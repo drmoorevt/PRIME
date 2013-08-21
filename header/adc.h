@@ -7,11 +7,16 @@
 
 typedef enum
 {
-  A2D1,
-  A2D2,
-  A2D3,
-  NUM_A2DS
-} A2D;
+  ADC_PORT1,
+  ADC_PORT2,
+  ADC_PORT3
+} ADCPort;
+
+typedef enum
+{
+    NONE,   // Manually via ADC_CR2_SWSTART
+    TIMER3  // Conversion occurs on Timer3 overflow
+} ADCTriggerSource;
 
 typedef struct
 {
@@ -21,10 +26,10 @@ typedef struct
   uint16 adcBuffer[2][ADC_BUFFER_SIZE];
 } ADCControl;
 
-ADCControl* ADC_getControlPtr(A2D a2d);
-void Main_adcConfig(A2D a2d);
+ADCControl* ADC_getControlPtr(ADCPort a2d);
+void ADC_adcConfig(ADCPort a2d);
 void ADC_StartCnv(boolean adc1, boolean adc2, boolean adc3);
-boolean ADC_isBufferFull(A2D a2d);
+boolean ADC_isBufferFull(ADCPort port);
 uint16_t Main_getADC(uint8_t adc, uint8_t chan);
 
 #endif // ADC_H

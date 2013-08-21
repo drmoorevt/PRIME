@@ -11,10 +11,6 @@ int main(void)
 { 
   GPIO_init();
   
-  Main_adcConfig(A2D1);
-  Main_adcConfig(A2D2);
-  Main_adcConfig(A2D3);
-  
   Analog_setDomain(MCU_DOMAIN,    FALSE); // Does nothing
   Analog_setDomain(ANALOG_DOMAIN, TRUE);  // Enable analog domain
   Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
@@ -24,6 +20,8 @@ int main(void)
   Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
   
+  Analog_adjustDomain(1,0);
+
 //  Tests_test0();  
 //  Tests_test1();
 //  Tests_test2();  

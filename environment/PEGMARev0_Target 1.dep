@@ -1,12 +1,12 @@
 Dependencies for Project 'PEGMARev0', Target 'Target 1': (DO NOT MODIFY !)
-F (..\source\adc.c)(0x52142D97)(-c --cpu Cortex-M3 -g -O0 --apcs=interwork -I..\header -I..\lib -I C:\Keil\ARM\RV31\INC -I C:\Keil\ARM\CMSIS\Include -I C:\Keil\ARM\Inc\ST\STM32F2xx -DHSE_VALUE="4000000" -o "..\object\adc.o" --omf_browse "..\object\adc.crf" --depend "..\object\adc.d")
+F (..\source\adc.c)(0x52144ADE)(-c --cpu Cortex-M3 -g -O0 --apcs=interwork -I..\header -I..\lib -I C:\Keil\ARM\RV31\INC -I C:\Keil\ARM\CMSIS\Include -I C:\Keil\ARM\Inc\ST\STM32F2xx -DHSE_VALUE="4000000" -o "..\object\adc.o" --omf_browse "..\object\adc.crf" --depend "..\object\adc.d")
 I (..\lib\stm32f2xx.h)(0x52143FDD)
 I (C:\Keil\ARM\CMSIS\Include\core_cm3.h)(0x515ED174)
 I (C:\Keil\ARM\ARMCC\bin\..\include\stdint.h)(0x516F2AA6)
 I (C:\Keil\ARM\CMSIS\Include\core_cmInstr.h)(0x515ED174)
 I (C:\Keil\ARM\CMSIS\Include\core_cmFunc.h)(0x515ED174)
 I (C:\Keil\ARM\Inc\ST\STM32F2xx\system_stm32f2xx.h)(0x50880278)
-I (..\header\adc.h)(0x52112C71)
+I (..\header\adc.h)(0x52144777)
 I (..\header\types.h)(0x52098804)
 I (..\header\eeprom.h)(0x52141FF9)
 I (..\header\util.h)(0x5212CC4D)
@@ -17,7 +17,7 @@ I (C:\Keil\ARM\ARMCC\bin\..\include\stdint.h)(0x516F2AA6)
 I (C:\Keil\ARM\CMSIS\Include\core_cmInstr.h)(0x515ED174)
 I (C:\Keil\ARM\CMSIS\Include\core_cmFunc.h)(0x515ED174)
 I (C:\Keil\ARM\Inc\ST\STM32F2xx\system_stm32f2xx.h)(0x50880278)
-I (..\header\adc.h)(0x52112C71)
+I (..\header\adc.h)(0x52144777)
 I (..\header\types.h)(0x52098804)
 I (..\header\analog.h)(0x521180E0)
 I (..\header\dac.h)(0x520DA34E)
@@ -56,14 +56,14 @@ I (C:\Keil\ARM\CMSIS\Include\core_cmFunc.h)(0x515ED174)
 I (C:\Keil\ARM\Inc\ST\STM32F2xx\system_stm32f2xx.h)(0x50880278)
 I (..\header\gpio.h)(0x520D98B9)
 I (..\header\types.h)(0x52098804)
-F (..\source\main.c)(0x5212CF09)(-c --cpu Cortex-M3 -g -O0 --apcs=interwork -I..\header -I..\lib -I C:\Keil\ARM\RV31\INC -I C:\Keil\ARM\CMSIS\Include -I C:\Keil\ARM\Inc\ST\STM32F2xx -DHSE_VALUE="4000000" -o "..\object\main.o" --omf_browse "..\object\main.crf" --depend "..\object\main.d")
+F (..\source\main.c)(0x52144ADE)(-c --cpu Cortex-M3 -g -O0 --apcs=interwork -I..\header -I..\lib -I C:\Keil\ARM\RV31\INC -I C:\Keil\ARM\CMSIS\Include -I C:\Keil\ARM\Inc\ST\STM32F2xx -DHSE_VALUE="4000000" -o "..\object\main.o" --omf_browse "..\object\main.crf" --depend "..\object\main.d")
 I (..\lib\stm32f2xx.h)(0x52143FDD)
 I (C:\Keil\ARM\CMSIS\Include\core_cm3.h)(0x515ED174)
 I (C:\Keil\ARM\ARMCC\bin\..\include\stdint.h)(0x516F2AA6)
 I (C:\Keil\ARM\CMSIS\Include\core_cmInstr.h)(0x515ED174)
 I (C:\Keil\ARM\CMSIS\Include\core_cmFunc.h)(0x515ED174)
 I (C:\Keil\ARM\Inc\ST\STM32F2xx\system_stm32f2xx.h)(0x50880278)
-I (..\header\adc.h)(0x52112C71)
+I (..\header\adc.h)(0x52144777)
 I (..\header\types.h)(0x52098804)
 I (..\header\analog.h)(0x521180E0)
 I (..\header\eeprom.h)(0x52141FF9)
@@ -80,14 +80,14 @@ I (C:\Keil\ARM\CMSIS\Include\core_cmFunc.h)(0x515ED174)
 I (C:\Keil\ARM\Inc\ST\STM32F2xx\system_stm32f2xx.h)(0x50880278)
 I (..\header\spi.h)(0x5209887D)
 I (..\header\types.h)(0x52098804)
-F (..\source\tests.c)(0x52142566)(-c --cpu Cortex-M3 -g -O0 --apcs=interwork -I..\header -I..\lib -I C:\Keil\ARM\RV31\INC -I C:\Keil\ARM\CMSIS\Include -I C:\Keil\ARM\Inc\ST\STM32F2xx -DHSE_VALUE="4000000" -o "..\object\tests.o" --omf_browse "..\object\tests.crf" --depend "..\object\tests.d")
+F (..\source\tests.c)(0x52144ADE)(-c --cpu Cortex-M3 -g -O0 --apcs=interwork -I..\header -I..\lib -I C:\Keil\ARM\RV31\INC -I C:\Keil\ARM\CMSIS\Include -I C:\Keil\ARM\Inc\ST\STM32F2xx -DHSE_VALUE="4000000" -o "..\object\tests.o" --omf_browse "..\object\tests.crf" --depend "..\object\tests.d")
 I (..\lib\stm32f2xx.h)(0x52143FDD)
 I (C:\Keil\ARM\CMSIS\Include\core_cm3.h)(0x515ED174)
 I (C:\Keil\ARM\ARMCC\bin\..\include\stdint.h)(0x516F2AA6)
 I (C:\Keil\ARM\CMSIS\Include\core_cmInstr.h)(0x515ED174)
 I (C:\Keil\ARM\CMSIS\Include\core_cmFunc.h)(0x515ED174)
 I (C:\Keil\ARM\Inc\ST\STM32F2xx\system_stm32f2xx.h)(0x50880278)
-I (..\header\adc.h)(0x52112C71)
+I (..\header\adc.h)(0x52144777)
 I (..\header\types.h)(0x52098804)
 I (..\header\analog.h)(0x521180E0)
 I (..\header\dac.h)(0x520DA34E)
@@ -121,7 +121,7 @@ F (..\source\util.c)(0x5212CC4D)(-c --cpu Cortex-M3 -g -O0 --apcs=interwork -I..
 I (..\header\util.h)(0x5212CC4D)
 I (..\header\types.h)(0x52098804)
 I (C:\Keil\ARM\ARMCC\bin\..\include\stdint.h)(0x516F2AA6)
-F (..\header\adc.h)(0x52112C71)()
+F (..\header\adc.h)(0x52144777)()
 F (..\header\analog.h)(0x521180E0)()
 F (..\header\dac.h)(0x520DA34E)()
 F (..\header\eeprom.h)(0x52141FF9)()

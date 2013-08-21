@@ -11,14 +11,19 @@ struct
   boolean isBufferFull;
 } sADC;
 
-// Setup and initialize ADC converter
-void Main_adcConfig(A2D a2d)
+/**************************************************************************************************\
+* FUNCTION    ADC_init
+* DESCRIPTION Initializes the analog to digital converters to their default state
+* PARAMETERS  None
+* RETURNS     Nothing
+* NOTES       None
+\**************************************************************************************************/
+void ADC_init(void)
 {
   //ADC->CCR  = 0;
   ADC->CCR &= ADC_CCR_ADCPRE;  // ADC clk = PCLK2/2 = 30MHz
   ADC->CCR |= ADC_CCR_TSVREFE; // turn on the temperature sensor
-  if (a2d == A2D1)
-  {
+
     RCC->APB2ENR |= RCC_APB2ENR_ADC1EN; // Enable peripheral clock for ADC1
     //ADC1->SQR1    = (1UL << 20); // 2 Conversions
     ADC1->SQR1    = (0UL << 20); // 1 Conversion
@@ -31,9 +36,8 @@ void Main_adcConfig(A2D a2d)
     ADC1->CR2     = (ADC_CR2_EOCS | ADC_CR2_CONT | ADC_CR2_ADON);
     ADC1->SR     &= (~(ADC_SR_OVR | ADC_SR_EOC));
     Util_fillMemory((uint8*)&sADC.adc1, sizeof(sADC.adc1), 0x00);
-  }
-  else if (a2d == A2D2)
-  {
+
+
     RCC->APB2ENR |= RCC_APB2ENR_ADC2EN; // Enable peripheral clock for ADC2
     //ADC2->SQR1    = (1UL << 20); // 2 Conversions
     ADC1->SQR1    = (0UL << 20); // 1 Conversion
@@ -46,9 +50,7 @@ void Main_adcConfig(A2D a2d)
     ADC2->CR2     = (ADC_CR2_EOCS | ADC_CR2_CONT | ADC_CR2_ADON);
     ADC2->SR     &= (~(ADC_SR_OVR | ADC_SR_EOC));
     Util_fillMemory((uint8*)&sADC.adc2, sizeof(sADC.adc2), 0x00);
-  }
-  else if (a2d == A2D3)
-  {
+
     RCC->APB2ENR |= RCC_APB2ENR_ADC3EN; // Enable peripheral clock for ADC3
     //ADC3->SQR1    = (1UL << 20); // 2 Conversions
     ADC1->SQR1    = (0UL << 20); // 1 Conversion
@@ -61,23 +63,26 @@ void Main_adcConfig(A2D a2d)
     ADC3->CR2     = (ADC_CR2_EOCS | ADC_CR2_CONT | ADC_CR2_ADON);
     ADC3->SR     &= (~(ADC_SR_OVR | ADC_SR_EOC));
     Util_fillMemory((uint8*)&sADC.adc3, sizeof(sADC.adc3), 0x00);
-  }
+
   NVIC_EnableIRQ(ADC_IRQn);               /* enable ADC Interrupt             */
 }
 
-boolean ADC_isBufferFull(A2D a2d)
+boolean ADC_isBufferFull(ADCPort port)
 {
-  if (a2d == A2D1)
-    return sADC.adc1.isBufferFull;
-  else if (a2d == A2D2)
-    return sADC.adc2.isBufferFull;
-  else if (a2d == A2D3)
-    return sADC.adc3.isBufferFull;
-  else
-    return FALSE;
+  switch (port)
+  {
+    case ADC_PORT1:
+      return sADC.adc1.isBufferFull;
+    case ADC_PORT2:
+      return sADC.adc2.isBufferFull;
+    case ADC_PORT3:
+      return sADC.adc3.isBufferFull;
+    default:
+      return FALSE;
+  }
 }
 
-ADCControl* ADC_getControlPtr(A2D a2d)
+ADCControl* ADC_getControlPtr(ADCPort a2d)
 {
   if (a2d == A2D1)
     return &sADC.adc1;

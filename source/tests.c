@@ -26,6 +26,8 @@ boolean Tests_test0(void)
   char adcVoltsChars[18][5];
   float resolution;
   uint8_t adcNum;
+
+  ADC_adcConfig();
   
   while (1)
   {
@@ -117,7 +119,8 @@ boolean Tests_test0(void)
 * NOTES       None
 \*****************************************************************************/
 boolean Tests_test1(void)
-{ 
+{
+	ADC_adcConfig();
   UART_init(SERIAL_PORT5);
   Time_initTimer2();
   ADC_StartCnv(TRUE, TRUE, TRUE);
