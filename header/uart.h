@@ -15,6 +15,17 @@ typedef enum
   SERIAL_PORT6
 } SerialPort;
 
+typedef enum
+{
+  BAUDRATE_2400,
+  BAUDRATE_4800,
+  BAUDRATE_9600,
+  BAUDRATE_19200,
+  BAUDRATE_38400,
+  BAUDRATE_57600,
+  BAUDRATE_115200,
+} BaudRate;
+
 typedef struct
 {
   struct

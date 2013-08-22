@@ -42,9 +42,9 @@ void Time_initTimer1(void)
 }
 
 /******************************************************************************\
-* FUNCTION			Time_timer1IRQ
-*	DESCRIPTION		Initializes timer1
-* PARAMETERS		none
+* FUNCTION    Time_timer1IRQ
+* DESCRIPTION Initializes timer1
+* PARAMETERS  none
 * RETURN				none
 \******************************************************************************/
 void TIM1_UP_TIM10_IRQHandler(void)

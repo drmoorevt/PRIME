@@ -1,0 +1,21 @@
+ModbusMaster_SendRequest(UART)
+
+ModbusMaster_ReadDiscreteInputs(TXBuffer, RXBuffer)
+ModbusMaster_ReadCoils()
+ModbusMaster_ReadInputRegister()
+ModbusMaster_ReadHoldingRegister()
+ModbusMaster_WriteHoldingRegister()
+ModbusMaster_ReadMultipleRegisters()
+ModbusMaster_WriteMultipleRegisters()
+
+ModbusMaster_ProcessResponse()
+
+Modbus_SlaveReadDiscreteInputs(TXBuffer, RXBuffer)
+Modbus_SlaveReadCoils()
+Modbus_SlaveReadInputRegister()
+Modbus_SlaveReadHoldingRegister()
+Modbus_SlaveWriteHoldingRegister()
+Modbus_SlaveReadMultipleRegisters()
+Modbus_SlaveWriteMultipleRegisters()
+
+Modbus_SlaveProcessRequest()
