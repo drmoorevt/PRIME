@@ -29,7 +29,8 @@ void ADC_init(void)
     ADC1->SQR1    = (0UL << 20); // 1 Conversion
     ADC1->SQR2    = (0);
     //ADC1->SQR3    = (17UL << 0) | (1UL << 5); // Convert INTVREF + ADCIN_1
-    ADC1->SQR3    = (17UL << 0); // Convert INTVREF
+    //ADC1->SQR3    = (17UL << 0); // Convert INTVREF
+    ADC1->SQR3    = (1UL << 0); // Convert ADCIN1 (domain input voltage)
     ADC1->SMPR1   = (0x6DB6DB6D);
     ADC1->SMPR2   = (0x6DB6DB6D);
     ADC1->CR1     = (ADC_CR1_SCAN | ADC_CR1_EOCIE);
@@ -43,7 +44,8 @@ void ADC_init(void)
     ADC1->SQR1    = (0UL << 20); // 1 Conversion
     ADC2->SQR2    = (0);
     //ADC2->SQR3    = (6UL << 0) | (2UL << 5); // Convert EXTVREF + ADCIN2
-    ADC2->SQR3    = (2UL << 0); // Convert ADCIN2
+    ADC2->SQR3    = (6UL << 0); // Convert EXTVREF
+    //ADC2->SQR3    = (2UL << 0); // Convert ADCIN2
     ADC2->SMPR1   = (0x6DB6DB6D);
     ADC2->SMPR2   = (0x6DB6DB6D);
     ADC2->CR1     = (ADC_CR1_SCAN | ADC_CR1_EOCIE);
@@ -84,11 +86,11 @@ boolean ADC_isBufferFull(ADCPort port)
 
 ADCControl* ADC_getControlPtr(ADCPort a2d)
 {
-  if (a2d == A2D1)
+  if (a2d == ADC_PORT1)
     return &sADC.adc1;
-  else if (a2d == A2D2)
+  else if (a2d == ADC_PORT2)
     return &sADC.adc2;
-  else if (a2d == A2D3)
+  else if (a2d == ADC_PORT3)
     return &sADC.adc3;
   else
     return 0;

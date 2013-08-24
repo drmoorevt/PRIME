@@ -68,10 +68,11 @@ int8 Util_compareMemory(uint8* pLeft, uint8* pRight, uint16 numBytes)
 * RETURNS      Nothing
 * NOTES        None
 \**************************************************************************************************/
-void Util_fillMemory(uint8* pDst, uint32 numBytes, uint8 fillVal)
+void Util_fillMemory(void *pDst, uint32 numBytes, uint8 fillVal)
 {
+  uint8 *pDstAsBytes = (uint8*)pDst;
   while (numBytes-- > 0)
-    pDst[numBytes] = fillVal;
+    pDstAsBytes[numBytes] = fillVal;
 }
 
 /**************************************************************************************************\

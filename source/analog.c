@@ -133,11 +133,12 @@ void Analog_adjustDomain(VoltageDomain domain, float voltage)
 \*************************************************************************************************/
 void Analog_sampleDomain(VoltageDomain analogSelect)
 {
+  /*
   uint8 bytesToSend = 0;
   uint16_t i, adcResult[5];
   float resolution, adcVolts[18];
   char adcResultChars[5][5], adcVoltsChars[5][5];
-  FullDuplexPort *dataPort = UART_getPortPtr(SERIAL_PORT5);
+  FullDuplexPort *dataPort = UART_getPortPtr(UART_PORT5);
   
   Analog_selectChannel(analogSelect, 0);  // Select channels from the analog switches
   
@@ -148,7 +149,7 @@ void Analog_sampleDomain(VoltageDomain analogSelect)
   adcResult[4] = Main_getADC(3, 3);  // ADC3 Chan3
   resolution = 1.20000000 / (float)adcResult[0]; // External vRef
   
-  while (!UART_isTxBufIdle(SERIAL_PORT5));
+  while (!UART_isTxBufIdle(UART_PORT5));
   
   dataPort->tx.numTx = 0;
   dataPort->tx.txBuffer[bytesToSend++] = '\f';
@@ -197,5 +198,6 @@ void Analog_sampleDomain(VoltageDomain analogSelect)
     dataPort->tx.txBuffer[bytesToSend++] = '\r';
     dataPort->tx.txBuffer[bytesToSend++] = '\n';
   }
-  UART_sendData(SERIAL_PORT5, bytesToSend);
+  UART_sendData(UART_PORT5, bytesToSend);
+*/
 }

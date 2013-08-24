@@ -18,13 +18,32 @@ typedef enum
   TIMER_XBEE,                 // generic xbee timer
   TIMER_XBEE_READ,            // xbee read timeout
   TOTAL_NUM_TIMERS            
-} TimersEnum;
+} SoftTimer;
+
+typedef enum
+{
+  TIMER0  = 0,
+  TIMER1  = 1,
+  TIMER2  = 2,
+  TIMER3  = 3,
+  TIMER4  = 4,
+  TIMER5  = 5,
+  TIMER6  = 6,
+  TIMER7  = 7,
+  TIMER8  = 8,
+  TIMER9  = 9,
+  TIMER10 = 10,
+  TIMER11 = 11,
+  TIMER12 = 12,
+  TIMER13 = 13,
+  TIMER14 = 14
+} HardTimer;
 
 void Time_initTimer1(void);
 void Time_initTimer2(void);
-void Time_startTimer(TimersEnum timer, uint16 numSubTicks);
+void Time_startTimer(SoftTimer timer, uint16 numSubTicks);
 void Time_delay(uint16 numSubTicks);
-uint16 Time_getTimerValue(TimersEnum timer);
+uint16 Time_getTimerValue(SoftTimer timer);
 uint32 Time_getSystemTime(void);
 uint32 Time_getTimeOfday(void);
 void Time_handleSubTick(void);

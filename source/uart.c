@@ -1,33 +1,54 @@
+
+
 #include "stm32f2xx.h"
+#include "gpio.h"
+#include "time.h"
 #include "util.h"
 #include "uart.h"
 
 #define FILE_ID UART_C
 
-typedef struct ComDevice
+// PortInfo contains all of the information needed to configure the clocks and pins for
+// initializing a generic UART port. It is populated via lookup in UART_getPortInfo()
+typedef struct
 {
-  const uint32 devAddr;
-  IOCompletionRoutine ioCompletionRoutine;
-  uint8* pReadBuffer;
-  uint16 readLen;
-  const uint8* pWriteBuffer;
-  uint16 writeLen;
-  void* pUserData;
-  IOState state;
-  IOResult lastResult;
-  uint8 dmaRxChannel;
-  uint8 dmaTxChannel;
-} CommDevice;
+  struct
+  {
+    USART_TypeDef   *pUART;     // The base register for hardware UART interaction
+    volatile uint32 *pClockReg; // The clock register for enabling/disabling clocks to the UART
+    volatile uint32 *pResetReg; // The reset register for resetting the UART
+    uint32    clockEnableBit;   // The bit mask used for enabling the clock to the UART
+    uint32    resetBit;         // The bit mask used for resetting the UART
+    IRQn_Type irqNumber;        // The irqNumber associated with this UART
+  } periph;
+  PinConfig rxPin;              // GPIO configuration required for operating as a UART
+  PinConfig txPin;              // GPIO configuration required for operating as a UART
+} PortInfo;
 
-struct
+// CommStatus is maintained internally but toSend and toReceive are populated via appLayer requests
+typedef struct
 {
-  FullDuplexPort U1;
-  FullDuplexPort U2;
-  FullDuplexPort U3;
-  FullDuplexPort U4;
-  FullDuplexPort U5;
-  FullDuplexPort U6;
+  uint16 bytesSent;
+  uint16 bytesToSend;
+  uint16 bytesToReceive;
+  uint16 bytesReceived;
+} CommStatus;
+
+// CommPort contains the information required for an appLayer agent to send and receive data
+typedef struct
+{
+  boolean       isConfigured; // Indicates if this port is registered to an appLayer
+  USART_TypeDef *pUART;       // The base register for hardware UART interaction
+  AppCommConfig appConfig;    // Buffers and callbacks set by the appLayer
+  CommStatus    commStatus;   // State information for sending and receiving
+} CommPort;
+
+static struct
+{
+  CommPort port[UART_NUM_PORTS];
 } sUART;
+
+static uint16 Uart_calcBaudRateRegister(BaudRate baud);
 
 /*************************************************************************************************\
 * FUNCTION    UART_init
@@ -36,7 +57,307 @@ struct
 * RETURNS     Nothing
 * NOTES       None
 \*************************************************************************************************/
-uint16 Uart_calculateBaudRateRegister(BaudRate baud)
+void UART_init(void)
+{
+  Util_fillMemory(&sUART, sizeof(sUART), 0x00);
+}
+
+/*************************************************************************************************\
+* FUNCTION    UART_getPortInfo
+* DESCRIPTION Retrieves pointers and bits from stm32f2xx.h to be used in a generic format
+* PARAMETERS  UARTPort: The UART port to find information for
+* RETURNS     PortInfo: The consolidated peripheral information
+* NOTES       None
+\*************************************************************************************************/
+static PortInfo UART_getPortInfo(UARTPort port)
+{
+  PortInfo portInfo = {0};
+  switch (port)
+  {
+    case UART_PORT1:
+      portInfo.periph.pUART              = USART1;
+      portInfo.periph.pClockReg          = &RCC->APB2ENR;
+      portInfo.periph.clockEnableBit     = RCC_APB2ENR_USART1EN;
+      portInfo.periph.pResetReg          = &RCC->APB2RSTR;
+      portInfo.periph.resetBit           = RCC_APB2RSTR_USART1RST;
+      portInfo.periph.irqNumber          = USART1_IRQn;
+
+      portInfo.rxPin.pGPIOReg            = GPIOB;
+      portInfo.rxPin.altFuncOffset       = ALT_FUNC_LOW;
+      portInfo.rxPin.gpioClockEnableBit  = RCC_AHB1ENR_GPIOBEN;
+      portInfo.rxPin.modeClearMask       = GPIO_MODER_MODER7;
+      portInfo.rxPin.modeSetMask         = GPIO_MODER_MODER7_1;
+      portInfo.rxPin.outTypeClearMask    = GPIO_OTYPER_OT_7;
+      portInfo.rxPin.outTypeSetMask      = 0;
+      portInfo.rxPin.outSpeedClearMask   = GPIO_OSPEEDER_OSPEEDR7;
+      portInfo.rxPin.outSpeedSetMask     = 0;
+      portInfo.rxPin.pullUpDownClearMask = GPIO_PUPDR_PUPDR7;
+      portInfo.rxPin.pullUpDownSetMask   = 0;
+      portInfo.rxPin.altFuncClearMask    = 0xF0000000;
+      portInfo.rxPin.altFuncSetMask      = 0x70000000;
+
+      portInfo.txPin.pGPIOReg            = GPIOB;
+      portInfo.txPin.altFuncOffset       = ALT_FUNC_LOW;
+      portInfo.txPin.gpioClockEnableBit  = RCC_AHB1ENR_GPIOBEN;
+      portInfo.txPin.modeClearMask       = GPIO_MODER_MODER6;
+      portInfo.txPin.modeSetMask         = GPIO_MODER_MODER6_1;
+      portInfo.txPin.outTypeClearMask    = GPIO_OTYPER_OT_6;
+      portInfo.txPin.outTypeSetMask      = 0;
+      portInfo.txPin.outSpeedClearMask   = GPIO_OSPEEDER_OSPEEDR6;
+      portInfo.txPin.outSpeedSetMask     = 0;
+      portInfo.txPin.pullUpDownClearMask = GPIO_PUPDR_PUPDR6;
+      portInfo.txPin.pullUpDownSetMask   = 0;
+      portInfo.txPin.altFuncClearMask    = 0x0F000000;
+      portInfo.txPin.altFuncSetMask      = 0x07000000;
+      break;
+    case UART_PORT2:
+      break;
+    case UART_PORT3:
+      break;
+    case UART_PORT4:
+      break;
+    case UART_PORT5:
+      portInfo.periph.pUART              = UART5;
+      portInfo.periph.pClockReg          = &RCC->APB1ENR;
+      portInfo.periph.clockEnableBit     = RCC_APB1ENR_UART5EN;
+      portInfo.periph.pResetReg          = &RCC->APB1RSTR;
+      portInfo.periph.resetBit           = RCC_APB1RSTR_UART5RST;
+      portInfo.periph.irqNumber          = UART5_IRQn;
+
+      portInfo.rxPin.pGPIOReg            = GPIOD;
+      portInfo.txPin.altFuncOffset       = ALT_FUNC_LOW;
+      portInfo.rxPin.gpioClockEnableBit  = RCC_AHB1ENR_GPIODEN;
+      portInfo.rxPin.modeClearMask       = GPIO_MODER_MODER2;
+      portInfo.rxPin.modeSetMask         = GPIO_MODER_MODER2_1;
+      portInfo.rxPin.outTypeClearMask    = GPIO_OTYPER_OT_2;
+      portInfo.rxPin.outTypeSetMask      = 0;
+      portInfo.rxPin.outSpeedClearMask   = GPIO_OSPEEDER_OSPEEDR2;
+      portInfo.rxPin.outSpeedSetMask     = 0;
+      portInfo.rxPin.pullUpDownClearMask = GPIO_PUPDR_PUPDR2;
+      portInfo.rxPin.pullUpDownSetMask   = 0;
+      portInfo.rxPin.altFuncClearMask    = 0x00000F00;
+      portInfo.rxPin.altFuncSetMask      = 0x00000800;
+
+      portInfo.txPin.pGPIOReg            = GPIOC;
+      portInfo.txPin.altFuncOffset       = ALT_FUNC_HIGH;
+      portInfo.txPin.gpioClockEnableBit  = RCC_AHB1ENR_GPIOCEN;
+      portInfo.txPin.modeClearMask       = GPIO_MODER_MODER12;
+      portInfo.txPin.modeSetMask         = GPIO_MODER_MODER12_1;
+      portInfo.txPin.outTypeClearMask    = GPIO_OTYPER_OT_12;
+      portInfo.txPin.outTypeSetMask      = 0;
+      portInfo.txPin.outSpeedClearMask   = GPIO_OSPEEDER_OSPEEDR12;
+      portInfo.txPin.outSpeedSetMask     = 0;
+      portInfo.txPin.pullUpDownClearMask = GPIO_PUPDR_PUPDR12;
+      portInfo.txPin.pullUpDownSetMask   = 0;
+      portInfo.txPin.altFuncClearMask    = 0x000F0000;
+      portInfo.txPin.altFuncSetMask      = 0x00080000;
+      break;
+    case UART_PORT6:
+      break;
+  }
+  return portInfo;
+}
+
+/*************************************************************************************************\
+* FUNCTION    UART_openPort
+* DESCRIPTION Retrieves pointers and bits from stm32f2xx.h to be used in a generic format
+* PARAMETERS  UARTPort: The UART port to find information for
+* RETURNS     PortInfo: The consolidated peripheral information
+* NOTES       None
+\*************************************************************************************************/
+boolean UART_openPort(UARTPort port, AppCommConfig config)
+{
+  UARTPort portToOpen = port;
+  PortInfo pi = UART_getPortInfo(port);
+
+  if (sUART.port[portToOpen].isConfigured)
+    return ERROR; // Port is already open, return error code
+
+  /***** Configure the peripheral *****/
+  *pi.periph.pClockReg |= pi.periph.clockEnableBit;// Enable port clocks
+  *pi.periph.pResetReg |= pi.periph.resetBit;      // Reset the peripheral
+  *pi.periph.pResetReg &= ~pi.periph.resetBit;     // Then release it from reset
+  pi.periph.pUART->CR1 |= USART_CR1_RE;                  // Enable RX
+  pi.periph.pUART->CR1 |= USART_CR1_TE;                  // Enable TX
+  pi.periph.pUART->CR1 |= USART_CR1_RXNEIE;              // Enable the RX not empty int
+  pi.periph.pUART->CR1 &= ~USART_CR1_TXEIE;              // Disable the tx data reg empty int
+  pi.periph.pUART->CR1 &= ~USART_CR1_TCIE;               // Disable the tx complete int
+  pi.periph.pUART->CR2 &= 0xFFFF0000;                    // Unnecessary, but for consistency
+  pi.periph.pUART->CR3 &= 0xFFFF0000;                    // No flow control
+  pi.periph.pUART->BRR  = Uart_calcBaudRateRegister(config.UARTConfig.baud);
+  pi.periph.pUART->CR1 |= USART_CR1_UE;           // Enable UART
+
+  /***** Configure the RX GPIO Pin *****/
+  SET_BIT(RCC->AHB1ENR, pi.rxPin.gpioClockEnableBit);  // Enable pin clocks
+  MODIFY_REG(pi.rxPin.pGPIOReg->MODER, pi.rxPin.modeClearMask, pi.rxPin.modeSetMask);
+  MODIFY_REG(pi.rxPin.pGPIOReg->OTYPER, pi.rxPin.modeClearMask, pi.rxPin.modeSetMask);
+  MODIFY_REG(pi.rxPin.pGPIOReg->OSPEEDR, pi.rxPin.modeClearMask, pi.rxPin.modeSetMask);
+  MODIFY_REG(pi.rxPin.pGPIOReg->PUPDR, pi.rxPin.modeClearMask, pi.rxPin.modeSetMask);
+  MODIFY_REG(pi.rxPin.pGPIOReg->AFR[pi.rxPin.altFuncOffset], pi.rxPin.altFuncClearMask, pi.rxPin.altFuncSetMask);
+
+  /***** Configure the TX GPIO Pin *****/
+  SET_BIT(RCC->AHB1ENR, pi.txPin.gpioClockEnableBit); // Enable pin clocks
+  MODIFY_REG(pi.txPin.pGPIOReg->MODER, pi.txPin.modeClearMask, pi.txPin.modeSetMask);
+  MODIFY_REG(pi.txPin.pGPIOReg->OTYPER, pi.txPin.modeClearMask, pi.txPin.modeSetMask);
+  MODIFY_REG(pi.txPin.pGPIOReg->OSPEEDR, pi.txPin.modeClearMask, pi.txPin.modeSetMask);
+  MODIFY_REG(pi.txPin.pGPIOReg->PUPDR, pi.txPin.modeClearMask, pi.txPin.modeSetMask);
+  MODIFY_REG(pi.txPin.pGPIOReg->AFR[pi.txPin.altFuncOffset], pi.txPin.altFuncClearMask, pi.txPin.altFuncSetMask);
+
+  /***** Enable Interrupts *****/
+  NVIC_EnableIRQ(pi.periph.irqNumber);
+
+  /***** Set the App layer buffers, callbacks and configured *****/
+  Util_copyMemory((uint8*)&config, (uint8*)&sUART.port[portToOpen].appConfig, sizeof(config));
+  sUART.port[portToOpen].pUART = pi.periph.pUART;
+  sUART.port[portToOpen].isConfigured = TRUE;
+
+  return SUCCESS;
+}
+
+/*****************************************************************************\
+* FUNCTION    UART_handleInterrupt
+* DESCRIPTION Generic handler for UART interrupts
+* PARAMETERS  port: The port on which the interrupt occurred
+* RETURNS     Nothing
+* NOTES       This should be broken up into multiple functions
+\*****************************************************************************/
+void UART_handleInterrupt(UARTPort port)
+{
+  CommPort      *pComm    = &sUART.port[port];
+  USART_TypeDef *pUART    = sUART.port[port].pUART;
+  CommStatus    *pStatus  = &sUART.port[port].commStatus;
+  uint16    USART_STATUS  = pUART->SR;
+  uint8     dummy;
+
+  if (READ_BIT(USART_STATUS, USART_SR_TXE)) // Transmit data register empty
+  {
+    if (pStatus->bytesSent < pStatus->bytesToSend)  // Still have more bytes to send?
+      pUART->DR = (uint8)*((uint8*)pComm->appConfig.appTransmitBuffer + pStatus->bytesSent++);
+    else
+    { // Last byte is in the shift register
+      CLEAR_BIT(pUART->CR1, USART_CR1_TXEIE); // Disable the tx data reg empty int
+      SET_BIT(pUART->CR1, USART_SR_TC);       // Enable the transmit complete int
+    }
+  }
+  
+  if (READ_BIT(USART_STATUS, USART_SR_RXNE)) // Received data ready to be read
+  {
+    if (pStatus->bytesReceived < pStatus->bytesToReceive)
+    { // App is waiting on bytes, fill up its buffer
+      *(((uint8*)pComm->appConfig.appReceiveBuffer) + pStatus->bytesReceived++) = pUART->DR;
+
+      if (pStatus->bytesReceived >= pStatus->bytesToReceive)
+      { // finished now? -- last expected byte is in the data register
+        sUART.port[port].appConfig.appNotifyReceiveComplete(pStatus->bytesReceived);
+        pStatus->bytesToReceive = 0;
+        pStatus->bytesReceived = 0;
+        CLEAR_BIT(pUART->CR1, USART_CR1_RXNEIE); // Disable the rx data reg not empty int
+      }
+    }
+    else
+    { // App not ready for this reception, throw it away and disable the interrupt
+      dummy = pUART->DR;
+      CLEAR_BIT(pUART->CR1, USART_CR1_RXNEIE); // Disable the rx data reg not empty int
+    }
+  }
+  
+  if (READ_BIT(USART_STATUS, USART_SR_TC)) // Last byte shifted out of the shift reg
+  {
+    sUART.port[port].appConfig.appNotifyTransmitComplete(pStatus->bytesSent);
+    pStatus->bytesToSend = 0;
+    pStatus->bytesSent   = 0;
+    pUART->SR &= (~USART_CR1_TCIE);  // Disable the transmit complete int
+  }
+}
+
+/*****************************************************************************\
+* FUNCTION    UARTx_IRQHandler
+* DESCRIPTION Writes character to the indicated serial port
+* PARAMETERS    port: The port over which to transmit
+              txByte: The byte to transmit
+* RETURNS     Nothing
+* NOTES       None
+\*****************************************************************************/
+void UART1_IRQHandler(void)
+{
+  UART_handleInterrupt(UART_PORT1);
+}
+
+void UART2_IRQHandler(void)
+{
+  UART_handleInterrupt(UART_PORT2);
+}
+
+void UART3_IRQHandler(void)
+{
+  UART_handleInterrupt(UART_PORT3);
+}
+
+void UART4_IRQHandler(void)
+{
+  UART_handleInterrupt(UART_PORT4);
+}
+
+void UART5_IRQHandler(void)
+{
+  UART_handleInterrupt(UART_PORT5);
+}
+
+void UART6_IRQHandler(void)
+{
+  UART_handleInterrupt(UART_PORT6);
+}
+
+/**************************************************************************************************\
+* FUNCTION    UART_sendData
+* DESCRIPTION Writes character to the indicated serial port
+* PARAMETERS  port: The port over which to transmit
+              numBytes: The number of bytes at which to trigger the transmit complete function
+* RETURNS     Nothing
+* NOTES       None
+\**************************************************************************************************/
+boolean UART_sendData(UARTPort port, uint16 numBytes)
+{
+  if (sUART.port[port].commStatus.bytesToSend == 0)
+  { // Transmitter is idle
+    sUART.port[port].commStatus.bytesToSend  = numBytes;
+    sUART.port[port].commStatus.bytesSent = 0;
+    sUART.port[port].pUART->CR1 |=  USART_CR1_TXEIE;  // Enable the tx data reg empty int
+    sUART.port[port].pUART->SR  &= ~USART_SR_TC;      // Clear the transmission complete flag
+    return SUCCESS;
+  }
+  else
+    return ERROR; // UART is currently transmitting
+}
+
+/**************************************************************************************************\
+* FUNCTION    UART_receiveData
+* DESCRIPTION Reads characters from the indicated serial port
+* PARAMETERS  port: The port over which to receive
+              numBytes: The number of bytes at which to trigger the receive complete function
+* RETURNS     Nothing
+* NOTES       None
+\**************************************************************************************************/
+boolean UART_receiveData(UARTPort port, uint16 numBytes)
+{
+  if (sUART.port[port].commStatus.bytesReceived == 0)
+  { // Receiver is idle
+    sUART.port[port].commStatus.bytesToReceive  = numBytes;
+    sUART.port[port].commStatus.bytesReceived = 0;
+    sUART.port[port].pUART->CR1 |=  USART_CR1_RXNEIE;  // Enable the rx data reg not empty int
+    return SUCCESS;
+  }
+  return ERROR; // UART is currently receiving
+}
+
+/*************************************************************************************************\
+* FUNCTION    Uart_calculateBaudRateRegister
+* DESCRIPTION Calculates the value for the baud rate register
+* PARAMETERS  baud: The baud rate for which to calculate the BRR
+* RETURNS     The appropriate value for the BRR
+* NOTES       None
+\*************************************************************************************************/
+static uint16 Uart_calcBaudRateRegister(BaudRate baud)
 {
   switch (baud)
   {
@@ -57,200 +378,4 @@ uint16 Uart_calculateBaudRateRegister(BaudRate baud)
     default:
       return 0;
   }
-}
-
-/*************************************************************************************************\
-* FUNCTION    UART_init
-* DESCRIPTION Initializes the selected port to its default configuration
-* PARAMETERS  port: The UART port to initialize and configure
-* RETURNS     Nothing
-* NOTES       None
-\*************************************************************************************************/
-boolean UART_init(SerialPort port, BaudRate baud, boolean enableInterrupt)
-{
-  USART_TypeDef  *pUARTConfig;
-  FullDuplexPort *pUARTPort;
-  IRQn_Type       irqNumber;
-
-  switch (port)
-  {
-    case SERIAL_PORT1:
-      pUARTConfig = UART1;
-      pUARTPort   = &sUART.U1;
-      // TODO: Set port pins to alternate function here
-      SET_BIT(RCC->APB1ENR,    RCC_APB1ENR_UART1EN);   // Enable UART1 clock (Alternate Function)
-      SET_BIT(RCC->APB1RSTR,   RCC_APB1RSTR_UART1RST); // Reset UART1
-      CLEAR_BIT(RCC->APB1RSTR, RCC_APB1RSTR_UART1RST); // Release UART1 from reset
-      irqNumber = UART1_IRQn;
-      break;
-    case SERIAL_PORT2:
-      pUARTConfig = UART2;
-      pUARTPort   = &sUART.U2;
-      // TODO: Set port pins to alternate function here
-      SET_BIT(RCC->APB1ENR,    RCC_APB1ENR_UART2EN);   // Enable UART2 clock (Alternate Function)
-      SET_BIT(RCC->APB1RSTR,   RCC_APB1RSTR_UART2RST); // Reset UART2
-      CLEAR_BIT(RCC->APB1RSTR, RCC_APB1RSTR_UART2RST); // Release UART2 from reset
-      irqNumber = UART2_IRQn;
-      break;
-    case SERIAL_PORT3:
-      pUARTConfig = UART3;
-      pUARTPort   = &sUART.U3;
-      // TODO: Set port pins to alternate function here
-      SET_BIT(RCC->APB1ENR,    RCC_APB1ENR_UART3EN);   // Enable UART3 clock (Alternate Function)
-      SET_BIT(RCC->APB1RSTR,   RCC_APB1RSTR_UART3RST); // Reset UART3
-      CLEAR_BIT(RCC->APB1RSTR, RCC_APB1RSTR_UART3RST); // Release UART3 from reset
-      irqNumber = UART3_IRQn;
-      break;
-    case SERIAL_PORT4:
-      pUARTConfig = UART4;
-      pUARTPort   = &sUART.U4;
-      // TODO: Set port pins to alternate function here
-      SET_BIT(RCC->APB1ENR,    RCC_APB1ENR_UART4EN);   // Enable UART4 clock (Alternate Function)
-      SET_BIT(RCC->APB1RSTR,   RCC_APB1RSTR_UART4RST); // Reset UART4
-      CLEAR_BIT(RCC->APB1RSTR, RCC_APB1RSTR_UART4RST); // Release UART4 from reset
-      irqNumber = UART4_IRQn;
-      break;
-    case SERIAL_PORT5:
-      pUARTConfig = UART5;
-      pUARTPort   = &sUART.U5;
-      // TODO: Set port pins to alternate function here
-      SET_BIT(RCC->APB1ENR,    RCC_APB1ENR_UART5EN);   // Enable UART5 clock (Alternate Function)
-      SET_BIT(RCC->APB1RSTR,   RCC_APB1RSTR_UART5RST); // Reset UART5
-      CLEAR_BIT(RCC->APB1RSTR, RCC_APB1RSTR_UART5RST); // Release UART5 from reset
-      irqNumber = UART5_IRQn;
-      break;
-    case SERIAL_PORT6:
-      pUARTConfig = UART6;
-      pUARTPort   = &sUART.U6;
-      // TODO: Set port pins to alternate function here
-      SET_BIT(RCC->APB1ENR,    RCC_APB1ENR_UART6EN);   // Enable UART6 clock (Alternate Function)
-      SET_BIT(RCC->APB1RSTR,   RCC_APB1RSTR_UART6RST); // Reset UART6
-      CLEAR_BIT(RCC->APB1RSTR, RCC_APB1RSTR_UART6RST); // Release UART6 from reset
-      irqNumber = UART6_IRQn;
-      break;
-    default:
-      return FALSE;
-  }
-
-  Util_fillMemory(pUARTPort, sizeof(FullDuplexPort), 0x00);
-  SET_BIT(pUARTConfig->CR1,   USART_CR1_RE);     // Enable RX
-  SET_BIT(pUARTConfig->CR1,   USART_CR1_TE);     // Enable TX
-  SET_BIT(pUARTConfig->CR1,   USART_CR1_RXNEIE); // Enable the RX not empty int
-  CLEAR_BIT(pUARTConfig->CR1, USART_CR1_TXEIE);  // Disable the tx data reg empty int
-  CLEAR_BIT(pUARTConfig->CR1, USART_CR1_TCIE);   // Disable the tx complete int
-  pUARTConfig->CR2 &= 0xFFFF0000;                // Unnecessary, but for consistency
-  pUARTConfig->CR3 &= 0xFFFF0000;                // No flow control
-  pUARTConfig->BRR  = Uart_calculateBaudRateRegister(baud);
-  SET_BIT(pUARTConfig->CR1, USART_CR1_UE);     // Enable UART
-
-  if (enableInterrupt) // If requested, enable or disable the appropriate interrupt
-    NVIC_EnableIRQ(irqNumber);
-  else
-    NVIC_DisableIRQ(irqNumber);
-  
-  return TRUE;
-}
-
-void UART5_IRQHandler(void)
-{
-  if (READ_BIT(UART5->SR, USART_SR_TXE)) // Transmit data register empty
-  {
-    if (sUART.U5.tx.numTx > 0)
-    { // We still have more bytes to send
-      UART5->DR = (sUART.U5.tx.txBuffer[sUART.U5.tx.bufIdx++] & 0x1FF);
-      sUART.U5.tx.numTx--;
-    }
-    else
-    { // Last byte is in the shift register
-      CLEAR_BIT(UART5->CR1, USART_CR1_TXEIE); // Disable the tx data reg empty int
-      SET_BIT(UART5->CR1, USART_SR_TC);       // Enable the transmit complete int
-    }
-//    CLEAR_BIT(UART5->SR, USART_SR_TXE); // Clear the interrupt flag
-  }
-  
-  if (READ_BIT(UART5->SR, USART_SR_RXNE)) // Received data ready to be read
-  {
-    CLEAR_BIT(UART5->SR, USART_SR_RXNE); // Clear the interrupt flag 
-  }
-  
-  if (READ_BIT(UART5->SR, USART_SR_TC)) // Last byte shifted out of the shift reg
-  {
-    CLEAR_BIT(UART5->CR1, USART_CR1_TCIE); // Disable the transmit complete int
-    CLEAR_BIT(UART5->SR, USART_SR_TC);     // Clear the interrupt flag
-  }
-}
-
-FullDuplexPort* UART_getPortPtr(SerialPort port)
-{
-  return &sUART.U5;
-}
-
-boolean UART_isTxBufIdle(SerialPort port)
-{
-  return sUART.U5.tx.numTx == 0;
-}
-
-/*****************************************************************************\
-* FUNCTION    UART_sendData
-* DESCRIPTION Writes character to the indicated serial port
-* PARAMETERS    port: The port over which to transmit
-              txByte: The byte to transmit
-* RETURNS     Nothing
-* NOTES       None
-\*****************************************************************************/
-boolean UART_sendData(SerialPort port, uint16 numBytes)
-{
-  if (sUART.U5.tx.numTx == 0)
-  { // UART is idle
-    sUART.U5.tx.numTx  = numBytes;
-    sUART.U5.tx.bufIdx = 0;
-    SET_BIT(UART5->CR1, USART_CR1_TXEIE); // Enable the tx data reg empty int
-    CLEAR_BIT(UART5->CR1, USART_SR_TC);   // Clear the transmission complete flag
-    return TRUE;
-  }
-  else
-    return FALSE; // UART is currently transmitting
-}
-
-/*****************************************************************************\
-* FUNCTION    UART_putChar
-* DESCRIPTION Writes character to the indicated serial port
-* PARAMETERS    port: The port over which to transmit
-              txByte: The byte to transmit
-* RETURNS     Nothing
-* NOTES       None
-\*****************************************************************************/
-boolean UART_putChar(SerialPort port, uint8 txByte)
-{
-  while (!(UART5->SR & USART_SR_TXE));  // Wait for transmit buffer empty
-  UART5->DR = (txByte & 0x1FF);         // Load in the character to transmit
-  return (txByte);
-}
-
-/*****************************************************************************\
-* FUNCTION    UART_checkChar
-* DESCRIPTION Checks to see if a character was received over the specified port
-* PARAMETERS    port: The port to check
-* RETURNS     TRUE if there is a byte available, FALSE otherwise
-* NOTES       None
-\*****************************************************************************/
-boolean UART_checkChar(SerialPort port)
-{
-  if (UART5->SR & USART_SR_RXNE)
-    return (TRUE);
-  else
-    return (FALSE);
-}
-
-/*****************************************************************************\
-* FUNCTION    UART_getChar
-* DESCRIPTION Retrieves a byte from the data register of the specified port
-* PARAMETERS    port: The port to retrieve from
-* RETURNS     The next available byte from the data register of the port
-* NOTES       This function will block if a byte is not available
-\*****************************************************************************/
-uint8 UART_getChar(SerialPort port)
-{
-  while (!(UART5->SR & USART_SR_RXNE));
-  return (UART5->DR & 0xFF);
 }

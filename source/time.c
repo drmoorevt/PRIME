@@ -100,8 +100,6 @@ void TIM2_IRQHandler(void)
   CLEAR_BIT(TIM2->SR, TIM_SR_UIF); // Clear the update interrupt flag
 }
 
-
-
 /******************************************************************************\
 * FUNCTION			Time_startTimer
 *	DESCRIPTION		Initializes timers
@@ -109,10 +107,10 @@ void TIM2_IRQHandler(void)
 *               numSubTicks - number of subticks to run timer
 * RETURN				none
 \******************************************************************************/
-void Time_startTimer(TimersEnum timer, uint16 numSubTicks)
+void Time_startTimer(SoftTimer timer, uint16 milliSeconds)
 {
   DISABLE_TIME_INTERRUPT(); 
-  sTime.timers[timer] = numSubTicks;
+  sTime.timers[timer] = milliSeconds;
   ENABLE_TIME_INTERRUPT();
 }
 
@@ -122,11 +120,10 @@ void Time_startTimer(TimersEnum timer, uint16 numSubTicks)
 * PARAMETERS		numSubTicks - number of subticks to delay
 * RETURN				none
 \******************************************************************************/
-void Time_delay(uint16 numSubTicks)
+void Time_delay(uint16 milliSeconds)
 {
-  Time_startTimer(TIMER_DELAY, numSubTicks);
-  while(Time_getTimerValue(TIMER_DELAY) != 0)
-    continue;
+  Time_startTimer(TIMER_DELAY, milliSeconds);
+  while (Time_getTimerValue(TIMER_DELAY));
 }
 
 /******************************************************************************\
@@ -135,7 +132,7 @@ void Time_delay(uint16 numSubTicks)
 * PARAMETERS		timer - index of timer
 * RETURN				uint16 - number of subticks left on the timer
 \******************************************************************************/
-uint16 Time_getTimerValue(TimersEnum timer)
+uint16 Time_getTimerValue(SoftTimer timer)
 {
   uint16 value;
 

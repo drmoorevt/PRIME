@@ -6,6 +6,9 @@
 #define FALSE 0
 #define TRUE  1
 
+#define ERROR   1
+#define SUCCESS 0
+
 typedef uint8_t  boolean;
 typedef uint8_t  uint8;
 typedef uint16_t uint16;
