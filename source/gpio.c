@@ -1,13 +1,15 @@
 #include "stm32f2xx.h"
 #include "gpio.h"
 
-/*****************************************************************************\
+#define FILE_ID GPIO_C
+
+/**************************************************************************************************\
 * FUNCTION    GPIO_init
 * DESCRIPTION Initializes the GPIO ports to their default configurations
 * PARAMETERS  None
 * RETURNS     Nothing
 * NOTES       None
-\*****************************************************************************/
+\**************************************************************************************************/
 void GPIO_init(void)
 { 
   // Port A Configuration
@@ -58,4 +60,93 @@ void GPIO_init(void)
   GPIOE->AFR[0]  = 0x00000000;
 }
 
-#define FILE_ID GPIO_C
+/**************************************************************************************************\
+* FUNCTION    GPIO_setPortClock
+* DESCRIPTION Enables or disables clocks to the specified port
+* PARAMETERS  GPIOx: The port to enable or disable
+*             clockState: The clocks will be enabled if clockState is TRUE, disabled otherwise
+* RETURNS     Nothing
+* NOTES       None
+\**************************************************************************************************/
+void GPIO_structInitUART(GPIO_InitTypeDef* GPIO_InitStruct, uint16 pin)
+{
+  /* Reset GPIO init structure parameters values */
+  GPIO_InitStruct->GPIO_Pin   = pin;
+  GPIO_InitStruct->GPIO_Mode  = GPIO_Mode_AF;
+  GPIO_InitStruct->GPIO_Speed = GPIO_Speed_2MHz;
+  GPIO_InitStruct->GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStruct->GPIO_PuPd  = GPIO_PuPd_NOPULL;
+}
+
+/**************************************************************************************************\
+* FUNCTION    GPIO_setPortClock
+* DESCRIPTION Enables or disables clocks to the specified port
+* PARAMETERS  GPIOx: The port to enable or disable
+*             clockState: The clocks will be enabled if clockState is TRUE, disabled otherwise
+* RETURNS     Nothing
+* NOTES       None
+\**************************************************************************************************/
+boolean GPIO_setPortClock(GPIO_TypeDef* GPIOx, boolean clockState)
+{
+  uint32 clockMask;
+  if (GPIOx == GPIOA)
+    clockMask = RCC_AHB1ENR_GPIOAEN;
+  else if (GPIOx == GPIOB)
+    clockMask = RCC_AHB1ENR_GPIOBEN;
+  else if (GPIOx == GPIOC)
+    clockMask = RCC_AHB1ENR_GPIOCEN;
+  else if (GPIOx == GPIOD)
+    clockMask = RCC_AHB1ENR_GPIODEN;
+  else if (GPIOx == GPIOE)
+    clockMask = RCC_AHB1ENR_GPIOEEN;
+  else
+    return ERROR;
+
+  if (clockState)
+    SET_BIT(RCC->AHB1ENR, clockMask);
+  else
+    CLEAR_BIT(RCC->AHB1ENR, clockMask);
+  return SUCCESS;
+}
+
+/**************************************************************************************************\
+* FUNCTION    GPIO_configurePins
+* DESCRIPTION Initializes the GPIO ports to their default configurations
+* PARAMETERS  None
+* RETURNS     Nothing
+* NOTES       None
+\**************************************************************************************************/
+boolean GPIO_configurePins(GPIO_TypeDef* GPIOx, GPIO_InitTypeDef* GPIO_InitStruct)
+{
+  uint32_t pinpos = 0x00, pos = 0x00 , currentpin = 0x00;
+
+  /*-- GPIO Mode Configuration --*/
+  for (pinpos = 0x00; pinpos < 0x10; pinpos++)
+  {
+    pos = ((uint32_t)0x01) << pinpos;
+    /* Get the port pins position */
+    currentpin = (GPIO_InitStruct->GPIO_Pin) & pos;
+
+    if (currentpin == pos)
+    {
+      GPIOx->MODER  &= ~(GPIO_MODER_MODER0 << (pinpos * 2));
+      GPIOx->MODER |= (((uint32_t)GPIO_InitStruct->GPIO_Mode) << (pinpos * 2));
+
+      if ((GPIO_InitStruct->GPIO_Mode == GPIO_Mode_OUT) || (GPIO_InitStruct->GPIO_Mode == GPIO_Mode_AF))
+      {
+        /* Speed mode configuration */
+        GPIOx->OSPEEDR &= ~(GPIO_OSPEEDER_OSPEEDR0 << (pinpos * 2));
+        GPIOx->OSPEEDR |= ((uint32_t)(GPIO_InitStruct->GPIO_Speed) << (pinpos * 2));
+
+        /* Output mode configuration*/
+        GPIOx->OTYPER  &= ~((GPIO_OTYPER_OT_0) << ((uint16_t)pinpos)) ;
+        GPIOx->OTYPER |= (uint16_t)(((uint16_t)GPIO_InitStruct->GPIO_OType) << ((uint16_t)pinpos));
+      }
+
+      /* Pull-up Pull down resistor configuration*/
+      GPIOx->PUPDR &= ~(GPIO_PUPDR_PUPDR0 << ((uint16_t)pinpos * 2));
+      GPIOx->PUPDR |= (((uint32_t)GPIO_InitStruct->GPIO_PuPd) << (pinpos * 2));
+    }
+  }
+  return SUCCESS;
+}

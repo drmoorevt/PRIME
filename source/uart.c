@@ -1,5 +1,3 @@
-
-
 #include "stm32f2xx.h"
 #include "gpio.h"
 #include "time.h"
@@ -21,8 +19,12 @@ typedef struct
     uint32    resetBit;         // The bit mask used for resetting the UART
     IRQn_Type irqNumber;        // The irqNumber associated with this UART
   } periph;
-  PinConfig rxPin;              // GPIO configuration required for operating as a UART
-  PinConfig txPin;              // GPIO configuration required for operating as a UART
+
+  GPIO_TypeDef     *rxPinPort;
+  GPIO_InitTypeDef  rxPinConfig;
+
+  GPIO_TypeDef     *txPinPort;
+  GPIO_InitTypeDef  txPinConfig;
 } PortInfo;
 
 // CommStatus is maintained internally but toSend and toReceive are populated via appLayer requests
@@ -69,93 +71,74 @@ void UART_init(void)
 * RETURNS     PortInfo: The consolidated peripheral information
 * NOTES       None
 \*************************************************************************************************/
-static PortInfo UART_getPortInfo(UARTPort port)
+static boolean UART_getPortInfo(UARTPort port, PortInfo *portInfo)
 {
-  PortInfo portInfo = {0};
   switch (port)
   {
     case UART_PORT1:
-      portInfo.periph.pUART              = USART1;
-      portInfo.periph.pClockReg          = &RCC->APB2ENR;
-      portInfo.periph.clockEnableBit     = RCC_APB2ENR_USART1EN;
-      portInfo.periph.pResetReg          = &RCC->APB2RSTR;
-      portInfo.periph.resetBit           = RCC_APB2RSTR_USART1RST;
-      portInfo.periph.irqNumber          = USART1_IRQn;
-
-      portInfo.rxPin.pGPIOReg            = GPIOB;
-      portInfo.rxPin.altFuncOffset       = ALT_FUNC_LOW;
-      portInfo.rxPin.gpioClockEnableBit  = RCC_AHB1ENR_GPIOBEN;
-      portInfo.rxPin.modeClearMask       = GPIO_MODER_MODER7;
-      portInfo.rxPin.modeSetMask         = GPIO_MODER_MODER7_1;
-      portInfo.rxPin.outTypeClearMask    = GPIO_OTYPER_OT_7;
-      portInfo.rxPin.outTypeSetMask      = 0;
-      portInfo.rxPin.outSpeedClearMask   = GPIO_OSPEEDER_OSPEEDR7;
-      portInfo.rxPin.outSpeedSetMask     = 0;
-      portInfo.rxPin.pullUpDownClearMask = GPIO_PUPDR_PUPDR7;
-      portInfo.rxPin.pullUpDownSetMask   = 0;
-      portInfo.rxPin.altFuncClearMask    = 0xF0000000;
-      portInfo.rxPin.altFuncSetMask      = 0x70000000;
-
-      portInfo.txPin.pGPIOReg            = GPIOB;
-      portInfo.txPin.altFuncOffset       = ALT_FUNC_LOW;
-      portInfo.txPin.gpioClockEnableBit  = RCC_AHB1ENR_GPIOBEN;
-      portInfo.txPin.modeClearMask       = GPIO_MODER_MODER6;
-      portInfo.txPin.modeSetMask         = GPIO_MODER_MODER6_1;
-      portInfo.txPin.outTypeClearMask    = GPIO_OTYPER_OT_6;
-      portInfo.txPin.outTypeSetMask      = 0;
-      portInfo.txPin.outSpeedClearMask   = GPIO_OSPEEDER_OSPEEDR6;
-      portInfo.txPin.outSpeedSetMask     = 0;
-      portInfo.txPin.pullUpDownClearMask = GPIO_PUPDR_PUPDR6;
-      portInfo.txPin.pullUpDownSetMask   = 0;
-      portInfo.txPin.altFuncClearMask    = 0x0F000000;
-      portInfo.txPin.altFuncSetMask      = 0x07000000;
-      break;
-    case UART_PORT2:
+      portInfo->periph.pUART              = USART1;
+      portInfo->periph.pClockReg          = &RCC->APB2ENR;
+      portInfo->periph.clockEnableBit     = RCC_APB2ENR_USART1EN;
+      portInfo->periph.pResetReg          = &RCC->APB2RSTR;
+      portInfo->periph.resetBit           = RCC_APB2RSTR_USART1RST;
+      portInfo->periph.irqNumber          = USART1_IRQn;
+      portInfo->rxPinPort = GPIOB;
+      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_7);
+      portInfo->txPinPort = GPIOB;
+      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_6);
       break;
     case UART_PORT3:
+      portInfo->periph.pUART              = USART3;
+      portInfo->periph.pClockReg          = &RCC->APB1ENR;
+      portInfo->periph.clockEnableBit     = RCC_APB1ENR_USART3EN;
+      portInfo->periph.pResetReg          = &RCC->APB1RSTR;
+      portInfo->periph.resetBit           = RCC_APB1RSTR_USART3RST;
+      portInfo->periph.irqNumber          = USART3_IRQn;
+      portInfo->rxPinPort = GPIOB;
+      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_11);
+      portInfo->txPinPort = GPIOB;
+      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_10);
       break;
     case UART_PORT4:
+      portInfo->periph.pUART              = UART4;
+      portInfo->periph.pClockReg          = &RCC->APB1ENR;
+      portInfo->periph.clockEnableBit     = RCC_APB1ENR_UART4EN;
+      portInfo->periph.pResetReg          = &RCC->APB1RSTR;
+      portInfo->periph.resetBit           = RCC_APB1RSTR_UART4RST;
+      portInfo->periph.irqNumber          = UART4_IRQn;
+      portInfo->rxPinPort = GPIOC;
+      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_11);
+      portInfo->txPinPort = GPIOC;
+      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_10);
       break;
     case UART_PORT5:
-      portInfo.periph.pUART              = UART5;
-      portInfo.periph.pClockReg          = &RCC->APB1ENR;
-      portInfo.periph.clockEnableBit     = RCC_APB1ENR_UART5EN;
-      portInfo.periph.pResetReg          = &RCC->APB1RSTR;
-      portInfo.periph.resetBit           = RCC_APB1RSTR_UART5RST;
-      portInfo.periph.irqNumber          = UART5_IRQn;
-
-      portInfo.rxPin.pGPIOReg            = GPIOD;
-      portInfo.txPin.altFuncOffset       = ALT_FUNC_LOW;
-      portInfo.rxPin.gpioClockEnableBit  = RCC_AHB1ENR_GPIODEN;
-      portInfo.rxPin.modeClearMask       = GPIO_MODER_MODER2;
-      portInfo.rxPin.modeSetMask         = GPIO_MODER_MODER2_1;
-      portInfo.rxPin.outTypeClearMask    = GPIO_OTYPER_OT_2;
-      portInfo.rxPin.outTypeSetMask      = 0;
-      portInfo.rxPin.outSpeedClearMask   = GPIO_OSPEEDER_OSPEEDR2;
-      portInfo.rxPin.outSpeedSetMask     = 0;
-      portInfo.rxPin.pullUpDownClearMask = GPIO_PUPDR_PUPDR2;
-      portInfo.rxPin.pullUpDownSetMask   = 0;
-      portInfo.rxPin.altFuncClearMask    = 0x00000F00;
-      portInfo.rxPin.altFuncSetMask      = 0x00000800;
-
-      portInfo.txPin.pGPIOReg            = GPIOC;
-      portInfo.txPin.altFuncOffset       = ALT_FUNC_HIGH;
-      portInfo.txPin.gpioClockEnableBit  = RCC_AHB1ENR_GPIOCEN;
-      portInfo.txPin.modeClearMask       = GPIO_MODER_MODER12;
-      portInfo.txPin.modeSetMask         = GPIO_MODER_MODER12_1;
-      portInfo.txPin.outTypeClearMask    = GPIO_OTYPER_OT_12;
-      portInfo.txPin.outTypeSetMask      = 0;
-      portInfo.txPin.outSpeedClearMask   = GPIO_OSPEEDER_OSPEEDR12;
-      portInfo.txPin.outSpeedSetMask     = 0;
-      portInfo.txPin.pullUpDownClearMask = GPIO_PUPDR_PUPDR12;
-      portInfo.txPin.pullUpDownSetMask   = 0;
-      portInfo.txPin.altFuncClearMask    = 0x000F0000;
-      portInfo.txPin.altFuncSetMask      = 0x00080000;
+      portInfo->periph.pUART              = UART5;
+      portInfo->periph.pClockReg          = &RCC->APB1ENR;
+      portInfo->periph.clockEnableBit     = RCC_APB1ENR_UART5EN;
+      portInfo->periph.pResetReg          = &RCC->APB1RSTR;
+      portInfo->periph.resetBit           = RCC_APB1RSTR_UART5RST;
+      portInfo->periph.irqNumber          = UART5_IRQn;
+      portInfo->rxPinPort = GPIOD;
+      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_2);
+      portInfo->txPinPort = GPIOC;
+      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_12);
       break;
     case UART_PORT6:
+      portInfo->periph.pUART              = USART6;
+      portInfo->periph.pClockReg          = &RCC->APB2ENR;
+      portInfo->periph.clockEnableBit     = RCC_APB2ENR_USART6EN;
+      portInfo->periph.pResetReg          = &RCC->APB2RSTR;
+      portInfo->periph.resetBit           = RCC_APB2RSTR_USART6RST;
+      portInfo->periph.irqNumber          = USART6_IRQn;
+      portInfo->rxPinPort = GPIOC;
+      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_7);
+      portInfo->txPinPort = GPIOC;
+      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_6);
       break;
+    default:
+      return ERROR;
   }
-  return portInfo;
+  return SUCCESS;
 }
 
 /*************************************************************************************************\
@@ -167,41 +150,36 @@ static PortInfo UART_getPortInfo(UARTPort port)
 \*************************************************************************************************/
 boolean UART_openPort(UARTPort port, AppCommConfig config)
 {
+  PortInfo pi;
   UARTPort portToOpen = port;
-  PortInfo pi = UART_getPortInfo(port);
+
+  if (ERROR == UART_getPortInfo(port, &pi))
+    return ERROR; // Port does not exist
 
   if (sUART.port[portToOpen].isConfigured)
     return ERROR; // Port is already open, return error code
 
   /***** Configure the peripheral *****/
-  *pi.periph.pClockReg |= pi.periph.clockEnableBit;// Enable port clocks
-  *pi.periph.pResetReg |= pi.periph.resetBit;      // Reset the peripheral
-  *pi.periph.pResetReg &= ~pi.periph.resetBit;     // Then release it from reset
-  pi.periph.pUART->CR1 |= USART_CR1_RE;                  // Enable RX
-  pi.periph.pUART->CR1 |= USART_CR1_TE;                  // Enable TX
-  pi.periph.pUART->CR1 |= USART_CR1_RXNEIE;              // Enable the RX not empty int
-  pi.periph.pUART->CR1 &= ~USART_CR1_TXEIE;              // Disable the tx data reg empty int
-  pi.periph.pUART->CR1 &= ~USART_CR1_TCIE;               // Disable the tx complete int
-  pi.periph.pUART->CR2 &= 0xFFFF0000;                    // Unnecessary, but for consistency
-  pi.periph.pUART->CR3 &= 0xFFFF0000;                    // No flow control
-  pi.periph.pUART->BRR  = Uart_calcBaudRateRegister(config.UARTConfig.baud);
-  pi.periph.pUART->CR1 |= USART_CR1_UE;           // Enable UART
+  *pi.periph.pClockReg |= pi.periph.clockEnableBit; // Enable port clocks
+  *pi.periph.pResetReg |= pi.periph.resetBit;       // Reset the peripheral
+  *pi.periph.pResetReg &= ~pi.periph.resetBit;      // Then release it from reset
+   pi.periph.pUART->CR1 |= USART_CR1_RE;            // Enable RX
+   pi.periph.pUART->CR1 |= USART_CR1_TE;            // Enable TX
+   pi.periph.pUART->CR1 |= USART_CR1_RXNEIE;        // Enable the RX not empty int
+   pi.periph.pUART->CR1 &= ~USART_CR1_TXEIE;        // Disable the tx data reg empty int
+   pi.periph.pUART->CR1 &= ~USART_CR1_TCIE;         // Disable the tx complete int
+   pi.periph.pUART->CR2 &= 0xFFFF0000;              // Unnecessary, but for consistency
+   pi.periph.pUART->CR3 &= 0xFFFF0000;              // No flow control
+   pi.periph.pUART->BRR  = Uart_calcBaudRateRegister(config.UARTConfig.baud);
+   pi.periph.pUART->CR1 |= USART_CR1_UE;           // Enable UART
 
   /***** Configure the RX GPIO Pin *****/
-  SET_BIT(RCC->AHB1ENR, pi.rxPin.gpioClockEnableBit);  // Enable pin clocks
-  MODIFY_REG(pi.rxPin.pGPIOReg->MODER, pi.rxPin.modeClearMask, pi.rxPin.modeSetMask);
-  MODIFY_REG(pi.rxPin.pGPIOReg->OTYPER, pi.rxPin.modeClearMask, pi.rxPin.modeSetMask);
-  MODIFY_REG(pi.rxPin.pGPIOReg->OSPEEDR, pi.rxPin.modeClearMask, pi.rxPin.modeSetMask);
-  MODIFY_REG(pi.rxPin.pGPIOReg->PUPDR, pi.rxPin.modeClearMask, pi.rxPin.modeSetMask);
-  MODIFY_REG(pi.rxPin.pGPIOReg->AFR[pi.rxPin.altFuncOffset], pi.rxPin.altFuncClearMask, pi.rxPin.altFuncSetMask);
+  GPIO_setPortClock(pi.rxPinPort, TRUE); // Enable pin clocks
+  GPIO_configurePins(pi.rxPinPort, &pi.rxPinConfig);
 
   /***** Configure the TX GPIO Pin *****/
-  SET_BIT(RCC->AHB1ENR, pi.txPin.gpioClockEnableBit); // Enable pin clocks
-  MODIFY_REG(pi.txPin.pGPIOReg->MODER, pi.txPin.modeClearMask, pi.txPin.modeSetMask);
-  MODIFY_REG(pi.txPin.pGPIOReg->OTYPER, pi.txPin.modeClearMask, pi.txPin.modeSetMask);
-  MODIFY_REG(pi.txPin.pGPIOReg->OSPEEDR, pi.txPin.modeClearMask, pi.txPin.modeSetMask);
-  MODIFY_REG(pi.txPin.pGPIOReg->PUPDR, pi.txPin.modeClearMask, pi.txPin.modeSetMask);
-  MODIFY_REG(pi.txPin.pGPIOReg->AFR[pi.txPin.altFuncOffset], pi.txPin.altFuncClearMask, pi.txPin.altFuncSetMask);
+  GPIO_setPortClock(pi.txPinPort, TRUE); // Enable pin clocks
+  GPIO_configurePins(pi.txPinPort, &pi.txPinConfig);
 
   /***** Enable Interrupts *****/
   NVIC_EnableIRQ(pi.periph.irqNumber);
@@ -227,7 +205,6 @@ void UART_handleInterrupt(UARTPort port)
   USART_TypeDef *pUART    = sUART.port[port].pUART;
   CommStatus    *pStatus  = &sUART.port[port].commStatus;
   uint16    USART_STATUS  = pUART->SR;
-  uint8     dummy;
 
   if (READ_BIT(USART_STATUS, USART_SR_TXE)) // Transmit data register empty
   {
@@ -256,7 +233,7 @@ void UART_handleInterrupt(UARTPort port)
     }
     else
     { // App not ready for this reception, throw it away and disable the interrupt
-      dummy = pUART->DR;
+      sUART.port[port].appConfig.appNotifyUnexpectedReceive(pUART->DR);
       CLEAR_BIT(pUART->CR1, USART_CR1_RXNEIE); // Disable the rx data reg not empty int
     }
   }

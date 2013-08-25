@@ -337,6 +337,11 @@ void Tests_notifyTransmitComplete(uint32 numBytes)
   sTests.transmitting = FALSE;
 }
 
+void Tests_notifyUnexpectedReceive(uint8 byte)
+{
+  return;
+}
+
 void Tests_receiveData(uint16 numBytes, uint16 timeout)
 {
   sTests.receiving = TRUE;
@@ -353,7 +358,8 @@ boolean Tests_test7(void)
 {
   AppCommConfig comm5 = { {UART_BAUDRATE_115200, UART_FLOWCONTROL_NONE, TRUE, TRUE},
                            &sTests.rxBuffer[0], &Tests_notifyReceiveComplete,
-                           &sTests.txBuffer[0], &Tests_notifyTransmitComplete };
+                           &sTests.txBuffer[0], &Tests_notifyTransmitComplete,
+                                                &Tests_notifyUnexpectedReceive };
   uint8 testArray[18] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','\r','\n'};
 
   GPIO_init();

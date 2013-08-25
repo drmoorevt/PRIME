@@ -55,6 +55,7 @@ typedef struct
   void (*appNotifyReceiveComplete)(uint32);
   void *appTransmitBuffer;
   void (*appNotifyTransmitComplete)(uint32);
+  void (*appNotifyUnexpectedReceive)(uint8);
 } AppCommConfig;
 
 void UART_init(void);

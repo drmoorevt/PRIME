@@ -25,6 +25,23 @@ union
   uint8_t  asBytes[4];
 } portCLSB;
 
+struct
+{
+  uint8 currState;
+} sAnalog;
+
+/*************************************************************************************************\
+* FUNCTION    Analog_init
+* DESCRIPTION Initializes the pins and data structures required for analog measurement and control
+* PARAMETERS  None
+* RETURNS     Nothing
+* NOTES       None
+\*************************************************************************************************/
+void Analog_init(void)
+{
+
+}
+
 /*************************************************************************************************\
 * FUNCTION    Analog_analogSelect
 * DESCRIPTION Enables or disables a voltage domain
