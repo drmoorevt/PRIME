@@ -63,19 +63,21 @@ void GPIO_init(void)
 /**************************************************************************************************\
 * FUNCTION    GPIO_setPortClock
 * DESCRIPTION Enables or disables clocks to the specified port
-* PARAMETERS  GPIOx: The port to enable or disable
-*             clockState: The clocks will be enabled if clockState is TRUE, disabled otherwise
+* PARAMETERS  GPIO_InitStruct: Pointer to the buffer this function will be initializing
+*             pin: The pin to set
+*             portNum: The port
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-void GPIO_structInitUART(GPIO_InitTypeDef* GPIO_InitStruct, uint16 pin)
+void GPIO_structInitUART(GPIO_InitTypeDef* GPIO_InitStruct, uint16 pin, uint8 portNum)
 {
   /* Reset GPIO init structure parameters values */
-  GPIO_InitStruct->GPIO_Pin   = pin;
-  GPIO_InitStruct->GPIO_Mode  = GPIO_Mode_AF;
-  GPIO_InitStruct->GPIO_Speed = GPIO_Speed_2MHz;
-  GPIO_InitStruct->GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStruct->GPIO_PuPd  = GPIO_PuPd_NOPULL;
+  GPIO_InitStruct->GPIO_Pin      = pin;
+  GPIO_InitStruct->GPIO_Mode     = GPIO_Mode_AF;
+  GPIO_InitStruct->GPIO_Speed    = GPIO_Speed_2MHz;
+  GPIO_InitStruct->GPIO_OType    = GPIO_OType_PP;
+  GPIO_InitStruct->GPIO_PuPd     = GPIO_PuPd_NOPULL;
+  GPIO_InitStruct->GPIO_AltFunc  = (portNum < 3) ? GPIO_AF_UART1_3 : GPIO_AF_UART_4_6;
 }
 
 /**************************************************************************************************\
@@ -116,7 +118,7 @@ boolean GPIO_setPortClock(GPIO_TypeDef* GPIOx, boolean clockState)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-boolean GPIO_configurePins(GPIO_TypeDef* GPIOx, GPIO_InitTypeDef* GPIO_InitStruct)
+boolean GPIO_configurePins(GPIO_TypeDef *GPIOx, GPIO_InitTypeDef *GPIO_InitStruct)
 {
   uint32_t pinpos = 0x00, pos = 0x00 , currentpin = 0x00;
 
@@ -146,6 +148,21 @@ boolean GPIO_configurePins(GPIO_TypeDef* GPIOx, GPIO_InitTypeDef* GPIO_InitStruc
       /* Pull-up Pull down resistor configuration*/
       GPIOx->PUPDR &= ~(GPIO_PUPDR_PUPDR0 << ((uint16_t)pinpos * 2));
       GPIOx->PUPDR |= (((uint32_t)GPIO_InitStruct->GPIO_PuPd) << (pinpos * 2));
+
+      /* Alternate function configuration */
+      if (GPIO_InitStruct->GPIO_Mode == GPIO_Mode_AF)
+      {
+        if (pinpos < 8)
+        {
+          GPIOx->AFR[0] &= ~(0x0000000F << (pinpos*4));
+          GPIOx->AFR[0] |= GPIO_InitStruct->GPIO_AltFunc << (pinpos*4);
+        }
+        else
+        {
+          GPIOx->AFR[1] &= ~(0x0000000F << ((pinpos-8)*4));
+          GPIOx->AFR[1] |= GPIO_InitStruct->GPIO_AltFunc << ((pinpos-8)*4);
+        }
+      }
     }
   }
   return SUCCESS;

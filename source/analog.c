@@ -39,7 +39,18 @@ struct
 \*************************************************************************************************/
 void Analog_init(void)
 {
+  const uint16 ctrlPortC = GPIO_Pin_0|GPIO_Pin_1|GPIO_Pin_2|GPIO_Pin_3|GPIO_Pin_4|GPIO_Pin_5;
+  const uint16 ctrlPortE = GPIO_Pin_2;
+  GPIO_InitTypeDef analogCtrlPortC = {ctrlPortC, GPIO_Mode_OUT, GPIO_Speed_2MHz, GPIO_OType_PP,
+                                                 GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
+  GPIO_InitTypeDef analogCtrlPortE = {ctrlPortE, GPIO_Mode_OUT, GPIO_Speed_2MHz, GPIO_OType_PP,
+                                                 GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
 
+  GPIO_setPortClock(GPIOC, TRUE);
+  GPIO_configurePins(GPIOC, &analogCtrlPortC);
+
+  GPIO_setPortClock(GPIOE, TRUE);
+  GPIO_configurePins(GPIOE, &analogCtrlPortE);
 }
 
 /*************************************************************************************************\

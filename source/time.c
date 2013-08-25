@@ -1,7 +1,6 @@
 #include "stm32f2xx.h"
 #include "time.h"
 #include "util.h"
-#include "dac.h" // remove!
 
 #define FILE_ID TIME_C
 
@@ -52,45 +51,44 @@ void TIM1_UP_TIM10_IRQHandler(void)
   CLEAR_BIT(TIM2->SR, TIM_SR_UIF); // Clear the update interrupt flag
 }
 
-/******************************************************************************\
+/**************************************************************************************************\
 * FUNCTION			Time_initTimer2
 *	DESCRIPTION		Initializes timer2
-* PARAMETERS		none
+* PARAMETERS		reloadValue: The automatic reload value, when reached an IRQ is triggered
 * RETURN				none
-\******************************************************************************/
-void Time_initTimer2(void)
+\**************************************************************************************************/
+void Time_initTimer2(uint16 reloadValue)
 {
   RCC->APB1ENR |= RCC_APB1ENR_TIM2EN; // Turn on Timer2 clocks (60 MHz)
-  TIM2->ARR     = 60000; // Autoreload set to 1ms overflow
+  TIM2->ARR     = reloadValue;
   TIM2->CR1    |= (TIM_CR1_CEN | TIM_CR1_URS | TIM_CR1_ARPE);
   TIM2->CR2     = (0x00000000);
   TIM2->DIER   |= TIM_DIER_UIE; // Turn on the timer (update) interrupt
   NVIC_EnableIRQ(TIM2_IRQn);
   
+  // Clear all of the software timers
   Util_fillMemory((uint8*)&sTime, sizeof(sTime), 0x00);
 }
 
-/******************************************************************************\
-* FUNCTION			Time_initTimer3
-*	DESCRIPTION		Initializes timer3
-* PARAMETERS		none
-* RETURN				none
-\******************************************************************************/
-void Time_initTimer3(void)
+/**************************************************************************************************\
+* FUNCTION      Time_initTimer3
+* DESCRIPTION   Initializes timer3
+* PARAMETERS    reloadValue: The automatic reload value, when reached an IRQ is triggered
+* RETURN        none
+\**************************************************************************************************/
+void Time_initTimer3(uint16 reloadValue)
 {
-  RCC->APB1ENR |= RCC_APB1ENR_TIM2EN; // Turn on Timer2 clocks (60 MHz)
-  TIM2->ARR     = 60000; // Autoreload set to 1ms overflow
-  TIM2->CR1    |= (TIM_CR1_CEN | TIM_CR1_URS | TIM_CR1_ARPE);
-  TIM2->CR2     = (0x00000000);
-  TIM2->DIER   |= TIM_DIER_UIE; // Turn on the timer (update) interrupt
-  NVIC_EnableIRQ(TIM2_IRQn);
-  
-  Util_fillMemory((uint8*)&sTime, sizeof(sTime), 0x00);
+  RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Turn on Timer2 clocks (60 MHz)
+  TIM3->ARR     = reloadValue; // Autoreload set to 1ms overflow
+  TIM3->CR1    |= (TIM_CR1_CEN | TIM_CR1_URS | TIM_CR1_ARPE);
+  TIM3->CR2     = (0x00000000);
+  TIM3->DIER   |= TIM_DIER_UIE; // Turn on the timer (update) interrupt
+  NVIC_EnableIRQ(TIM3_IRQn);
 }
 
 /******************************************************************************\
-* FUNCTION			Time_timer2IRQ
-*	DESCRIPTION		Initializes timer2
+* FUNCTION			TIM2_IRQHandler
+*	DESCRIPTION		Handles interrupts originating from Timer2
 * PARAMETERS		none
 * RETURN				none
 \******************************************************************************/
@@ -98,6 +96,17 @@ void TIM2_IRQHandler(void)
 {
   Time_decrementTimerCounts();
   CLEAR_BIT(TIM2->SR, TIM_SR_UIF); // Clear the update interrupt flag
+}
+
+/******************************************************************************\
+* FUNCTION      TIM3_IRQHandler
+* DESCRIPTION   Handles interrupts originating from Timer3
+* PARAMETERS    none
+* RETURN        none
+\******************************************************************************/
+void TIM3_IRQHandler(void)
+{
+  CLEAR_BIT(TIM3->SR, TIM_SR_UIF); // Clear the update interrupt flag
 }
 
 /******************************************************************************\

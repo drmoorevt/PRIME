@@ -124,7 +124,7 @@ boolean Tests_test1(void)
 {
 	ADC_init();
   UART_init();
-  Time_initTimer2();
+  Time_initTimer2(60000); // 1ms tick
   ADC_StartCnv(TRUE, TRUE, TRUE);
   while(1)
   {
@@ -164,8 +164,8 @@ boolean Tests_test2(void)
 //  Analog_adjustDomain(EEPROM_DOMAIN, 0.3);
   
   Analog_adjustDomain(ANALOG_DOMAIN, 0.4);
-  
-  Time_initTimer2();
+
+  Time_initTimer2(60000); // 1ms tick
   EEPROM_init();
   
   Util_fillMemory(testBuffer, 128, 0xA5);
@@ -192,7 +192,7 @@ boolean Tests_test4(void)
 {
   GPIO_init();
   DAC_init();
-  Time_initTimer2();
+  Time_initTimer2(60000); // 1ms tick
   while(1)
   {
     Util_spinWait(1);
@@ -272,7 +272,7 @@ boolean Tests_test5(void)
   Analog_selectChannel(MCU_DOMAIN, TRUE);
   
   UART_init(UART_PORT5);
-  Time_initTimer2();
+  Time_initTimer2(60000); // 1ms tick
   
   ADC_StartCnv(TRUE, TRUE, TRUE);
   while(!ADC_isBufferFull(ADC_PORT1) && !ADC_isBufferFull(ADC_PORT2) && !ADC_isBufferFull(ADC_PORT3));
@@ -299,7 +299,7 @@ boolean Tests_test6(void)
   Analog_adjustDomain(EEPROM_DOMAIN, 0.3);
   
   UART_init();
-  Time_initTimer2();
+  Time_initTimer2(60000); // 1ms tick
   EEPROM_init();
     
   Util_fillMemory(testBuffer, 128, 0xA5); // try writing 0x00 next!
@@ -354,6 +354,7 @@ void Tests_sendData(uint16 numBytes)
   UART_sendData(UART_PORT5, numBytes);
 }
 
+// No longer need GPIO_init, pins are configured per module now
 boolean Tests_test7(void)
 {
   AppCommConfig comm5 = { {UART_BAUDRATE_115200, UART_FLOWCONTROL_NONE, TRUE, TRUE},
@@ -362,8 +363,7 @@ boolean Tests_test7(void)
                                                 &Tests_notifyUnexpectedReceive };
   uint8 testArray[18] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','\r','\n'};
 
-  GPIO_init();
-
+  Analog_init();
   Analog_setDomain(MCU_DOMAIN,    FALSE); // Does nothing
   Analog_setDomain(ANALOG_DOMAIN, TRUE);  // Enable analog domain
   Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
@@ -374,7 +374,7 @@ boolean Tests_test7(void)
   Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
 
   UART_init();
-  Time_initTimer2();
+  Time_initTimer2(60000); // 1ms tick
   UART_openPort(UART_PORT5, comm5);
 
   Util_copyMemory(&testArray[0], &sTests.txBuffer[0], 18);

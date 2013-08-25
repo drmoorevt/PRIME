@@ -40,7 +40,8 @@ typedef enum
 } HardTimer;
 
 void Time_initTimer1(void);
-void Time_initTimer2(void);
+void Time_initTimer2(uint16 reloadValue);
+void Time_initTimer3(uint16 reloadValue);
 void Time_startTimer(SoftTimer timer, uint16 numSubTicks);
 void Time_delay(uint16 numSubTicks);
 uint16 Time_getTimerValue(SoftTimer timer);

@@ -50,17 +50,38 @@ typedef enum
   GPIO_PuPd_DOWN   = 0x02
 } GPIOPuPd_TypeDef;
 
+typedef enum
+{
+  GPIO_AF_SYSTEM   = 0x00,
+  GPIO_AF_TIM1_2   = 0x01,
+  GPIO_AF_TIM3_5   = 0x02,
+  GPIO_AF_TIM8_11  = 0x03,
+  GPIO_AF_I2C1_3   = 0x04,
+  GPIO_AF_SPI1_2   = 0x05,
+  GPIO_AF_SPI3     = 0x06,
+  GPIO_AF_UART1_3  = 0x07,
+  GPIO_AF_UART_4_6 = 0x08,
+  GPIO_AF_CAN1_2   = 0x09,
+  GPIO_AF_OTGFSHS  = 0x0A,
+  GPIO_AF_ETH      = 0x0B,
+  GPIO_AF_FSMC     = 0x0C,
+  GPIO_AF_DCMI     = 0x0D,
+  GPIO_AF_RESVD    = 0x0E,
+  GPIO_AF_EVENT    = 0x0F
+} GPIOAltFunc_TypeDef;
+
 typedef struct
 {
-  uint32_t          GPIO_Pin;
-  GPIOMode_TypeDef  GPIO_Mode;
-  GPIOSpeed_TypeDef GPIO_Speed;
-  GPIOOType_TypeDef GPIO_OType;
-  GPIOPuPd_TypeDef  GPIO_PuPd;
+  uint32_t            GPIO_Pin;
+  GPIOMode_TypeDef    GPIO_Mode;
+  GPIOSpeed_TypeDef   GPIO_Speed;
+  GPIOOType_TypeDef   GPIO_OType;
+  GPIOPuPd_TypeDef    GPIO_PuPd;
+  GPIOAltFunc_TypeDef GPIO_AltFunc;
 } GPIO_InitTypeDef;
 
 void GPIO_init(void);
-void GPIO_structInitUART(GPIO_InitTypeDef *GPIO_InitStruct, uint16 pin);
+void GPIO_structInitUART(GPIO_InitTypeDef *GPIO_InitStruct, uint16 pin, uint8 portNum);
 boolean GPIO_setPortClock(GPIO_TypeDef *GPIOx, boolean clockState);
 boolean GPIO_configurePins(GPIO_TypeDef *GPIOx, GPIO_InitTypeDef *GPIO_InitStruct);
 

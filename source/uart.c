@@ -1,6 +1,5 @@
 #include "stm32f2xx.h"
 #include "gpio.h"
-#include "time.h"
 #include "util.h"
 #include "uart.h"
 
@@ -83,9 +82,9 @@ static boolean UART_getPortInfo(UARTPort port, PortInfo *portInfo)
       portInfo->periph.resetBit           = RCC_APB2RSTR_USART1RST;
       portInfo->periph.irqNumber          = USART1_IRQn;
       portInfo->rxPinPort = GPIOB;
-      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_7);
+      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_7, port);
       portInfo->txPinPort = GPIOB;
-      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_6);
+      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_6, port);
       break;
     case UART_PORT3:
       portInfo->periph.pUART              = USART3;
@@ -95,9 +94,9 @@ static boolean UART_getPortInfo(UARTPort port, PortInfo *portInfo)
       portInfo->periph.resetBit           = RCC_APB1RSTR_USART3RST;
       portInfo->periph.irqNumber          = USART3_IRQn;
       portInfo->rxPinPort = GPIOB;
-      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_11);
+      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_11, port);
       portInfo->txPinPort = GPIOB;
-      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_10);
+      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_10, port);
       break;
     case UART_PORT4:
       portInfo->periph.pUART              = UART4;
@@ -107,9 +106,9 @@ static boolean UART_getPortInfo(UARTPort port, PortInfo *portInfo)
       portInfo->periph.resetBit           = RCC_APB1RSTR_UART4RST;
       portInfo->periph.irqNumber          = UART4_IRQn;
       portInfo->rxPinPort = GPIOC;
-      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_11);
+      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_11, port);
       portInfo->txPinPort = GPIOC;
-      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_10);
+      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_10, port);
       break;
     case UART_PORT5:
       portInfo->periph.pUART              = UART5;
@@ -119,9 +118,9 @@ static boolean UART_getPortInfo(UARTPort port, PortInfo *portInfo)
       portInfo->periph.resetBit           = RCC_APB1RSTR_UART5RST;
       portInfo->periph.irqNumber          = UART5_IRQn;
       portInfo->rxPinPort = GPIOD;
-      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_2);
+      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_2, port);
       portInfo->txPinPort = GPIOC;
-      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_12);
+      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_12, port);
       break;
     case UART_PORT6:
       portInfo->periph.pUART              = USART6;
@@ -131,9 +130,9 @@ static boolean UART_getPortInfo(UARTPort port, PortInfo *portInfo)
       portInfo->periph.resetBit           = RCC_APB2RSTR_USART6RST;
       portInfo->periph.irqNumber          = USART6_IRQn;
       portInfo->rxPinPort = GPIOC;
-      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_7);
+      GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_7, port);
       portInfo->txPinPort = GPIOC;
-      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_6);
+      GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_6, port);
       break;
     default:
       return ERROR;
