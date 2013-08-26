@@ -462,8 +462,8 @@ uint8 EEPROM_eraseFlash(uint8 *pDest, SFBlockSize blockSize)
   SPI_write(writeBuf,numBytes);
   DESELECT_CHIP_SF();
 
-  // wait for Erase to complete, max 3.5 sec
-  return EEPROM_waitStateFlash(0, SF_BSY_bm, TIME_ONE_SECOND_IN_SUBTICKS * 10);
+  // wait for Erase to complete, max 3500ms
+  return EEPROM_waitStateFlash(0, SF_BSY_bm, 3500);
 }
 
 /*****************************************************************************\

@@ -3,20 +3,17 @@
 
 #include "types.h"
 
-#define TIME_ONE_SECOND_IN_SUBTICKS         ((uint8) 128)
-#define TIME_ONE_HUNDRED_MILLIS_IN_SUBTICKS ((uint8) 13)
-
 typedef enum
 {
   TIMER_DELAY = 0,            // Time_delay timer
   TIMER_UART,                 // used for protocol timeouts
   TIMER_SERIAL_MEM,           // eeprom/flash timer
-  TIMER_UART_INTERCHAR,       // c12.18 interchar uart timeout
+  TIMER_UART_INTERCHAR,       // interchar uart timeout
   TIMER_XBEE_UART_INTERCHAR,  // xbee interchar uart timeout
-  TIMER_RUN_HEALTH,           // health timer
   TIMER_ADE,                  // timer used with ade metering chip inf
   TIMER_XBEE,                 // generic xbee timer
   TIMER_XBEE_READ,            // xbee read timeout
+  TIMER_ONE_SECOND,           // One second timer
   TOTAL_NUM_TIMERS            
 } SoftTimer;
 
@@ -25,7 +22,7 @@ typedef enum
   TIMER0  = 0,
   TIMER1  = 1,
   TIMER2  = 2,
-  TIMER3  = 3,
+  TIMER3  = 3,  // Triggers analog sampling
   TIMER4  = 4,
   TIMER5  = 5,
   TIMER6  = 6,
@@ -39,6 +36,7 @@ typedef enum
   TIMER14 = 14
 } HardTimer;
 
+void Time_init(void);
 void Time_initTimer1(void);
 void Time_initTimer2(uint16 reloadValue);
 void Time_initTimer3(uint16 reloadValue);

@@ -6,8 +6,6 @@
 
 #define SECONDS_PER_DAY 86400
 #define SUB_TICKS_PER_SECOND 128
-#define MAX_SLOW_TIME_ADJUST 30
-#define ADJUST_STEP 16
 
 #define ENABLE_TIME_INTERRUPT()  do {TIM2->DIER |=  TIM_DIER_UIE;} while(0)
 #define DISABLE_TIME_INTERRUPT() do {TIM2->DIER &= ~TIM_DIER_UIE;} while(0)
@@ -22,7 +20,21 @@ struct
   uint16 adjustCyclesRemaining;
 } sTime;
 
+void Time_initSysTick(void);
 void Time_decrementTimerCounts(void);
+
+/******************************************************************************\
+* FUNCTION      Time_init
+* DESCRIPTION   Initializes the 1ms SysTick and clears all software timers
+* PARAMETERS    none
+* RETURN        none
+\******************************************************************************/
+void Time_init(void)
+{
+  // Clear all of the software timers
+  Util_fillMemory((uint8*)&sTime, sizeof(sTime), 0x00);
+  Time_initSysTick();
+}
 
 /******************************************************************************\
 * FUNCTION			Time_initTimer1
@@ -65,9 +77,17 @@ void Time_initTimer2(uint16 reloadValue)
   TIM2->CR2     = (0x00000000);
   TIM2->DIER   |= TIM_DIER_UIE; // Turn on the timer (update) interrupt
   NVIC_EnableIRQ(TIM2_IRQn);
-  
-  // Clear all of the software timers
-  Util_fillMemory((uint8*)&sTime, sizeof(sTime), 0x00);
+}
+
+/******************************************************************************\
+* FUNCTION      TIM2_IRQHandler
+* DESCRIPTION   Handles interrupts originating from Timer2
+* PARAMETERS    none
+* RETURN        none
+\******************************************************************************/
+void TIM2_IRQHandler(void)
+{
+  CLEAR_BIT(TIM2->SR, TIM_SR_UIF); // Clear the update interrupt flag
 }
 
 /**************************************************************************************************\
@@ -76,26 +96,17 @@ void Time_initTimer2(uint16 reloadValue)
 * PARAMETERS    reloadValue: The automatic reload value, when reached an IRQ is triggered
 * RETURN        none
 \**************************************************************************************************/
+#define TIM_TRGOSource_Update              ((uint16_t)0x0020)
 void Time_initTimer3(uint16 reloadValue)
 {
   RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Turn on Timer2 clocks (60 MHz)
   TIM3->ARR     = reloadValue; // Autoreload set to 1ms overflow
   TIM3->CR1    |= (TIM_CR1_CEN | TIM_CR1_URS | TIM_CR1_ARPE);
-  TIM3->CR2     = (0x00000000);
+  TIM3->CR2    &= (~TIM_CR2_MMS);
+  TIM3->CR2    |= (TIM_TRGOSource_Update);
   TIM3->DIER   |= TIM_DIER_UIE; // Turn on the timer (update) interrupt
+//  TIM3->SR      = 0;
   NVIC_EnableIRQ(TIM3_IRQn);
-}
-
-/******************************************************************************\
-* FUNCTION			TIM2_IRQHandler
-*	DESCRIPTION		Handles interrupts originating from Timer2
-* PARAMETERS		none
-* RETURN				none
-\******************************************************************************/
-void TIM2_IRQHandler(void)
-{
-  Time_decrementTimerCounts();
-  CLEAR_BIT(TIM2->SR, TIM_SR_UIF); // Clear the update interrupt flag
 }
 
 /******************************************************************************\
@@ -106,6 +117,7 @@ void TIM2_IRQHandler(void)
 \******************************************************************************/
 void TIM3_IRQHandler(void)
 {
+  TIM3->EGR = TIM_EGR_TG;
   CLEAR_BIT(TIM3->SR, TIM_SR_UIF); // Clear the update interrupt flag
 }
 
@@ -211,13 +223,13 @@ void Time_handleSubTick(void)
   Time_decrementTimerCounts();
 }
 
-/******************************************************************************\
+/**************************************************************************************************\
 * FUNCTION			Time_isSecondBoundary
 *	DESCRIPTION		Checks to see if we have crossed a second boundary.  This clears
 *               the boundary flag
 * PARAMETERS		none
 * RETURN				none
-\******************************************************************************/
+\**************************************************************************************************/
 boolean Time_isSecondBoundary(void)
 {
   boolean isSecondBoundary;
@@ -229,23 +241,23 @@ boolean Time_isSecondBoundary(void)
   return isSecondBoundary;
 }
 
-/******************************************************************************\
+/**************************************************************************************************\
 * FUNCTION			Time_incrementSystemTime
 *	DESCRIPTION		Adds 1 second to the system time
 * PARAMETERS		none
 * RETURN				none
-\******************************************************************************/
+\**************************************************************************************************/
 void Time_incrementSystemTime(void)
 {
   sTime.systemTime++;
 }
 
-/******************************************************************************\
+/**************************************************************************************************\
 * FUNCTION			Time_decrementTimerCounts
 *	DESCRIPTION		Decrements all timers that aren't already 0
 * PARAMETERS		none
 * RETURN				none
-\******************************************************************************/
+\**************************************************************************************************/
 void Time_decrementTimerCounts(void)
 {
   uint8 i;
@@ -255,3 +267,30 @@ void Time_decrementTimerCounts(void)
       sTime.timers[i]--;
   }
 }
+
+/**************************************************************************************************\
+* FUNCTION      SysTick_Handler
+* DESCRIPTION   Interrupt that fires on the 1ms system tick
+* PARAMETERS    none
+* RETURN        none
+* NOTES         These
+\**************************************************************************************************/
+void SysTick_Handler(void)
+{
+  Time_decrementTimerCounts(); // No need to disable interrupts, this one is high priority
+}
+
+/**************************************************************************************************\
+* FUNCTION      Time_initSysTick
+* DESCRIPTION   Initializes the 1ms system tick timer
+* PARAMETERS    none
+* RETURN        none
+* NOTES         These
+\**************************************************************************************************/
+static void Time_initSysTick(void)
+{
+  const uint32 SysTick_CLKSource_HCLK_Div8 = 0xFFFFFFFB; // Per StdLib
+  SysTick->CTRL &= SysTick_CLKSource_HCLK_Div8; // Set the clock source (per clock spreadsheet)
+  SysTick_Config(15000); // (15Mhz / 15000) = 1ms
+}
+

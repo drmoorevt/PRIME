@@ -11,5 +11,6 @@ boolean Tests_test4(void);
 boolean Tests_test5(void);
 boolean Tests_test6(void);
 boolean Tests_test7(void);
+boolean Tests_test8(void);
 
 #endif // TESTS_H

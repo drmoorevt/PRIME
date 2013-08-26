@@ -2,12 +2,12 @@
 #define TYPES_H
 
 #include <stdint.h>
+#include "stm32f2xx.h"
 
 #define FALSE 0
 #define TRUE  1
 
-#define ERROR   1
-#define SUCCESS 0
+#define NULL ((void *)0)
 
 typedef uint8_t  boolean;
 typedef uint8_t  uint8;

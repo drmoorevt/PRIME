@@ -11,107 +11,133 @@
 
 #define FILE_ID TESTS_C
 
-/*****************************************************************************\
-* FUNCTION    Tests_test0
-* DESCRIPTION 
-* PARAMETERS  None
-* RETURNS     Nothing
-* NOTES       None
-\*****************************************************************************/
-/*
-boolean Tests_test0(void)
+#define TESTS_MAX_SAMPLES (4096)
+typedef struct
 {
-  uint16_t i, adcResult[18];
-  char adcResultChars[18][5];
-  float adcVolts[18];
-  char adcVoltsChars[18][5];
-  float resolution;
-  uint8_t adcNum;
+  uint8   channel;
+  uint16  numSamples;
+  boolean isSampling;
+  __attribute__((aligned)) uint16 adcBuffer[TESTS_MAX_SAMPLES];
+} Samples;
 
-  ADC_init();
-  
-  while (1)
+static struct
+{
+  Samples adc1;
+  Samples adc2;
+  Samples adc3;
+  struct
   {
-    Util_spinWait(2000000);
-    
-    if ((GPIOC->IDR & 0x00008000) == 0)
-      adcNum = 1;
-    else if ((GPIOC->IDR & 0x00004000) == 0)
-      adcNum = 2;
-    else if ((GPIOC->IDR & 0x00002000) == 0)
-      adcNum = 3;
-    
-    UART_putChar(UART_PORT5, '\f');
-    for (i=0; i < 18; i++)
-    {
-      adcResult[i] = Main_getADC(adcNum, i);
-      adcResultChars[i][4] = ((adcResult[i] % 10     ) / 1     ) + 0x30;
-      adcResultChars[i][3] = ((adcResult[i] % 100    ) / 10    ) + 0x30;
-      adcResultChars[i][2] = ((adcResult[i] % 1000   ) / 100   ) + 0x30;
-      adcResultChars[i][1] = ((adcResult[i] % 10000  ) / 1000  ) + 0x30;
-      adcResultChars[i][0] = ((adcResult[i] % 100000 ) / 10000 ) + 0x30;
-      if (i < 10)
-        UART_putChar(UART_PORT5, i + 0x30);
-      else
-        UART_putChar(UART_PORT5, i + 0x41 - 10);
-      UART_putChar(UART_PORT5, ':');
-      UART_putChar(UART_PORT5, ' ');
-      UART_putChar(UART_PORT5, adcResultChars[i][0]);
-      UART_putChar(UART_PORT5, adcResultChars[i][1]);
-      UART_putChar(UART_PORT5, adcResultChars[i][2]);
-      UART_putChar(UART_PORT5, adcResultChars[i][3]);
-      UART_putChar(UART_PORT5, adcResultChars[i][4]);
-      UART_putChar(UART_PORT5, ' ');
-      UART_putChar(UART_PORT5, '=');
-      UART_putChar(UART_PORT5, ' ');
-      
-      resolution = 1.2 / (float)adcResult[6];
-      adcVolts[i] = adcResult[i] * resolution * 10000;
-      adcVoltsChars[i][4] = (((uint16_t)adcVolts[i] % 10     ) /  1    ) + 0x30;
-      adcVoltsChars[i][3] = (((uint16_t)adcVolts[i] % 100    ) / 10    ) + 0x30;
-      adcVoltsChars[i][2] = (((uint16_t)adcVolts[i] % 1000   ) / 100   ) + 0x30;
-      adcVoltsChars[i][1] = (((uint16_t)adcVolts[i] % 10000  ) / 1000  ) + 0x30;
-      adcVoltsChars[i][0] = (((uint16_t)adcVolts[i] % 100000 ) / 10000 ) + 0x30;
-      UART_putChar(UART_PORT5, adcVoltsChars[i][0]);
-      UART_putChar(UART_PORT5, '.');
-      UART_putChar(UART_PORT5, adcVoltsChars[i][1]);
-      UART_putChar(UART_PORT5, adcVoltsChars[i][2]);
-      UART_putChar(UART_PORT5, adcVoltsChars[i][3]);
-      UART_putChar(UART_PORT5, adcVoltsChars[i][4]);
-      UART_putChar(UART_PORT5, 'v');
-      
-      if (i == 16)
-      {
-        UART_putChar(UART_PORT5, ' ');
-        UART_putChar(UART_PORT5, '=');
-        UART_putChar(UART_PORT5, ' ');
-        adcVolts[i] /= 10000;
-        adcVolts[i] -= .76;
-        adcVolts[i] = 25 + (adcVolts[i] / .0025);
-        adcVolts[i] *= 10000;
-        adcVoltsChars[i][4] = (((uint32_t)adcVolts[i] % 10     ) /  1    ) + 0x30;
-        adcVoltsChars[i][3] = (((uint32_t)adcVolts[i] % 100    ) / 10    ) + 0x30;
-        adcVoltsChars[i][2] = (((uint32_t)adcVolts[i] % 1000   ) / 100   ) + 0x30;
-        adcVoltsChars[i][1] = (((uint32_t)adcVolts[i] % 10000  ) / 1000  ) + 0x30;
-        adcVoltsChars[i][0] = (((uint32_t)adcVolts[i] % 100000 ) / 10000 ) + 0x30;
-        UART_putChar(UART_PORT5, adcVoltsChars[i][0]);
-        UART_putChar(UART_PORT5, adcVoltsChars[i][1]);
-        UART_putChar(UART_PORT5, '.');
-        UART_putChar(UART_PORT5, adcVoltsChars[i][2]);
-        UART_putChar(UART_PORT5, adcVoltsChars[i][3]);
-        UART_putChar(UART_PORT5, adcVoltsChars[i][4]);
-        UART_putChar(UART_PORT5, 'd');
-        UART_putChar(UART_PORT5, 'e');
-        UART_putChar(UART_PORT5, 'g');
-        UART_putChar(UART_PORT5, 'C');
-      }
-      
-      UART_putChar(UART_PORT5, '\r');
-      UART_putChar(UART_PORT5, '\n');
-    }
+    boolean receiving;
+    boolean transmitting;
+    __attribute__((aligned)) uint8 rxBuffer[256];
+    __attribute__((aligned)) uint8 txBuffer[256];
+  } comms;
+} sTests;
+
+void Tests_init(void)
+{
+  Util_fillMemory(&sTests, sizeof(sTests), 0x00);
+}
+
+void Tests_notifyReceiveComplete(uint32 numBytes)
+{
+  sTests.comms.receiving = FALSE;
+}
+
+void Tests_notifyTransmitComplete(uint32 numBytes)
+{
+  sTests.comms.transmitting = FALSE;
+}
+
+void Tests_notifyUnexpectedReceive(uint8 byte)
+{
+  return;
+}
+
+void Tests_receiveData(uint16 numBytes, uint16 timeout)
+{
+  sTests.comms.receiving = TRUE;
+  UART_receiveData(UART_PORT5, numBytes);
+}
+
+void Tests_sendData(uint16 numBytes)
+{
+  sTests.comms.transmitting = TRUE;
+  UART_sendData(UART_PORT5, numBytes);
+}
+
+void Tests_notifyConversionComplete(uint8 chan, uint16 numSamples)
+{
+  switch (chan)
+  {
+    case 3:
+      sTests.adc1.channel = chan;
+      sTests.adc1.isSampling = FALSE;
+      sTests.adc1.numSamples = numSamples;
+      break;
+    case 6:
+      sTests.adc2.channel = chan;
+      sTests.adc2.isSampling = FALSE;
+      sTests.adc2.numSamples = numSamples;
+      break;
+    case 17:
+      sTests.adc3.channel = chan;
+      sTests.adc3.isSampling = FALSE;
+      sTests.adc3.numSamples = numSamples;
+      break;
+    default:
+      break;
   }
 }
-*/
+
+void Tests_sendADCdata(void)
+{
+  uint16 i = 0, j = 0;
+
+  sTests.comms.txBuffer[i++] = '\f';
+  sTests.comms.txBuffer[i++] = '\r';
+  sTests.comms.txBuffer[i++] = '\n';
+  sTests.comms.txBuffer[i++] = 'T';
+  sTests.comms.txBuffer[i++] = '1';
+  sTests.comms.txBuffer[i++] = ' ';
+  sTests.comms.txBuffer[i++] = 'V';
+  sTests.comms.txBuffer[i++] = 'r';
+  sTests.comms.txBuffer[i++] = ' ';
+  sTests.comms.txBuffer[i++] = 'T';
+  sTests.comms.txBuffer[i++] = '1';
+  sTests.comms.txBuffer[i++] = ' ';
+  sTests.comms.txBuffer[i++] = 'B';
+  sTests.comms.txBuffer[i++] = 'I';
+  sTests.comms.txBuffer[i++] = ' ';
+  sTests.comms.txBuffer[i++] = 'T';
+  sTests.comms.txBuffer[i++] = '1';
+  sTests.comms.txBuffer[i++] = ' ';
+  sTests.comms.txBuffer[i++] = 'B';
+  sTests.comms.txBuffer[i++] = 'O';
+  sTests.comms.txBuffer[i++] = '\r';
+  sTests.comms.txBuffer[i++] = '\n';
+
+  Tests_sendData(6);
+  while(sTests.comms.transmitting); // wait to send out our test buffer
+  
+  for (i = 0; i < TESTS_MAX_SAMPLES; i++)
+  {
+    j = 0;
+    Util_uint16ToASCII(sTests.adc1.adcBuffer[i], (char*)&sTests.comms.txBuffer[j]);
+    j += 5;
+    sTests.comms.txBuffer[j++] = ' ';
+    Util_uint16ToASCII(sTests.adc2.adcBuffer[i], (char*)&sTests.comms.txBuffer[j]);
+    j += 5;
+    sTests.comms.txBuffer[j++] = ' ';
+    Util_uint16ToASCII(sTests.adc3.adcBuffer[i], (char*)&sTests.comms.txBuffer[j]);
+    j += 5;
+    sTests.comms.txBuffer[j++] = '\r';
+    sTests.comms.txBuffer[j++] = '\n';
+    
+    Tests_sendData(j);
+    while(sTests.comms.transmitting); // wait to send out our test buffer
+  }
+}
 
 /*****************************************************************************\
 * FUNCTION    Tests_test1
@@ -122,10 +148,9 @@ boolean Tests_test0(void)
 \*****************************************************************************/
 boolean Tests_test1(void)
 {
+  Time_init();
 	ADC_init();
   UART_init();
-  Time_initTimer2(60000); // 1ms tick
-  ADC_StartCnv(TRUE, TRUE, TRUE);
   while(1)
   {
     Util_spinWait(2000000);
@@ -158,14 +183,13 @@ boolean Tests_test1(void)
 boolean Tests_test2(void)
 {
   uint8 testBuffer[128];
-  
+  Time_init();
   DAC_init();
 //  Analog_setDomain(EEPROM_DOMAIN, TRUE);
 //  Analog_adjustDomain(EEPROM_DOMAIN, 0.3);
   
   Analog_adjustDomain(ANALOG_DOMAIN, 0.4);
 
-  Time_initTimer2(60000); // 1ms tick
   EEPROM_init();
   
   Util_fillMemory(testBuffer, 128, 0xA5);
@@ -190,97 +214,14 @@ boolean Tests_test3(void)
 
 boolean Tests_test4(void)
 {
+  Time_init();
   GPIO_init();
   DAC_init();
-  Time_initTimer2(60000); // 1ms tick
   while(1)
   {
     Util_spinWait(1);
   }
 }
-
-
-void Tests_sendADCdata(void)
-{/*
-  uint16 i;
-  char outChars[40];
-  ADCControl* pAdc1 = ADC_getControlPtr(ADC_PORT1);
-  ADCControl* pAdc2 = ADC_getControlPtr(ADC_PORT2);
-  ADCControl* pAdc3 = ADC_getControlPtr(ADC_PORT3);
-  FullDuplexPort* sp = UART_getPortPtr(UART_PORT5);
-  
-  i = 0;
-  sp->tx.txBuffer[i++] = '\f';
-  sp->tx.txBuffer[i++] = '\r';
-  sp->tx.txBuffer[i++] = '\n';
-  sp->tx.txBuffer[i++] = 'T';
-  sp->tx.txBuffer[i++] = '1';
-  sp->tx.txBuffer[i++] = ' ';
-  sp->tx.txBuffer[i++] = 'V';
-  sp->tx.txBuffer[i++] = 'r';
-  sp->tx.txBuffer[i++] = ' ';
-  sp->tx.txBuffer[i++] = 'T';
-  sp->tx.txBuffer[i++] = '1';
-  sp->tx.txBuffer[i++] = ' ';
-  sp->tx.txBuffer[i++] = 'B';
-  sp->tx.txBuffer[i++] = 'I';
-  sp->tx.txBuffer[i++] = ' ';
-  sp->tx.txBuffer[i++] = 'T';
-  sp->tx.txBuffer[i++] = '1';
-  sp->tx.txBuffer[i++] = ' ';
-  sp->tx.txBuffer[i++] = 'B';
-  sp->tx.txBuffer[i++] = 'O';
-  sp->tx.txBuffer[i++] = '\r';
-  sp->tx.txBuffer[i++] = '\n';
-  
-  UART_sendData(UART_PORT5, i);
-  while (!UART_isTxBufIdle(UART_PORT5));
-  
-  for (i = 0; i < ADC_BUFFER_SIZE; i++)
-  { 
-    Util_uint16ToASCII(pAdc1->adcBuffer[1][i], &outChars[0]);
-    outChars[5] = ' ';
-    Util_uint16ToASCII(pAdc1->adcBuffer[0][i], &outChars[6]);
-    outChars[11] = ' ';
-    Util_uint16ToASCII(pAdc2->adcBuffer[1][i], &outChars[12]);
-    outChars[17] = ' ';
-    Util_uint16ToASCII(pAdc2->adcBuffer[0][i], &outChars[18]);
-    outChars[23] = ' ';
-    Util_uint16ToASCII(pAdc3->adcBuffer[1][i], &outChars[24]);
-    outChars[29] = ' ';
-    Util_uint16ToASCII(pAdc3->adcBuffer[0][i], &outChars[30]);
-    outChars[35] = '\r';
-    outChars[36] = '\n';
-    Util_copyMemory((uint8*)&outChars[0], sp->tx.txBuffer, 37);
-    UART_sendData(UART_PORT5, 37);
-    while (!UART_isTxBufIdle(UART_PORT5));
-  }
-  */
-}
-
-
-/*****************************************************************************\
-* FUNCTION    Tests_test5
-* DESCRIPTION 
-* PARAMETERS  None
-* RETURNS     Nothing
-* NOTES       None
-\*****************************************************************************/
-/*
-boolean Tests_test5(void)
-{ 
-  Analog_selectChannel(MCU_DOMAIN, TRUE);
-  
-  UART_init(UART_PORT5);
-  Time_initTimer2(60000); // 1ms tick
-  
-  ADC_StartCnv(TRUE, TRUE, TRUE);
-  while(!ADC_isBufferFull(ADC_PORT1) && !ADC_isBufferFull(ADC_PORT2) && !ADC_isBufferFull(ADC_PORT3));
-  Tests_sendADCdata();
-  
-  while(1);
-}
-*/
 
 /*****************************************************************************\
 * FUNCTION    Tests_test6
@@ -292,6 +233,7 @@ boolean Tests_test5(void)
 boolean Tests_test6(void)
 { 
   uint8 testBuffer[128];
+  Time_init();
   ADC_init();
   DAC_init();
   
@@ -299,70 +241,27 @@ boolean Tests_test6(void)
   Analog_adjustDomain(EEPROM_DOMAIN, 0.3);
   
   UART_init();
-  Time_initTimer2(60000); // 1ms tick
   EEPROM_init();
     
-  Util_fillMemory(testBuffer, 128, 0xA5); // try writing 0x00 next!
+  Util_fillMemory(testBuffer, 128, 0xA5); // @AGD: try writing 0x00 next!
   
-  TIM2->CNT = 0;
-  
-  ADC_StartCnv(TRUE, TRUE, TRUE);
+  // START SAMPLER HERE
   EEPROM_writeEE(testBuffer, 0, 128);
-  while(!ADC_isBufferFull(ADC_PORT1) && !ADC_isBufferFull(ADC_PORT2) && !ADC_isBufferFull(ADC_PORT3));
+  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
   Tests_sendADCdata();
   
   while(1);
 }
 
-static struct
-{
-  boolean receiving;
-  boolean transmitting;
-  __attribute__((aligned)) uint8 rxBuffer[256];
-  __attribute__((aligned)) uint8 txBuffer[256];
-} sTests;
-
-void Tests_init(void)
-{
-  Util_fillMemory(&sTests, sizeof(sTests), 0x00);
-}
-
-void Tests_notifyReceiveComplete(uint32 numBytes)
-{
-  sTests.receiving = FALSE;
-}
-
-void Tests_notifyTransmitComplete(uint32 numBytes)
-{
-  sTests.transmitting = FALSE;
-}
-
-void Tests_notifyUnexpectedReceive(uint8 byte)
-{
-  return;
-}
-
-void Tests_receiveData(uint16 numBytes, uint16 timeout)
-{
-  sTests.receiving = TRUE;
-  UART_receiveData(UART_PORT5, numBytes);
-}
-
-void Tests_sendData(uint16 numBytes)
-{
-  sTests.transmitting = TRUE;
-  UART_sendData(UART_PORT5, numBytes);
-}
-
-// No longer need GPIO_init, pins are configured per module now
 boolean Tests_test7(void)
 {
   AppCommConfig comm5 = { {UART_BAUDRATE_115200, UART_FLOWCONTROL_NONE, TRUE, TRUE},
-                           &sTests.rxBuffer[0], &Tests_notifyReceiveComplete,
-                           &sTests.txBuffer[0], &Tests_notifyTransmitComplete,
-                                                &Tests_notifyUnexpectedReceive };
+                           &sTests.comms.rxBuffer[0], &Tests_notifyReceiveComplete,
+                           &sTests.comms.txBuffer[0], &Tests_notifyTransmitComplete,
+                                                      &Tests_notifyUnexpectedReceive };
   uint8 testArray[18] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','\r','\n'};
 
+  Time_init();
   Analog_init();
   Analog_setDomain(MCU_DOMAIN,    FALSE); // Does nothing
   Analog_setDomain(ANALOG_DOMAIN, TRUE);  // Enable analog domain
@@ -374,24 +273,100 @@ boolean Tests_test7(void)
   Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
 
   UART_init();
-  Time_initTimer2(60000); // 1ms tick
   UART_openPort(UART_PORT5, comm5);
 
-  Util_copyMemory(&testArray[0], &sTests.txBuffer[0], 18);
+  Util_copyMemory(&testArray[0], &sTests.comms.txBuffer[0], 18);
 
   while(1)
   {
     Tests_receiveData(2, 0);
-    while(sTests.receiving); // wait for one incoming byte
+    while(sTests.comms.receiving); // wait for one incoming byte
 
     // Echo two bytes at a time
-    sTests.txBuffer[0] = '\r';
-    sTests.txBuffer[1] = '\n';
-    Util_copyMemory(&sTests.rxBuffer[0], &sTests.txBuffer[2], 2);
-    sTests.txBuffer[4] = '\r';
-    sTests.txBuffer[5] = '\n';
+    sTests.comms.txBuffer[0] = '\r';
+    sTests.comms.txBuffer[1] = '\n';
+    Util_copyMemory(&sTests.comms.rxBuffer[0], &sTests.comms.txBuffer[2], 2);
+    sTests.comms.txBuffer[4] = '\r';
+    sTests.comms.txBuffer[5] = '\n';
 
     Tests_sendData(6);
-    while(sTests.transmitting); // wait to send out our test buffer
+    while(sTests.comms.transmitting); // wait to send out our test buffer
   }
 }
+
+boolean Tests_test8(void)
+{
+  AppADCConfig adc1Config = {0};
+  AppADCConfig adc2Config = {0};
+  AppADCConfig adc3Config = {0};
+  AppCommConfig comm5 = { {UART_BAUDRATE_115200, UART_FLOWCONTROL_NONE, TRUE, TRUE},
+                           &sTests.comms.rxBuffer[0], &Tests_notifyReceiveComplete,
+                           &sTests.comms.txBuffer[0], &Tests_notifyTransmitComplete,
+                                                      &Tests_notifyUnexpectedReceive };
+  // ADC1 sampling intVref
+  adc1Config.adcConfig.scan               = FALSE;
+  adc1Config.adcConfig.continuous         = FALSE;
+  adc1Config.adcConfig.numChannels        = 1;
+  adc1Config.adcConfig.chan[0].chanNum    = ADC_Channel_Vrefint;
+  adc1Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_144Cycles;
+  adc1Config.appSampleBuffer              = &sTests.adc1.adcBuffer[0];
+  adc1Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  // ADC2 sampling extVref
+  adc2Config.adcConfig.scan               = FALSE;
+  adc2Config.adcConfig.continuous         = FALSE;
+  adc2Config.adcConfig.numChannels        = 1;
+  adc2Config.adcConfig.chan[0].chanNum    = ADC_Channel_6;
+  adc2Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_144Cycles;
+  adc2Config.appSampleBuffer              = &sTests.adc2.adcBuffer[0];
+  adc2Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  // ADC3 sampling domain voltage
+  adc3Config.adcConfig.scan               = FALSE;
+  adc3Config.adcConfig.continuous         = FALSE;
+  adc3Config.adcConfig.numChannels        = 1;
+  adc3Config.adcConfig.chan[0].chanNum    = ADC_Channel_1;
+  adc3Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_144Cycles;
+  adc3Config.appSampleBuffer              = &sTests.adc3.adcBuffer[0];
+  adc3Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  Time_init();
+  Analog_init();
+
+  Analog_setDomain(MCU_DOMAIN,    FALSE); // Does nothing
+  Analog_setDomain(ANALOG_DOMAIN, TRUE);  // Enable analog domain
+  Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
+  Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
+  Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
+  Analog_setDomain(EEPROM_DOMAIN, FALSE); // Disable SPI domain
+  Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
+  Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
+  Analog_selectChannel(EEPROM_DOMAIN, TRUE);
+
+  ADC_init();
+  ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
+  ADC_openPort(ADC_PORT2, adc2Config);
+  ADC_openPort(ADC_PORT3, adc3Config);
+  ADC_getSamples(ADC_PORT1, TESTS_MAX_SAMPLES); // Notify App when sample buffer is full
+  ADC_getSamples(ADC_PORT2, TESTS_MAX_SAMPLES);
+  ADC_getSamples(ADC_PORT3, TESTS_MAX_SAMPLES);
+  ADC_startSampleTimer(TIMER3, 6000);     // Start timer3 triggered ADCs at 100us sample rate
+
+  // Complete the samples
+  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
+
+  Analog_setDomain(COMMS_DOMAIN,  TRUE); // Enable comms domain
+  UART_init();
+  UART_openPort(UART_PORT5, comm5);
+
+  Tests_receiveData(2, 0);
+  while(sTests.comms.receiving); // wait for two incoming bytes
+
+  Tests_sendADCdata();
+
+  while(1);
+}
+
+
+
+
