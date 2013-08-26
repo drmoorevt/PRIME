@@ -1,7 +1,7 @@
 *.ini
-object/*.*
-list/*.*
-/environment/*.bak
-/environment/*.dep
-/environment/*.drmoore
-/environment/*.uvopt
+/Firmware/object/*.*
+/Firmware/list/*.*
+/Firmware/environment/*.bak
+/Firmware/environment/*.dep
+/Firmware/environment/*.drmoore
+/Firmware/environment/*.uvopt
