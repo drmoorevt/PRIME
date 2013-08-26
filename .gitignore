@@ -5,3 +5,5 @@
 /Firmware/environment/*.dep
 /Firmware/environment/*.drmoore
 /Firmware/environment/*.uvopt
+
+/Software/RetrieveTestData/*.asv
