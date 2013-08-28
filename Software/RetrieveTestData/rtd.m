@@ -6,6 +6,8 @@ fopen(s);
 
 fprintf(s,'Test09'); % Execute test
 
+% wait for test data, timeout after 5 seconds, print byteReceived as it
+% comes in
 i = 0;
 while((s.BytesAvailable < 24576) && (i < 50))
     i = i + 1;

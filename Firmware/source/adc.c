@@ -194,7 +194,7 @@ void ADC_ClearITPendingBit(ADC_TypeDef* ADCx, uint16_t ADC_IT);
 * DESCRIPTION Initializes the analog to digital converters to their default state
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       None
+* NOTES       ADCClk is @30MHz without modifying any prescalars (APB2/2)
 \**************************************************************************************************/
 void ADC_init(void)
 {
