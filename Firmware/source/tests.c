@@ -34,6 +34,18 @@ static struct
   } comms;
 } sTests;
 
+boolean Tests_test0(void);
+boolean Tests_test1(void);
+boolean Tests_test2(void);
+boolean Tests_test3(void);
+boolean Tests_test4(void);
+boolean Tests_test5(void);
+boolean Tests_test6(void);
+boolean Tests_test7(void);
+boolean Tests_test8(void);
+boolean Tests_test9(void);
+uint8 Tests_parseTestCommand(void);
+
 void Tests_init(void)
 {
   Util_fillMemory(&sTests, sizeof(sTests), 0x00);
@@ -90,13 +102,77 @@ void Tests_notifyConversionComplete(uint8 chan, uint16 numSamples)
   }
 }
 
+void Tests_run(void)
+{
+  AppCommConfig comm5 = { {UART_BAUDRATE_115200, UART_FLOWCONTROL_NONE, TRUE, TRUE},
+                           &sTests.comms.rxBuffer[0], &Tests_notifyReceiveComplete,
+                           &sTests.comms.txBuffer[0], &Tests_notifyTransmitComplete,
+                                                      &Tests_notifyUnexpectedReceive };
+
+  Analog_setDomain(COMMS_DOMAIN,  TRUE); // Enable comms domain
+  UART_openPort(UART_PORT5, comm5);
+
+  while(1)
+  {
+    Tests_receiveData(7, 0);
+    while(sTests.comms.receiving);
+    switch (Tests_parseTestCommand())
+    {
+      case 8:
+        Tests_test8();
+        break;
+      case 9:
+        Tests_test9();
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+uint8 Tests_parseTestCommand(void)
+{
+  if (sTests.comms.rxBuffer[0] == 'T' &&
+      sTests.comms.rxBuffer[1] == 'e' &&
+      sTests.comms.rxBuffer[2] == 's' &&
+      sTests.comms.rxBuffer[3] == 't')
+  {
+    return ((sTests.comms.rxBuffer[4] - 0x30) * 10) + (sTests.comms.rxBuffer[5] - 0x30);
+  }
+  else
+    return 0xFF;
+}
+
+void Tests_sendBinaryResults(void)
+{
+  uint16 i = 0;
+  for (i = 0; i < TESTS_MAX_SAMPLES; i++)
+  {
+    sTests.comms.txBuffer[1] = sTests.adc1.adcBuffer[i] >> 8;
+    sTests.comms.txBuffer[0] = sTests.adc1.adcBuffer[i];
+    Tests_sendData(2);
+    while(sTests.comms.transmitting); // wait to send out our test buffer
+  }
+  for (i = 0; i < TESTS_MAX_SAMPLES; i++)
+  {
+    sTests.comms.txBuffer[1] = sTests.adc2.adcBuffer[i] >> 8;
+    sTests.comms.txBuffer[0] = sTests.adc2.adcBuffer[i];
+    Tests_sendData(2);
+    while(sTests.comms.transmitting); // wait to send out our test buffer
+  }
+  for (i = 0; i < TESTS_MAX_SAMPLES; i++)
+  {
+    sTests.comms.txBuffer[1] = sTests.adc3.adcBuffer[i] >> 8;
+    sTests.comms.txBuffer[0] = sTests.adc3.adcBuffer[i];
+    Tests_sendData(2);
+    while(sTests.comms.transmitting); // wait to send out our test buffer
+  }
+}
+
 void Tests_sendADCdata(void)
 {
   uint16 i = 0, j = 0;
 
-  sTests.comms.txBuffer[i++] = '\f';
-  sTests.comms.txBuffer[i++] = '\r';
-  sTests.comms.txBuffer[i++] = '\n';
   sTests.comms.txBuffer[i++] = 'T';
   sTests.comms.txBuffer[i++] = '1';
   sTests.comms.txBuffer[i++] = ' ';
@@ -114,14 +190,18 @@ void Tests_sendADCdata(void)
   sTests.comms.txBuffer[i++] = ' ';
   sTests.comms.txBuffer[i++] = 'B';
   sTests.comms.txBuffer[i++] = 'O';
-  sTests.comms.txBuffer[i++] = '\r';
-  sTests.comms.txBuffer[i++] = '\n';
+//  sTests.comms.txBuffer[i++] = '\r';
+//  sTests.comms.txBuffer[i++] = '\n';
+  sTests.comms.txBuffer[i++] = '\0';
 
-  Tests_sendData(6);
+  Tests_sendData(i);
   while(sTests.comms.transmitting); // wait to send out our test buffer
   
   for (i = 0; i < TESTS_MAX_SAMPLES; i++)
-  {
+  {  
+    Tests_receiveData(2, 0);
+    while(sTests.comms.receiving); // wait for two incoming bytes
+    
     j = 0;
     Util_uint16ToASCII(sTests.adc1.adcBuffer[i], (char*)&sTests.comms.txBuffer[j]);
     j += 5;
@@ -131,8 +211,9 @@ void Tests_sendADCdata(void)
     sTests.comms.txBuffer[j++] = ' ';
     Util_uint16ToASCII(sTests.adc3.adcBuffer[i], (char*)&sTests.comms.txBuffer[j]);
     j += 5;
-    sTests.comms.txBuffer[j++] = '\r';
-    sTests.comms.txBuffer[j++] = '\n';
+//    sTests.comms.txBuffer[j++] = '\r';
+//    sTests.comms.txBuffer[j++] = '\n';
+    sTests.comms.txBuffer[j++] = '\0';
     
     Tests_sendData(j);
     while(sTests.comms.transmitting); // wait to send out our test buffer
@@ -299,10 +380,7 @@ boolean Tests_test8(void)
   AppADCConfig adc1Config = {0};
   AppADCConfig adc2Config = {0};
   AppADCConfig adc3Config = {0};
-  AppCommConfig comm5 = { {UART_BAUDRATE_115200, UART_FLOWCONTROL_NONE, TRUE, TRUE},
-                           &sTests.comms.rxBuffer[0], &Tests_notifyReceiveComplete,
-                           &sTests.comms.txBuffer[0], &Tests_notifyTransmitComplete,
-                                                      &Tests_notifyUnexpectedReceive };
+
   // ADC1 sampling intVref
   adc1Config.adcConfig.scan               = FALSE;
   adc1Config.adcConfig.continuous         = FALSE;
@@ -330,9 +408,6 @@ boolean Tests_test8(void)
   adc3Config.appSampleBuffer              = &sTests.adc3.adcBuffer[0];
   adc3Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
 
-  Time_init();
-  Analog_init();
-
   Analog_setDomain(MCU_DOMAIN,    FALSE); // Does nothing
   Analog_setDomain(ANALOG_DOMAIN, TRUE);  // Enable analog domain
   Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
@@ -343,7 +418,6 @@ boolean Tests_test8(void)
   Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
   Analog_selectChannel(EEPROM_DOMAIN, TRUE);
 
-  ADC_init();
   ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
   ADC_openPort(ADC_PORT2, adc2Config);
   ADC_openPort(ADC_PORT3, adc3Config);
@@ -355,18 +429,70 @@ boolean Tests_test8(void)
   // Complete the samples
   while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
 
-  Analog_setDomain(COMMS_DOMAIN,  TRUE); // Enable comms domain
-  UART_init();
-  UART_openPort(UART_PORT5, comm5);
+  Tests_sendBinaryResults();
 
-  Tests_receiveData(2, 0);
-  while(sTests.comms.receiving); // wait for two incoming bytes
-
-  Tests_sendADCdata();
-
-  while(1);
+  return SUCCESS;
 }
 
+boolean Tests_test9(void)
+{
+  AppADCConfig adc1Config = {0};
+  AppADCConfig adc2Config = {0};
+  AppADCConfig adc3Config = {0};
 
+  // ADC1 sampling intVref
+  adc1Config.adcConfig.scan               = FALSE;
+  adc1Config.adcConfig.continuous         = FALSE;
+  adc1Config.adcConfig.numChannels        = 1;
+  adc1Config.adcConfig.chan[0].chanNum    = ADC_Channel_Vrefint;
+  adc1Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_480Cycles;
+  adc1Config.appSampleBuffer              = &sTests.adc1.adcBuffer[0];
+  adc1Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  // ADC2 sampling extVref
+  adc2Config.adcConfig.scan               = FALSE;
+  adc2Config.adcConfig.continuous         = FALSE;
+  adc2Config.adcConfig.numChannels        = 1;
+  adc2Config.adcConfig.chan[0].chanNum    = ADC_Channel_2;
+  adc2Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_480Cycles;
+  adc2Config.appSampleBuffer              = &sTests.adc2.adcBuffer[0];
+  adc2Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  // ADC3 sampling domain voltage
+  adc3Config.adcConfig.scan               = FALSE;
+  adc3Config.adcConfig.continuous         = FALSE;
+  adc3Config.adcConfig.numChannels        = 1;
+  adc3Config.adcConfig.chan[0].chanNum    = ADC_Channel_3;
+  adc3Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_480Cycles;
+  adc3Config.appSampleBuffer              = &sTests.adc3.adcBuffer[0];
+  adc3Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  Analog_setDomain(MCU_DOMAIN,    FALSE); // Does nothing
+  Analog_setDomain(ANALOG_DOMAIN, TRUE);  // Enable analog domain
+  Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
+  Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
+  Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
+  Analog_setDomain(EEPROM_DOMAIN, FALSE); // Disable SPI domain
+  Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
+  Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
+  Analog_selectChannel(EEPROM_DOMAIN, TRUE);
+
+  ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
+  ADC_openPort(ADC_PORT2, adc2Config);
+  ADC_openPort(ADC_PORT3, adc3Config);
+  ADC_getSamples(ADC_PORT1, TESTS_MAX_SAMPLES); // Notify App when sample buffer is full
+  ADC_getSamples(ADC_PORT2, TESTS_MAX_SAMPLES);
+  ADC_getSamples(ADC_PORT3, TESTS_MAX_SAMPLES);
+  ADC_startSampleTimer(TIMER3, 1200);     // Start timer3 triggered ADCs at 20us sample rate
+
+  EEPROM_writeEE(&sTests.comms.rxBuffer[0], (uint8*)0, 128);
+
+  // Complete the samples
+  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
+
+  Tests_sendBinaryResults();
+
+  return SUCCESS;
+}
 
 
