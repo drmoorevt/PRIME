@@ -1,6 +1,7 @@
 #include "stm32f2xx.h"
 #include "time.h"
 #include "util.h"
+#include "tests.h"
 
 #define FILE_ID TIME_C
 
@@ -34,6 +35,16 @@ void Time_init(void)
   // Clear all of the software timers
   Util_fillMemory((uint8*)&sTime, sizeof(sTime), 0x00);
   Time_initSysTick();
+}
+
+void Time_stopTimer(HardTimer timer)
+{
+  switch (timer)
+  {
+    case TIMER3:
+      TIM3->CR1 &= (~TIM_CR1_CEN);
+      break;
+  }
 }
 
 /******************************************************************************\
@@ -99,7 +110,7 @@ void TIM2_IRQHandler(void)
 #define TIM_TRGOSource_Update              ((uint16_t)0x0020)
 void Time_initTimer3(uint16 reloadValue)
 {
-  RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Turn on Timer2 clocks (60 MHz)
+  RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Turn on Timer3 clocks (60 MHz)
   TIM3->ARR     = reloadValue; // Autoreload set to 1ms overflow
   TIM3->CR1    |= (TIM_CR1_CEN | TIM_CR1_URS | TIM_CR1_ARPE);
   TIM3->CR2    &= (~TIM_CR2_MMS);
@@ -119,6 +130,7 @@ void TIM3_IRQHandler(void)
 {
   TIM3->EGR = TIM_EGR_TG;
   CLEAR_BIT(TIM3->SR, TIM_SR_UIF); // Clear the update interrupt flag
+  Tests_notifySampleTrigger();
 }
 
 /******************************************************************************\

@@ -15,9 +15,11 @@ int main(void)
   ADC_init();
   UART_init();
   Analog_init();
-  Tests_init();
   EEPROM_init();
+  Tests_init();
 
-  Tests_run();
-  while(1); // Should never get here!
+  while(1)
+  {
+    Tests_run();
+  }
 }

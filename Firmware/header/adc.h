@@ -69,5 +69,6 @@ void ADC_init(void);
 void ADC_getSamples(ADCPort port, uint16 numSamples);
 void ADC_openPort(ADCPort port, AppADCConfig adcConfig);
 boolean ADC_startSampleTimer(HardTimer timer, uint16 reloadVal);
+boolean ADC_stopSampleTimer(HardTimer timer);
 
 #endif // ADC_H

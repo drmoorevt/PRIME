@@ -257,7 +257,7 @@ void ADC_openPort(ADCPort port, AppADCConfig appConfig)
   adcInit.ADC_ExternalTrigConv     = ADC_ExternalTrigConv_T3_TRGO;
   ADC_configureADC(sADC.adc[port].pADC, &adcInit);
   ADC_RegularChannelConfig(sADC.adc[port].pADC, pCfg->chan[0].chanNum, 1, pCfg->chan[0].sampleTime);
-  sADC.adc[ADC_PORT1].adcStatus.currChan = pCfg->chan[0].chanNum;
+  sADC.adc[port].adcStatus.currChan = pCfg->chan[0].chanNum;
 
   ADC_CommonStructInit(&adcCommonInit);
   ADC_CommonInit(&adcCommonInit);
@@ -444,6 +444,20 @@ boolean ADC_startSampleTimer(HardTimer timer, uint16 reloadVal)
     default:      // Cannot use any other timer for gating ADCs
       return ERROR;
   }
+  return SUCCESS;
+}
+
+/**************************************************************************************************\
+* FUNCTION    ADC_stopSampleTimer
+* DESCRIPTION Starts one of the sample timers that can (if configured) trigger and ADC conversion
+* PARAMETERS  timer: The timer to start
+*             reloadVal: The reload value for the specified timer
+* RETURNS     Nothing
+* NOTES       None
+\**************************************************************************************************/
+boolean ADC_stopSampleTimer(HardTimer timer)
+{
+  Time_stopTimer(timer);
   return SUCCESS;
 }
 

@@ -36,6 +36,34 @@ uint8 Util_checksum(const uint8 *pData, uint8 nbrBytes)
 }  // Util_checksum
 
 /**************************************************************************************************\
+* FUNCTION     Util_calcCRC16
+* DESCRIPTION  Computes the 16bit CRC of pData given the specified CRC polynomial.
+* PARAMETERS   pData      - pointer to data
+*              nbrBytes   - length of the data
+*              polynomial - The CRC polynomial to use. Typically IEEE or CCITT.
+* RETURNS      The CRC of pData
+* NOTES        None
+\**************************************************************************************************/
+uint16 Util_calcCRC16(uint8 *pData, uint16 numBytes){
+   uint16 crc = 0xFFFF, i;
+   uint8 dataByte, j, flag;
+
+   for (j = 0; j < numBytes; j++)  // Examine the input bytes one by one
+   {
+      dataByte= *pData++;
+      for (i = 0; i < 8; i++)  // Shift in each bit in the data byte
+      {
+         flag = (crc ^ dataByte) & 0x0001;
+         crc       >>= 1;
+         dataByte  >>= 1;
+         if (flag)
+           crc ^= 0xA001;
+      }
+   }
+   return(crc);
+}
+
+/**************************************************************************************************\
 * FUNCTION     Util_compareMemory
 * DESCRIPTION  Little endian comparison of two memory locations
 * PARAMETERS   pLeft: The left value to compare

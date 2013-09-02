@@ -37,6 +37,7 @@ typedef enum
 } HardTimer;
 
 void Time_init(void);
+void Time_stopTimer(HardTimer timer);
 void Time_initTimer1(void);
 void Time_initTimer2(uint16 reloadValue);
 void Time_initTimer3(uint16 reloadValue);
