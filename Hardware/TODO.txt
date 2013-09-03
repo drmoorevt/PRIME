@@ -1,0 +1,14 @@
+1) Connect MCU Vref to output of opamp with the input being a 3.0v reference selectable to a divide by 2.
+2) Buffer the output of the analog switches
+3) Use the HC versions of analog switches, not HCT
+4) Connect bulk caps to V internal regulator pins
+5) Divide BUSVout by 2 before measuring
+6) Decouple LED circuit and Domain Enable circuit
+7) Fix indcutor size
+8) Use larger terminal blocks
+9) Fix RS232 pinout
+10) Space out resistor pads (USB, EEPROM circuits)
+11) JTAG connector pins need more length
+12) Test Boost converters
+13) Find smaller schotkey diode
+14) Determine necessity of pullups/downs
