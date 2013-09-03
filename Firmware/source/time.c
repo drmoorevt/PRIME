@@ -137,7 +137,7 @@ void TIM3_IRQHandler(void)
 * FUNCTION			Time_startTimer
 *	DESCRIPTION		Initializes timers
 * PARAMETERS		timer - index of timer
-*               numSubTicks - number of subticks to run timer
+*               milliSeconds - number of milliseconds to run timer
 * RETURN				none
 \******************************************************************************/
 void Time_startTimer(SoftTimer timer, uint16 milliSeconds)
@@ -301,8 +301,6 @@ void SysTick_Handler(void)
 \**************************************************************************************************/
 static void Time_initSysTick(void)
 {
-  const uint32 SysTick_CLKSource_HCLK_Div8 = 0xFFFFFFFB; // Per StdLib
-  SysTick->CTRL &= SysTick_CLKSource_HCLK_Div8; // Set the clock source (per clock spreadsheet)
-  SysTick_Config(15000); // (15Mhz / 15000) = 1ms
+  SysTick_Config(60000); // (60Mhz / 60000) = 1ms
 }
 

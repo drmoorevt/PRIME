@@ -1,4 +1,5 @@
 #include "stm32f2xx.h"
+#include "gpio.h"
 #include "spi.h"
 
 #define FILE_ID SPI_C
@@ -13,10 +14,19 @@
 \*****************************************************************************/
 void SPI_init(void)
 {
-  RCC->APB2RSTR |=  RCC_APB1RSTR_SPI2RST;
-  RCC->APB2RSTR &= ~RCC_APB1RSTR_SPI2RST;
-  RCC->APB1ENR |= RCC_APB1ENR_SPI2EN; // Enable SPI peripheral clocks
-  GPIOB->MODER  = ((GPIOB->MODER & 0x03FFFFFF) | 0xA8000000); //  Alternate function SPI2
+  const uint16 spiPinsPortB = (GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15);
+
+  // Initialize all potential ADC pins to analog configuration
+  GPIO_InitTypeDef spiCtrlPortB = {spiPinsPortB, GPIO_Mode_AF, GPIO_Speed_25MHz, GPIO_OType_PP,
+                                                 GPIO_PuPd_NOPULL, GPIO_AF_SPI1_2 };
+  GPIO_setPortClock(GPIOB, TRUE);
+  GPIO_configurePins(GPIOB, &spiCtrlPortB);
+
+  RCC->APB2RSTR |=  (RCC_APB1RSTR_SPI2RST);  // Reset the SPI peripheral
+  RCC->APB2RSTR &=  (~RCC_APB1RSTR_SPI2RST); // Release the SPI peripheral from reset
+
+  RCC->APB1ENR  |= (RCC_APB1ENR_SPI2EN); // Enable SPI peripheral clocks
+
   // Using 2MHz for baud rate until we start modulating voltage 30MHz / 2Mhz = 15
 //  SPI2->CR1 |= (SPI_CR1_SPE | SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_BR);
   SPI2->CR1 |= (SPI_CR1_SPE | SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_BR_2);

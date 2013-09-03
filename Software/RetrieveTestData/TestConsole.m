@@ -16,7 +16,11 @@ function success = TestConsole(CommPort)
         return;
     end
  
-    [chans,data] = rtd(s, 9);
+    try
+        [chans,data] = rtd(s, 9);
+    catch ME
+        ME
+    end
     fclose(s);
     delete(s);
     clear s;

@@ -1,5 +1,6 @@
 #include "stm32f2xx.h"
 #include "adc.h"
+#include "dac.h"
 #include "analog.h"
 #include "eeprom.h"
 #include "gpio.h"
@@ -13,8 +14,9 @@ int main(void)
 
   Time_init();
   ADC_init();
-  UART_init();
+  DAC_init();
   Analog_init();
+  UART_init();
   EEPROM_init();
   Tests_init();
 

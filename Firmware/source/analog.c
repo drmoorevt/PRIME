@@ -30,6 +30,9 @@ struct
   uint8 currState;
 } sAnalog;
 
+#define SELECT_DOMLEN()   do { GPIOE->BSRRH |= 0x00000004; } while (0)
+#define DESELECT_DOMLEN() do { GPIOE->BSRRL |= 0x00000004; } while (0)
+
 /*************************************************************************************************\
 * FUNCTION    Analog_init
 * DESCRIPTION Initializes the pins and data structures required for analog measurement and control
@@ -39,12 +42,18 @@ struct
 \*************************************************************************************************/
 void Analog_init(void)
 {
+  const uint16 ctrlPortB = GPIO_Pin_0;
   const uint16 ctrlPortC = GPIO_Pin_0|GPIO_Pin_1|GPIO_Pin_2|GPIO_Pin_3|GPIO_Pin_4|GPIO_Pin_5;
   const uint16 ctrlPortE = GPIO_Pin_2;
+
+  GPIO_InitTypeDef analogCtrlPortB = {ctrlPortB, GPIO_Mode_OUT, GPIO_Speed_2MHz, GPIO_OType_PP,
+                                                 GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
   GPIO_InitTypeDef analogCtrlPortC = {ctrlPortC, GPIO_Mode_OUT, GPIO_Speed_2MHz, GPIO_OType_PP,
                                                  GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
   GPIO_InitTypeDef analogCtrlPortE = {ctrlPortE, GPIO_Mode_OUT, GPIO_Speed_2MHz, GPIO_OType_PP,
                                                  GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
+  GPIO_setPortClock(GPIOB, TRUE);
+  GPIO_configurePins(GPIOB, &analogCtrlPortB);
 
   GPIO_setPortClock(GPIOC, TRUE);
   GPIO_configurePins(GPIOC, &analogCtrlPortC);
@@ -108,9 +117,9 @@ void Analog_setDomain(VoltageDomain domain, boolean state)
     case BOOST_DOMAIN6:
     case BOOST_DOMAIN7:
       Analog_selectChannel(domain, state);
-      GPIOE->BSRRH = 0x0004;  // DOMLEN low to latch in new vals
+      SELECT_DOMLEN();        // DOMLEN low to latch in new vals
       Util_spinWait(12000);   // 100us to latch in the new value
-      GPIOE->BSRRL = 0x0004;  // DOMLEN high so we can otherwise use the bus
+      DESELECT_DOMLEN();      // DOMLEN high so we can otherwise use the bus
       Util_spinWait(12000);   // 100us to let the DOMLEN latch in
       break;
   }

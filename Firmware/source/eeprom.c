@@ -1,4 +1,5 @@
 #include "stm32f2xx.h"
+#include "gpio.h"
 #include "types.h"
 #include "spi.h"
 #include "time.h"
@@ -33,6 +34,10 @@
 
 #define SELECT_CHIP_EE1()   do { GPIOB->BSRRH |= 0x00000100; } while (0)
 #define DESELECT_CHIP_EE1() do { GPIOB->BSRRL |= 0x00000100; } while (0)
+
+#define SELECT_EE_HOLD()    do { GPIOB->BSRRH |= 0x00000004; } while (0)
+#define DESELECT_EE_HOLD()  do { GPIOB->BSRRL |= 0x00000004; } while (0)
+
 #define SELECT_CHIP_SF()    do { GPIOB->BSRRH |= 0x00000010; } while (0)
 #define DESELECT_CHIP_SF()  do { GPIOB->BSRRL |= 0x00000010; } while (0)
 
@@ -55,9 +60,19 @@ static const uint8 sFillBuf[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
 void EEPROM_init(void)
 {
+  const uint16 eeCtrlPins = (GPIO_Pin_2 | GPIO_Pin_5 | GPIO_Pin_8);
+
+  // Initialize the EEPROM chip select and hold lines
+  GPIO_InitTypeDef eeCtrlPortB = {eeCtrlPins, GPIO_Mode_OUT, GPIO_Speed_25MHz, GPIO_OType_PP,
+                                              GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
+  GPIO_setPortClock(GPIOB, TRUE);
+  GPIO_configurePins(GPIOB, &eeCtrlPortB);
+  DESELECT_CHIP_EE0();
+  DESELECT_CHIP_EE1();
+  DESELECT_EE_HOLD();
+
   Util_fillMemory((uint8*)&sEEPROM, sizeof(sEEPROM), 0x00);
   sEEPROM.state = EEPROM_IDLE;
-  GPIOB->BSRRL = 0x0004;
   SPI_init();
 }
 
@@ -100,7 +115,7 @@ void EEPROM_readEE(uint8 *pSrc, uint8 *pDest, uint16 length)
 * PARAMETERS  pSrc - pointer to source RAM buffer
 *             pDest - pointer to destination in EEPROM
 *             length - number of bytes to write
-* RETURNS     true if the write suceeds
+* RETURNS     true if the write succeeds
 \*****************************************************************************/
 boolean EEPROM_writeEE(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
@@ -119,9 +134,9 @@ boolean EEPROM_writeEE(uint8 *pSrc, uint8 *pDest, uint16 length)
     chipOffset = (uint16)((uint32)pDest);
     retries = EE_NUM_RETRIES;
 
-    sEEPROM.state = EEPROM_WRITING;
     do
     {
+      sEEPROM.state = EEPROM_WRITING;
       SELECT_CHIP_EE0();
 
        // enable EEPROM
@@ -139,15 +154,11 @@ boolean EEPROM_writeEE(uint8 *pSrc, uint8 *pDest, uint16 length)
       SELECT_CHIP_EE0();
       SPI_write(writeBuf,ADDRBYTES_EE + 1);
       SPI_write(pSrc,numBytes);
-
       DESELECT_CHIP_EE0();
 
-      // wait for write to complete, set a timeout of 2 ticks which will be between 8 and 16 msec
-      // so we won't watchdog if the eeprom gets stuck.
+      // wait for write to complete, set a timeout of 10 ticks which will be between 10-11ms
       sEEPROM.state = EEPROM_WAITING;
       Time_startTimer(TIMER_SERIAL_MEM, 10);
-      
-      /*
       do
       {
         writeBuf[0] = OP_READ_STATUS;
@@ -156,18 +167,15 @@ boolean EEPROM_writeEE(uint8 *pSrc, uint8 *pDest, uint16 length)
         SPI_read(writeBuf,1);
         DESELECT_CHIP_EE0();
       } while((writeBuf[0] & 0x01) && Time_getTimerValue(TIMER_SERIAL_MEM));
-      */
-      
-      while(Time_getTimerValue(TIMER_SERIAL_MEM));
       
       sEEPROM.state = EEPROM_READBACK;
       EEPROM_readEE((uint8*)chipOffset, readBuf, numBytes);
 
       writeFailed = (Util_compareMemory(pSrc, readBuf, (uint8)numBytes) != 0);
-    }while(writeFailed && --retries != 0);
+    } while (writeFailed && (retries-- != 0));
        
-    pSrc += numBytes;   // update source pointer
-    pDest +=  numBytes; // update destination pointer
+    pSrc   += numBytes;  // update source pointer
+    pDest  +=  numBytes; // update destination pointer
     length -= numBytes;
   }
   sEEPROM.state = EEPROM_IDLE;
