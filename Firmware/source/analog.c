@@ -25,9 +25,17 @@ union
   uint8_t  asBytes[4];
 } portCLSB;
 
+typedef struct
+{
+  boolean isEnabled;
+  float voltSetting;
+  float voltActual;
+} DomainStatus;
+
+
 struct
 {
-  uint8 currState;
+  DomainStatus domain[NUM_ANALOG_DOMAINS];
 } sAnalog;
 
 #define SELECT_DOMLEN()   do { GPIOE->BSRRH |= 0x00000004; } while (0)

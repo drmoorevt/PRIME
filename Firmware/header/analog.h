@@ -20,7 +20,8 @@ typedef enum
   BOOST_DOMAIN4 = 12,
   BOOST_DOMAIN5 = 13,
   BOOST_DOMAIN6 = 14,
-  BOOST_DOMAIN7 = 15
+  BOOST_DOMAIN7 = 15,
+  NUM_ANALOG_DOMAINS
 } VoltageDomain;
 
 void Analog_init(void);

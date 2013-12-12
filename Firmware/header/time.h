@@ -10,7 +10,7 @@ typedef enum
   TIMER_SERIAL_MEM,           // eeprom/flash timer
   TIMER_UART_INTERCHAR,       // interchar uart timeout
   TIMER_XBEE_UART_INTERCHAR,  // xbee interchar uart timeout
-  TIMER_ADE,                  // timer used with ade metering chip inf
+  TIMER_ANALOG,               // reserving timer for analog module
   TIMER_XBEE,                 // generic xbee timer
   TIMER_XBEE_READ,            // xbee read timeout
   TIMER_ONE_SECOND,           // One second timer

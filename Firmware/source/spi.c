@@ -29,8 +29,12 @@ void SPI_init(void)
 
   // Using 2MHz for baud rate until we start modulating voltage 30MHz / 2Mhz = 15
 //  SPI2->CR1 |= (SPI_CR1_SPE | SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_BR);
+
   SPI2->CR1 |= (SPI_CR1_SPE | SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_BR_2);
-//  SPI2->CR1 |= (SPI_CR1_SPE | SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI);
+
+//  SPI2->CR1 |= (SPI_CR1_SPE | SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_BR_2);
+
+  //  SPI2->CR1 |= (SPI_CR1_SPE | SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI);
   SPI2->CR2 = (0x00000000);
 }
 

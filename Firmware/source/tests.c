@@ -37,16 +37,34 @@ typedef struct
   __attribute__((aligned)) uint16 adcBuffer[TESTS_MAX_SAMPLES];
 } Samples;
 
+typedef struct
+{
+  uint16 headerBytes;  // The size of this struct
+  uint16 timeScale;    // Time between samples in micro seconds
+  uint16 bytesPerChan; // Number of bytes to expect per channel
+  uint16 numChannels;  // Total number of channels
+} TestHeader;
+
+typedef struct
+{
+  uint8  chanNum;
+  char   title[15]; // Padding this to a word length...
+  double bitRes;
+} ChanHeader;
+
 static struct
 {
+  TestHeader testHeader;
+  ChanHeader chanHeader[4];
   uint8  testToRun;
-  uint8  numChannels;
-  uint16 bytesPerChannel;
   TestState state;
   Samples adc1;
   Samples adc2;
   Samples adc3;
   Samples eeState;
+  uint32  vAvg[TESTS_MAX_SAMPLES];
+  uint32  iAvg[TESTS_MAX_SAMPLES];
+  uint32  sAvg[TESTS_MAX_SAMPLES];
   struct
   {
     boolean portOpen;
@@ -67,6 +85,10 @@ uint16 Tests_test6(void);
 uint16 Tests_test7(void);
 uint16 Tests_test8(void);
 uint16 Tests_test9(void);
+uint16 Tests_test10(void);
+uint16 Tests_test11(void);
+uint16 Tests_test12(void);
+uint16 Tests_test13(void);
 uint8 Tests_parseTestCommand(void);
 void Tests_notifyReceiveComplete(uint32 numBytes);
 void Tests_notifyTransmitComplete(uint32 numBytes);
@@ -86,7 +108,11 @@ TestFunction testFunctions[] = { &Tests_test0,
                                  &Tests_test6,
                                  &Tests_test7,
                                  &Tests_test8,
-                                 &Tests_test9 };
+                                 &Tests_test9,
+                                 &Tests_test10,
+                                 &Tests_test11,
+                                 &Tests_test12,
+                                 &Tests_test13 };
 
 void Tests_init(void)
 {
@@ -240,21 +266,36 @@ uint8 Tests_parseTestCommand(void)
 
 void Tests_sendHeaderInfo(void)
 {
-  sTests.comms.txBuffer[0] = sTests.numChannels;
-  sTests.comms.txBuffer[1] = sTests.bytesPerChannel >> 8;
-  sTests.comms.txBuffer[2] = sTests.bytesPerChannel;
-  Tests_sendData(3);
+  uint8 txBufOffset = 0,
+                  i = 0;
+
+  // Fill in the total number of bytes for the Test and Channel headers
+  sTests.testHeader.headerBytes  =  sizeof(TestHeader);
+  sTests.testHeader.headerBytes +=  sizeof(ChanHeader) * sTests.testHeader.numChannels;
+
+  // Always send the test header
+  Util_copyMemory( (uint8*)&sTests.testHeader,
+                   (uint8*)&sTests.comms.txBuffer[txBufOffset],
+                   sizeof(TestHeader));
+  txBufOffset += sizeof(TestHeader);
+
+  // Now send individual channel information
+  for (i = 0; i < sTests.testHeader.numChannels; i++)
+  {
+    Util_copyMemory((uint8*)&sTests.chanHeader[i],
+                    (uint8*)&sTests.comms.txBuffer[txBufOffset],
+                    sizeof(ChanHeader));
+    txBufOffset += sizeof(ChanHeader);
+  }
+
+  // Send the header out the UART
+  Tests_sendData(txBufOffset);
   while(sTests.comms.transmitting);
 }
 
 void Tests_sendBinaryResults(Samples *adcBuffer)
 {
   uint16 i = 0;
-  // Send out the channel number of this buffer
-  sTests.comms.txBuffer[0] = adcBuffer->channel;
-  Tests_sendData(1);
-  while(sTests.comms.transmitting);
-  // Then send out the data associated with it
   for (i = 0; i < TESTS_MAX_SAMPLES; i++)
   {
     sTests.comms.txBuffer[1] = adcBuffer->adcBuffer[i] >> 8;
@@ -673,7 +714,7 @@ uint16 Tests_test9(void)
   Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
 //  Analog_selectChannel(EEPROM_DOMAIN, TRUE);
   Analog_adjustDomain(EEPROM_DOMAIN, 0.6);
-  Time_delay(10); // Wait 10ms for domains to settle
+  Time_delay(100); // Wait 10ms for domains to settle
 
   ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
   ADC_openPort(ADC_PORT2, adc2Config);
@@ -706,8 +747,17 @@ uint16 Tests_test9(void)
   sTests.eeState.channel = 22;
 
   // Prepare data structures for retrieval
-  sTests.numChannels = 4;
-  sTests.bytesPerChannel = TESTS_MAX_SAMPLES * 2;
+  sTests.testHeader.timeScale = 5;
+  sTests.testHeader.numChannels = 4;
+  sTests.testHeader.bytesPerChan = TESTS_MAX_SAMPLES * 2;
+  sTests.chanHeader[0].chanNum  = adc1Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[0].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[1].chanNum  = adc2Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[1].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[2].chanNum  = adc3Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[2].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[3].chanNum  = sTests.eeState.channel;
+  sTests.chanHeader[3].bitRes   = (3.3 / 4096.0);
 
   // Return domains to initial state
   Analog_setDomain(COMMS_DOMAIN,  TRUE); // Disable comms domain
@@ -717,4 +767,449 @@ uint16 Tests_test9(void)
   return SUCCESS;
 }
 
+/**************************************************************************************************\
+* FUNCTION    Tests_test10
+* DESCRIPTION
+* PARAMETERS  None
+* RETURNS     Number of bytes generated by the test
+* NOTES       None
+\**************************************************************************************************/
+uint16 Tests_test10(void)
+{
+  AppADCConfig adc1Config = {0};
+  AppADCConfig adc2Config = {0};
+  AppADCConfig adc3Config = {0};
 
+  // ADC1 sampling domain voltage
+  adc1Config.adcConfig.scan               = FALSE;
+  adc1Config.adcConfig.continuous         = FALSE;
+  adc1Config.adcConfig.numChannels        = 1;
+  adc1Config.adcConfig.chan[0].chanNum    = ADC_Channel_1;
+  adc1Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc1Config.appSampleBuffer              = &sTests.adc1.adcBuffer[0];
+  adc1Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  // ADC2 sampling domain input current
+  adc2Config.adcConfig.scan               = FALSE;
+  adc2Config.adcConfig.continuous         = FALSE;
+  adc2Config.adcConfig.numChannels        = 1;
+  adc2Config.adcConfig.chan[0].chanNum    = ADC_Channel_2;
+  adc2Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc2Config.appSampleBuffer              = &sTests.adc2.adcBuffer[0];
+  adc2Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  // ADC3 sampling domain output current
+  adc3Config.adcConfig.scan               = FALSE;
+  adc3Config.adcConfig.continuous         = FALSE;
+  adc3Config.adcConfig.numChannels        = 1;
+  adc3Config.adcConfig.chan[0].chanNum    = ADC_Channel_3;
+  adc3Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc3Config.appSampleBuffer              = &sTests.adc3.adcBuffer[0];
+  adc3Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  Analog_setDomain(MCU_DOMAIN,    FALSE); // Does nothing
+  Analog_setDomain(ANALOG_DOMAIN, TRUE);  // Enable analog domain
+  Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
+  Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
+  Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
+  Analog_setDomain(EEPROM_DOMAIN, TRUE);  // Enable SPI domain
+  Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
+  Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
+  Analog_adjustDomain(EEPROM_DOMAIN, 0.6); // Set domain voltage to nominal
+  Time_delay(1000); // Wait 1000ms for domains to settle
+
+  ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
+  ADC_openPort(ADC_PORT2, adc2Config);
+  ADC_openPort(ADC_PORT3, adc3Config);
+  ADC_getSamples(ADC_PORT1, TESTS_MAX_SAMPLES); // Notify App when sample buffer is full
+  ADC_getSamples(ADC_PORT2, TESTS_MAX_SAMPLES);
+  ADC_getSamples(ADC_PORT3, TESTS_MAX_SAMPLES);
+  sTests.adc1.isSampling = TRUE;
+  sTests.adc2.isSampling = TRUE;
+  sTests.adc3.isSampling = TRUE;
+  ADC_startSampleTimer(TIMER3, 300);     // Start timer3 triggered ADCs at 10us sample rate
+
+  Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
+  EEPROM_writeEE(&sTests.comms.rxBuffer[0], (uint8*)0, 128);
+
+  Time_delay(7);
+
+  Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
+  sTests.comms.rxBuffer[0] = 0xAA; // Changing up the first byte to test that this gets written
+  EEPROM_writeEELowPower(&sTests.comms.rxBuffer[0], (uint8*)128, 128);
+
+  // Complete the samples
+  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
+  ADC_stopSampleTimer(TIMER3);
+
+  // HACK: let EEPROM state be channel 22
+  sTests.eeState.channel = 22;
+
+  // Prepare data structures for retrieval
+  sTests.testHeader.timeScale = 5;
+  sTests.testHeader.numChannels = 4;
+  sTests.testHeader.bytesPerChan = TESTS_MAX_SAMPLES * 2;
+  sTests.chanHeader[0].chanNum  = adc1Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[0].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[1].chanNum  = adc2Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[1].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[2].chanNum  = adc3Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[2].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[3].chanNum  = sTests.eeState.channel;
+  sTests.chanHeader[3].bitRes   = (3.3 / 4096.0);
+
+  // Return domains to initial state
+  Analog_setDomain(COMMS_DOMAIN,  TRUE); // Enable comms domain
+  Analog_setDomain(EEPROM_DOMAIN, FALSE);  // Disable SPI domain
+  Time_delay(10); // Wait 10ms for domains to settle
+
+  return SUCCESS;
+}
+
+/**************************************************************************************************\
+* FUNCTION    Tests_test11
+* DESCRIPTION
+* PARAMETERS  None
+* RETURNS     Number of bytes generated by the test
+* NOTES       This test attempts to
+\**************************************************************************************************/
+uint16 Tests_test11(void)
+{
+  AppADCConfig adc1Config = {0};
+  AppADCConfig adc2Config = {0};
+  AppADCConfig adc3Config = {0};
+
+  // ADC1 sampling domain voltage
+  adc1Config.adcConfig.scan               = FALSE;
+  adc1Config.adcConfig.continuous         = FALSE;
+  adc1Config.adcConfig.numChannels        = 1;
+  adc1Config.adcConfig.chan[0].chanNum    = ADC_Channel_1;
+  adc1Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc1Config.appSampleBuffer              = &sTests.adc1.adcBuffer[0];
+  adc1Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  // ADC2 sampling domain input current
+  adc2Config.adcConfig.scan               = FALSE;
+  adc2Config.adcConfig.continuous         = FALSE;
+  adc2Config.adcConfig.numChannels        = 1;
+  adc2Config.adcConfig.chan[0].chanNum    = ADC_Channel_2;
+  adc2Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc2Config.appSampleBuffer              = &sTests.adc2.adcBuffer[0];
+  adc2Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  // ADC3 sampling domain output current
+  adc3Config.adcConfig.scan               = FALSE;
+  adc3Config.adcConfig.continuous         = FALSE;
+  adc3Config.adcConfig.numChannels        = 1;
+  adc3Config.adcConfig.chan[0].chanNum    = ADC_Channel_3;
+  adc3Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc3Config.appSampleBuffer              = &sTests.adc3.adcBuffer[0];
+  adc3Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  Analog_setDomain(MCU_DOMAIN,    FALSE); // Does nothing
+  Analog_setDomain(ANALOG_DOMAIN, TRUE);  // Enable analog domain
+  Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
+  Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
+  Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
+  Analog_setDomain(EEPROM_DOMAIN, TRUE);  // Enable SPI domain
+  Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
+  Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
+  Analog_adjustDomain(EEPROM_DOMAIN, 0.6); // Set domain voltage to nominal
+  Time_delay(1000); // Wait 10ms for domains to settle
+
+  ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
+  ADC_openPort(ADC_PORT2, adc2Config);
+  ADC_openPort(ADC_PORT3, adc3Config);
+  ADC_getSamples(ADC_PORT1, TESTS_MAX_SAMPLES); // Notify App when sample buffer is full
+  ADC_getSamples(ADC_PORT2, TESTS_MAX_SAMPLES);
+  ADC_getSamples(ADC_PORT3, TESTS_MAX_SAMPLES);
+  sTests.adc1.isSampling = TRUE;
+  sTests.adc2.isSampling = TRUE;
+  sTests.adc3.isSampling = TRUE;
+  ADC_startSampleTimer(TIMER3, 300);     // Start timer3 triggered ADCs at 10us sample rate
+
+  Time_delay(7);
+  Analog_adjustDomain(EEPROM_DOMAIN, 0.0); // Set domain voltage to maximum
+  Time_delay(7);
+  Analog_adjustDomain(EEPROM_DOMAIN, 3.3); // Set domain voltage to minimum
+  Time_delay(7);
+  Analog_adjustDomain(EEPROM_DOMAIN, 0.0); // Set domain voltage to maximum
+  Time_delay(7);
+  Analog_adjustDomain(EEPROM_DOMAIN, 3.3); // Set domain voltage to minimum
+  Time_delay(7);
+  Analog_adjustDomain(EEPROM_DOMAIN, 0.6); // Set domain voltage to maximum
+  
+
+  // Complete the samples
+  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
+  ADC_stopSampleTimer(TIMER3);
+
+  // HACK: let EEPROM state be channel 22
+  sTests.eeState.channel = 22;
+
+  // Prepare data structures for retrieval
+  sTests.testHeader.timeScale = 10;
+  sTests.testHeader.numChannels = 4;
+  sTests.testHeader.bytesPerChan = TESTS_MAX_SAMPLES * 2;
+  sTests.chanHeader[0].chanNum  = adc1Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[0].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[1].chanNum  = adc2Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[1].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[2].chanNum  = adc3Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[2].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[3].chanNum  = sTests.eeState.channel;
+  sTests.chanHeader[3].bitRes   = (3.3 / 4096.0);
+
+  // Return domains to initial state
+  Analog_setDomain(COMMS_DOMAIN,  TRUE);   // Enable comms domain
+  Analog_setDomain(EEPROM_DOMAIN, FALSE);  // Disable SPI domain
+  Time_delay(10); // Wait 10ms for domains to settle
+
+  return SUCCESS;
+}
+
+/**************************************************************************************************\
+* FUNCTION    Tests_test12
+* DESCRIPTION
+* PARAMETERS  None
+* RETURNS     Number of bytes generated by the test
+* NOTES       This test uses the same technique as test11, but performs the test iteratively and
+*             aggregates the results.
+\**************************************************************************************************/
+uint16 Tests_test12(void)
+{
+  uint16 i, j;
+  AppADCConfig adc1Config = {0};
+  AppADCConfig adc2Config = {0};
+  AppADCConfig adc3Config = {0};
+
+  // ADC1 sampling domain voltage
+  adc1Config.adcConfig.scan               = FALSE;
+  adc1Config.adcConfig.continuous         = FALSE;
+  adc1Config.adcConfig.numChannels        = 1;
+  adc1Config.adcConfig.chan[0].chanNum    = ADC_Channel_1;
+  adc1Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc1Config.appSampleBuffer              = &sTests.adc1.adcBuffer[0];
+  adc1Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  // ADC2 sampling domain input current
+  adc2Config.adcConfig.scan               = FALSE;
+  adc2Config.adcConfig.continuous         = FALSE;
+  adc2Config.adcConfig.numChannels        = 1;
+  adc2Config.adcConfig.chan[0].chanNum    = ADC_Channel_2;
+  adc2Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc2Config.appSampleBuffer              = &sTests.adc2.adcBuffer[0];
+  adc2Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  // ADC3 sampling domain output current
+  adc3Config.adcConfig.scan               = FALSE;
+  adc3Config.adcConfig.continuous         = FALSE;
+  adc3Config.adcConfig.numChannels        = 1;
+  adc3Config.adcConfig.chan[0].chanNum    = ADC_Channel_3;
+  adc3Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc3Config.appSampleBuffer              = &sTests.adc3.adcBuffer[0];
+  adc3Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  Analog_setDomain(MCU_DOMAIN,    FALSE); // Does nothing
+  Analog_setDomain(ANALOG_DOMAIN, TRUE);  // Enable analog domain
+  Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
+  Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
+  Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
+  Analog_setDomain(EEPROM_DOMAIN, TRUE);  // Enable SPI domain
+  Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
+  Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
+  Analog_adjustDomain(EEPROM_DOMAIN, 0.6); // Set domain voltage to nominal
+  Time_delay(1000); // Wait 1000ms for domains to settle
+
+  ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
+  ADC_openPort(ADC_PORT3, adc3Config);
+
+  Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
+  Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
+  Util_fillMemory(&sTests.iAvg, sizeof(sTests.iAvg), 0x00);
+  Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
+  Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
+  for (i = 0; i < 512; i++)
+  {
+    // Using a variety of write bytes (i)
+    Util_fillMemory(&sTests.comms.rxBuffer[0], 128, i);
+
+    ADC_getSamples(ADC_PORT1, TESTS_MAX_SAMPLES); // Get 4096 samples
+    ADC_getSamples(ADC_PORT3, TESTS_MAX_SAMPLES);
+    sTests.adc1.isSampling = TRUE;
+    sTests.adc3.isSampling = TRUE;
+    ADC_startSampleTimer(TIMER3, 300);     // Start timer3 triggered ADCs at 10us sample rate
+
+    // write one page in each regular and low power mode
+    EEPROM_writeEE(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
+    Time_delay(7);
+    EEPROM_writeEELowPower(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
+    Time_delay(7);
+
+    // Complete the samples
+    while(sTests.adc1.isSampling || sTests.adc3.isSampling);
+    ADC_stopSampleTimer(TIMER3);
+
+    // Aggregate the results into the voltage and current averages
+    for (j = 0; j < TESTS_MAX_SAMPLES; j++)
+    {
+      sTests.vAvg[j] += sTests.adc1.adcBuffer[j];
+      sTests.iAvg[j] += sTests.adc3.adcBuffer[j];
+      sTests.sAvg[j] += sTests.eeState.adcBuffer[j];
+    }
+  }
+
+  // Sample / Accumulate complete, divide by the number of samples
+  for (i = 0; i < TESTS_MAX_SAMPLES; i++)
+  {
+    sTests.adc1.adcBuffer[i]    = (uint16)(sTests.vAvg[i] / 512);
+    sTests.adc3.adcBuffer[i]    = (uint16)(sTests.iAvg[i] / 512);
+    sTests.eeState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / 512);
+  }
+
+  // HACK: let EEPROM state be channel 22
+  sTests.eeState.channel = 22;
+
+  // Prepare data structures for retrieval
+  sTests.testHeader.timeScale = 10;
+  sTests.testHeader.numChannels = 4;
+  sTests.testHeader.bytesPerChan = TESTS_MAX_SAMPLES * 2;
+  sTests.chanHeader[0].chanNum  = adc1Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[0].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[1].chanNum  = adc2Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[1].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[2].chanNum  = adc3Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[2].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[3].chanNum  = sTests.eeState.channel;
+  sTests.chanHeader[3].bitRes   = (3.3 / 4096.0);
+
+  // Return domains to initial state
+  Analog_setDomain(COMMS_DOMAIN,  TRUE); // Enable comms domain
+  Analog_setDomain(EEPROM_DOMAIN, FALSE);  // Disable SPI domain
+  Time_delay(10); // Wait 10ms for domains to settle
+
+  return SUCCESS;
+}
+
+/**************************************************************************************************\
+* FUNCTION    Tests_test13
+* DESCRIPTION
+* PARAMETERS  None
+* RETURNS     Number of bytes generated by the test
+* NOTES       This test uses the same technique as test11, but performs the test iteratively and
+*             aggregates the results.
+\**************************************************************************************************/
+uint16 Tests_test13(void)
+{
+  uint16 i, j;
+  AppADCConfig adc1Config = {0};
+  AppADCConfig adc2Config = {0};
+  AppADCConfig adc3Config = {0};
+
+  // ADC1 sampling domain voltage
+  adc1Config.adcConfig.scan               = FALSE;
+  adc1Config.adcConfig.continuous         = FALSE;
+  adc1Config.adcConfig.numChannels        = 1;
+  adc1Config.adcConfig.chan[0].chanNum    = ADC_Channel_1;
+  adc1Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc1Config.appSampleBuffer              = &sTests.adc1.adcBuffer[0];
+  adc1Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  // ADC2 sampling domain input current
+  adc2Config.adcConfig.scan               = FALSE;
+  adc2Config.adcConfig.continuous         = FALSE;
+  adc2Config.adcConfig.numChannels        = 1;
+  adc2Config.adcConfig.chan[0].chanNum    = ADC_Channel_2;
+  adc2Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc2Config.appSampleBuffer              = &sTests.adc2.adcBuffer[0];
+  adc2Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  // ADC3 sampling domain output current
+  adc3Config.adcConfig.scan               = FALSE;
+  adc3Config.adcConfig.continuous         = FALSE;
+  adc3Config.adcConfig.numChannels        = 1;
+  adc3Config.adcConfig.chan[0].chanNum    = ADC_Channel_3;
+  adc3Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc3Config.appSampleBuffer              = &sTests.adc3.adcBuffer[0];
+  adc3Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
+
+  Analog_setDomain(MCU_DOMAIN,    FALSE); // Does nothing
+  Analog_setDomain(ANALOG_DOMAIN, TRUE);  // Enable analog domain
+  Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
+  Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
+  Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
+  Analog_setDomain(EEPROM_DOMAIN, TRUE);  // Enable SPI domain
+  Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
+  Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
+  Analog_adjustDomain(EEPROM_DOMAIN, 0.6); // Set domain voltage to nominal
+  Time_delay(1000); // Wait 1000ms for domains to settle
+
+  ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
+  ADC_openPort(ADC_PORT3, adc3Config);
+
+  Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
+  Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
+  Util_fillMemory(&sTests.iAvg, sizeof(sTests.iAvg), 0x00);
+  Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
+  Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
+  for (i = 0; i < 512; i++)
+  {
+    // Using a variety of write bytes (i)
+    Util_fillMemory(&sTests.comms.rxBuffer[0], 128, i);
+
+    ADC_getSamples(ADC_PORT1, TESTS_MAX_SAMPLES); // Get 4096 samples
+    ADC_getSamples(ADC_PORT3, TESTS_MAX_SAMPLES);
+    sTests.adc1.isSampling = TRUE;
+    sTests.adc3.isSampling = TRUE;
+    ADC_startSampleTimer(TIMER3, 300);     // Start timer3 triggered ADCs at 10us sample rate
+
+    // write one page in each regular and low power mode
+    EEPROM_writeEE(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
+    Time_delay(7);
+    EEPROM_writeEEXLP(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
+    Time_delay(7);
+
+    // Complete the samples
+    while(sTests.adc1.isSampling || sTests.adc3.isSampling);
+    ADC_stopSampleTimer(TIMER3);
+
+    // Aggregate the results into the voltage and current averages
+    for (j = 0; j < TESTS_MAX_SAMPLES; j++)
+    {
+      sTests.vAvg[j] += sTests.adc1.adcBuffer[j];
+      sTests.iAvg[j] += sTests.adc3.adcBuffer[j];
+      sTests.sAvg[j] += sTests.eeState.adcBuffer[j];
+    }
+  }
+
+  // Sample / Accumulate complete, divide by the number of samples
+  for (i = 0; i < TESTS_MAX_SAMPLES; i++)
+  {
+    sTests.adc1.adcBuffer[i]    = (uint16)(sTests.vAvg[i] / 512);
+    sTests.adc3.adcBuffer[i]    = (uint16)(sTests.iAvg[i] / 512);
+    sTests.eeState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / 512);
+  }
+
+  // HACK: let EEPROM state be channel 22
+  sTests.eeState.channel = 22;
+
+  // Prepare data structures for retrieval
+  sTests.testHeader.timeScale = 10;
+  sTests.testHeader.numChannels = 4;
+  sTests.testHeader.bytesPerChan = TESTS_MAX_SAMPLES * 2;
+  sTests.chanHeader[0].chanNum  = adc1Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[0].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[1].chanNum  = adc2Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[1].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[2].chanNum  = adc3Config.adcConfig.chan[0].chanNum;
+  sTests.chanHeader[2].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[3].chanNum  = sTests.eeState.channel;
+  sTests.chanHeader[3].bitRes   = (3.3 / 4096.0);
+
+  // Return domains to initial state
+  Analog_setDomain(COMMS_DOMAIN,  TRUE); // Enable comms domain
+  Analog_setDomain(EEPROM_DOMAIN, FALSE);  // Disable SPI domain
+  Time_delay(10); // Wait 10ms for domains to settle
+
+  return SUCCESS;
+}
