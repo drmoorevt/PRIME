@@ -39,6 +39,12 @@ static struct
 
 static const uint8 sFillBuf[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 
+/*****************************************************************************\
+* FUNCTION    EEPROM_init
+* DESCRIPTION Initializes the EEPROM module
+* PARAMETERS  None
+* RETURNS     Nothing
+\*****************************************************************************/
 void EEPROM_init(void)
 {
   const uint16 eeCtrlPins = (GPIO_Pin_2 | GPIO_Pin_5 | GPIO_Pin_8);
@@ -58,7 +64,6 @@ void EEPROM_init(void)
 
   Util_fillMemory((uint8*)&sEEPROM, sizeof(sEEPROM), 0x00);
   sEEPROM.state = EEPROM_IDLE;
-  SPI_init();
 }
 
 EEPROMState EEPROM_getState(void)

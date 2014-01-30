@@ -7,7 +7,7 @@
 #include "util.h"
 #include "serialflash.h"
 
-#define FILE_ID EEPROM_C
+#define FILE_ID SERIALFLASH_C
 
 #define WRITEPAGESIZE_SF ((uint16)256)
 #define SF_NUM_RETRIES 3
@@ -36,8 +36,49 @@
 
 #define SF_SWP_SOME_gc      0x04
 
+static struct
+{
+  SerialFlashState state;
+} sSerialFlash;
+
 /*****************************************************************************\
-* FUNCTION    EEPROM_waitStateFlash
+* FUNCTION    SerialFlash_init
+* DESCRIPTION Initializes the SerialFlash module
+* PARAMETERS  None
+* RETURNS     Nothing
+\*****************************************************************************/
+void SerialFlash_init(void)
+{
+  const uint16 sfCtrlPins = (GPIO_Pin_2 | GPIO_Pin_5 | GPIO_Pin_8);
+
+  // Initialize the chip select and hold lines
+  /*
+  GPIO_InitTypeDef eeCtrlPortB = {eeCtrlPins, GPIO_Mode_OUT, GPIO_Speed_25MHz, GPIO_OType_OD,
+                                              GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
+  */
+  GPIO_InitTypeDef eeCtrlPortB = {sfCtrlPins, GPIO_Mode_OUT, GPIO_Speed_25MHz, GPIO_OType_PP,
+                                              GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
+  GPIO_setPortClock(GPIOB, TRUE);
+  GPIO_configurePins(GPIOB, &eeCtrlPortB);
+  DESELECT_CHIP_SF();
+
+  Util_fillMemory((uint8*)&sSerialFlash, sizeof(sSerialFlash), 0x00);
+  sSerialFlash.state = SERIAL_FLASH_IDLE;
+}
+
+/*****************************************************************************\
+* FUNCTION    SerialFlash_getState
+* DESCRIPTION Returns the internal state of SerialFlash
+* PARAMETERS  None
+* RETURNS     The SerialFlashState
+\*****************************************************************************/
+SerialFlashState SerialFlash_getState(void)
+{
+  return sSerialFlash.state;
+}
+
+/*****************************************************************************\
+* FUNCTION    SerialFlash_waitStateFlash
 * DESCRIPTION Wait for the status register to transition to specified
 *             value or timeout
 * PARAMETERS  state - expected state
@@ -45,7 +86,7 @@
 *             timeout - timeout in ticks
 * RETURNS     status byte for serial flash
 \*****************************************************************************/
-static uint8 EEPROM_waitStateFlash(uint8 state, uint8 stateMask, uint16 timeout)
+static uint8 SerialFlash_waitStateFlash(uint8 state, uint8 stateMask, uint16 timeout)
 {
   uint8 status;
 
@@ -65,14 +106,14 @@ static uint8 EEPROM_waitStateFlash(uint8 state, uint8 stateMask, uint16 timeout)
 }
 
 /*****************************************************************************\
-* FUNCTION    EEPROM_readFlash
+* FUNCTION    SerialFlash_readFlash
 * DESCRIPTION Reads data out of Serial flash
 * PARAMETERS  pSrc - pointer to data in serial flash to read out
 *             pDest - pointer to destination RAM buffer
 *             length - number of bytes to read
 * RETURNS     nothing
 \*****************************************************************************/
-void EEPROM_readFlash(uint8 *pSrc, uint8 *pDest, uint16 length)
+void SerialFlash_readFlash(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
   uint32 chipOffset;
   uint8 writeBuf[ADDRBYTES_SF + 1];
@@ -88,7 +129,7 @@ void EEPROM_readFlash(uint8 *pSrc, uint8 *pDest, uint16 length)
   writeBuf[3] = (uint8)chipOffset;
 
   SELECT_CHIP_SF();
-  // read from EEPROM
+  // read from SerialFlash
   SPI_write(writeBuf,ADDRBYTES_SF + 1);
   SPI_read(pDest,length);
 
@@ -96,14 +137,14 @@ void EEPROM_readFlash(uint8 *pSrc, uint8 *pDest, uint16 length)
 }
 
 /*****************************************************************************\
-* FUNCTION    EEPROM_writeFlash
+* FUNCTION    SerialFlash_writeFlash
 * DESCRIPTION Writes a buffer to Serial Flash
 * PARAMETERS  pSrc - pointer to source RAM buffer
-*             pDest - pointer to destination in EEPROM
+*             pDest - pointer to destination in SerialFlash
 *             length - number of bytes to write
 * RETURNS     true if the write suceeds
 \*****************************************************************************/
-boolean EEPROM_writeFlash(uint8 *pSrc, uint8 *pDest, uint16 length)
+boolean SerialFlash_writeFlash(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
   uint32 chipOffset;
   uint16 numBytes;
@@ -144,8 +185,8 @@ boolean EEPROM_writeFlash(uint8 *pSrc, uint8 *pDest, uint16 length)
       DESELECT_CHIP_SF();
 
       // wait for write to complete, set a timeout of 2 ticks which will be between 8 and 16 msec
-      // so we won't watchdog if the eeprom gets stuck.
-      writeResult = EEPROM_waitStateFlash(0, SF_BSY_bm, 2);
+      // so we won't watchdog if the SerialFlash gets stuck.
+      writeResult = SerialFlash_waitStateFlash(0, SF_BSY_bm, 2);
 
       //Analyze the result
       if (writeResult & SF_EPE_bm)
@@ -190,12 +231,12 @@ boolean EEPROM_writeFlash(uint8 *pSrc, uint8 *pDest, uint16 length)
 }
 
 /*****************************************************************************\
-* FUNCTION    EEPROM_protectFlash
+* FUNCTION    SerialFlash_protectFlash
 * DESCRIPTION protect or unprotect the SF chip (global)
 * PARAMETERS  bProtect - boolean to protect = TRUE, unprotect = FALSE
 * RETURNS     status byte for serial flash
 \*****************************************************************************/
-uint8 EEPROM_protectFlash(boolean bProtect)
+uint8 SerialFlash_protectFlash(boolean bProtect)
 {
   uint8 buf[2];
 
@@ -256,20 +297,20 @@ uint8 EEPROM_protectFlash(boolean bProtect)
     else
       buf[1] = 0;
 
-    buf[0] = EEPROM_waitStateFlash(0, (SF_SWP_bm |SF_BSY_bm), 2);
+    buf[0] = SerialFlash_waitStateFlash(0, (SF_SWP_bm |SF_BSY_bm), 2);
     //UNPROTECT_CHIP_SF();
   }
   return buf[0];
 }
 
 /*****************************************************************************\
-* FUNCTION    EEPROM_eraseFlash
+* FUNCTION    SerialFlash_eraseFlash
 * DESCRIPTION Erase a block of flash
 * PARAMETERS  pDest - pointer to destination location
 *             length - number of bytes to erase
 * RETURNS     status byte for serial flash
 \*****************************************************************************/
-uint8 EEPROM_eraseFlash(uint8 *pDest, SFBlockSize blockSize)
+uint8 SerialFlash_eraseFlash(uint8 *pDest, SerialFlashBlockSize blockSize)
 {
   uint8 numBytes;
   uint8 writeBuf[ADDRBYTES_SF + 1];
@@ -282,7 +323,7 @@ uint8 EEPROM_eraseFlash(uint8 *pDest, SFBlockSize blockSize)
   DESELECT_CHIP_SF();
 
   writeBuf[0] = (uint8)blockSize;
-  if(blockSize != SF_CHIP)
+  if(blockSize != SERIAL_FLASH_CHIP)
   {
     writeBuf[1] = (uint8)((uint32)pDest >> 16);
     writeBuf[2] = (uint8)((uint32)pDest >> 8);
@@ -299,5 +340,40 @@ uint8 EEPROM_eraseFlash(uint8 *pDest, SFBlockSize blockSize)
   DESELECT_CHIP_SF();
 
   // wait for Erase to complete, max 3500ms
-  return EEPROM_waitStateFlash(0, SF_BSY_bm, 3500);
+  return SerialFlash_waitStateFlash(0, SF_BSY_bm, 3500);
+}
+
+/*****************************************************************************\
+* FUNCTION    SerialFlash_test
+* DESCRIPTION Executes reads and writes to SerialFlash to test the code
+* PARAMETERS  none
+* RETURNS     nothing
+\*****************************************************************************/
+void SerialFlash_test(void)
+{
+  uint8 buffer[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  uint8 test[sizeof(buffer)];
+  
+  Analog_setDomain(MCU_DOMAIN,    FALSE); // Does nothing
+  Analog_setDomain(ANALOG_DOMAIN, TRUE);  // Enable analog domain
+  Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
+  Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
+  Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
+  Analog_setDomain(EEPROM_DOMAIN, TRUE);  // Enable SPI domain
+  Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
+  Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
+  Analog_adjustDomain(EEPROM_DOMAIN, 0.6); // Set domain voltage to nominal
+  Time_delay(1000); // Wait 1000ms for domains to settle
+
+  while(1)
+  {
+    // basic read test
+    SerialFlash_readFlash((uint8*)0,test,sizeof(test));
+    SerialFlash_writeFlash(buffer,(uint8*)0,sizeof(buffer));
+    SerialFlash_readFlash((uint8*)0,test,sizeof(test));
+
+    // boundary test
+    SerialFlash_writeFlash(buffer,(uint8*)(8),sizeof(buffer));
+    SerialFlash_readFlash((uint8*)(8),test,sizeof(test));
+  }
 }
