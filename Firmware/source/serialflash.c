@@ -353,7 +353,7 @@ void SerialFlash_test(void)
 {
   uint8 buffer[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   uint8 test[sizeof(buffer)];
-  
+
   Analog_setDomain(MCU_DOMAIN,    FALSE); // Does nothing
   Analog_setDomain(ANALOG_DOMAIN, TRUE);  // Enable analog domain
   Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
