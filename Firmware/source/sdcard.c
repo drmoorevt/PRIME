@@ -63,7 +63,7 @@ void SDCard_init(void)
   DESELECT_CHIP_SF();
 
   Util_fillMemory((uint8*)&sSDCard, sizeof(sSDCard), 0x00);
-  sSDCard.state = SERIAL_FLASH_IDLE;
+  sSDCard.state = SD_CARD_IDLE;
 }
 
 /*****************************************************************************\
@@ -323,7 +323,7 @@ uint8 SDCard_eraseFlash(uint8 *pDest, SDCardBlockSize blockSize)
   DESELECT_CHIP_SF();
 
   writeBuf[0] = (uint8)blockSize;
-  if(blockSize != SERIAL_FLASH_CHIP)
+  if(blockSize != SD_CARD_CHIP)
   {
     writeBuf[1] = (uint8)((uint32)pDest >> 16);
     writeBuf[2] = (uint8)((uint32)pDest >> 8);

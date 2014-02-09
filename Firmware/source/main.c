@@ -4,6 +4,7 @@
 #include "analog.h"
 #include "eeprom.h"
 #include "gpio.h"
+#include "hih613x.h"
 #include "sdcard.h"
 #include "serialflash.h"
 #include "spi.h"
@@ -20,13 +21,16 @@ int main(void)
   DAC_init();
   Analog_init();
   UART_init();
+  HIH613X_init();
   EEPROM_init();
-  SDCard_init();
-  SerialFlash_init();
+//  SerialFlash_init();
+//  SDCard_init();
   SPI_init();
   Tests_init();
 
-  SDCard_test(); //
+  HIH613X_test();
+//  EEPROM_test();
+//  SDCard_test();
   
   while(1) // Unreachable with above test code in place!
   {

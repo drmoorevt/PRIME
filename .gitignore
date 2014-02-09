@@ -11,3 +11,5 @@
 /Hardware/*.s##
 /Hardware/*.b##
 /Hardware/*.epf
+
+/Firmware/*.bak

@@ -469,6 +469,11 @@
               <FilePath>..\source\eeprom.c</FilePath>
             </File>
             <File>
+              <FileName>hih613x.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\hih613x.c</FilePath>
+            </File>
+            <File>
               <FileName>gpio.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\gpio.c</FilePath>
@@ -477,6 +482,11 @@
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\main.c</FilePath>
+            </File>
+            <File>
+              <FileName>serialflash.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\serialflash.c</FilePath>
             </File>
             <File>
               <FileName>spi.c</FileName>
@@ -502,6 +512,11 @@
               <FileName>util.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\util.c</FilePath>
+            </File>
+            <File>
+              <FileName>sdcard.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\sdcard.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -534,9 +549,19 @@
               <FilePath>..\header\gpio.h</FilePath>
             </File>
             <File>
+              <FileName>hih613x.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\hih613x.h</FilePath>
+            </File>
+            <File>
               <FileName>main.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\header\main.h</FilePath>
+            </File>
+            <File>
+              <FileName>serialflash.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\serialflash.h</FilePath>
             </File>
             <File>
               <FileName>spi.h</FileName>
@@ -567,6 +592,11 @@
               <FileName>util.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\header\util.h</FilePath>
+            </File>
+            <File>
+              <FileName>sdcard.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\sdcard.h</FilePath>
             </File>
           </Files>
         </Group>

@@ -66,6 +66,12 @@ void EEPROM_init(void)
   sEEPROM.state = EEPROM_IDLE;
 }
 
+/*****************************************************************************\
+* FUNCTION    EEPROM_getState
+* DESCRIPTION Returns the current state of EEPROM
+* PARAMETERS  None
+* RETURNS     Nothing
+\*****************************************************************************/
 EEPROMState EEPROM_getState(void)
 {
   return sEEPROM.state;
@@ -388,6 +394,17 @@ void EEPROM_test(void)
   uint8 buffer[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
   uint8 test[sizeof(buffer)];
+
+  Analog_setDomain(MCU_DOMAIN,    FALSE);  // Does nothing
+  Analog_setDomain(ANALOG_DOMAIN, TRUE);   // Enable analog domain
+  Analog_setDomain(IO_DOMAIN,     TRUE);   // Enable I/O domain
+  Analog_setDomain(COMMS_DOMAIN,  FALSE);  // Disable comms domain
+  Analog_setDomain(SRAM_DOMAIN,   FALSE);  // Disable sram domain
+  Analog_setDomain(EEPROM_DOMAIN, TRUE);   // Enable SPI domain
+  Analog_setDomain(ENERGY_DOMAIN, FALSE);  // Disable energy domain
+  Analog_setDomain(BUCK_DOMAIN7,  FALSE);  // Disable relay domain
+  Analog_adjustDomain(EEPROM_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
+  Time_delay(1000); // Wait 1000ms for domains to settle
 
   // basic read test
   EEPROM_readEE((uint8*)0,test,sizeof(test));

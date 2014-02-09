@@ -89,6 +89,7 @@ uint16 Tests_test10(void);
 uint16 Tests_test11(void);
 uint16 Tests_test12(void);
 uint16 Tests_test13(void);
+uint16 Tests_test14(void);
 uint8 Tests_parseTestCommand(void);
 void Tests_notifyReceiveComplete(uint32 numBytes);
 void Tests_notifyTransmitComplete(uint32 numBytes);
@@ -358,7 +359,7 @@ void Tests_sendADCdata(void)
 
 /**************************************************************************************************\
 * FUNCTION    Tests_test0
-* DESCRIPTION
+* DESCRIPTION Tests the enabling and disabling of the ENERGY_DOMAIN
 * PARAMETERS  None
 * RETURNS     Nothing
 * NOTES       None
@@ -380,29 +381,6 @@ uint16 Tests_test0(void)
     Analog_setDomain(ENERGY_DOMAIN, FALSE);
     Time_delay(1000);
     Analog_setDomain(ENERGY_DOMAIN, TRUE);
-  }
-
-  while(1)
-  {
-    Util_spinWait(2000000);
-    while ((GPIOC->IDR & 0x00008000) &&
-          (GPIOC->IDR & 0x00004000) &&
-          (GPIOC->IDR & 0x00002000));
-
-    if ((GPIOC->IDR & 0x00008000) == 0)
-    {
-      Analog_setDomain(ANALOG_DOMAIN, TRUE);
-      Analog_adjustDomain(EEPROM_DOMAIN, 0.6);
-    }
-    else if ((GPIOC->IDR & 0x00004000) == 0)
-    {
-      Analog_setDomain(ANALOG_DOMAIN, FALSE);
-      Analog_adjustDomain(EEPROM_DOMAIN, 0.6);
-    }
-    else
-    {
-
-    }
   }
 }
 
