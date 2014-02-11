@@ -518,6 +518,16 @@
               <FileType>1</FileType>
               <FilePath>..\source\sdcard.c</FilePath>
             </File>
+            <File>
+              <FileName>i2c.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\i2c.c</FilePath>
+            </File>
+            <File>
+              <FileName>i2cbb.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\i2cbb.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -597,6 +607,16 @@
               <FileName>sdcard.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\header\sdcard.h</FilePath>
+            </File>
+            <File>
+              <FileName>i2c.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\i2c.h</FilePath>
+            </File>
+            <File>
+              <FileName>i2cbb.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\i2cbb.h</FilePath>
             </File>
           </Files>
         </Group>

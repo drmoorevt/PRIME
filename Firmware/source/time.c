@@ -301,6 +301,6 @@ void SysTick_Handler(void)
 \**************************************************************************************************/
 static void Time_initSysTick(void)
 {
-  SysTick_Config(60000); // (60Mhz / 60000) = 1ms
+  SysTick_Config(SystemCoreClock / 1000); // div 1000 = 1ms tick
 }
 

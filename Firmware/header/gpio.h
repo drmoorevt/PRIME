@@ -82,6 +82,7 @@ typedef struct
 
 void GPIO_init(void);
 void GPIO_structInitUART(GPIO_InitTypeDef *GPIO_InitStruct, uint16 pin, uint8 portNum);
+void GPIO_setDirection(GPIO_TypeDef *GPIOx, uint16 pinNumber, GPIOMode_TypeDef outMode);
 boolean GPIO_setPortClock(GPIO_TypeDef *GPIOx, boolean clockState);
 boolean GPIO_configurePins(GPIO_TypeDef *GPIOx, GPIO_InitTypeDef *GPIO_InitStruct);
 

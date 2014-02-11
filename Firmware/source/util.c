@@ -112,7 +112,7 @@ void Util_fillMemory(void *pDst, uint32 numBytes, uint8 fillVal)
 * RETURNS      Nothing
 * NOTES        None
 \**************************************************************************************************/
-void Util_copyMemory(uint8* pSrc, uint8* pDst, uint16 numBytes)
+void Util_copyMemory(uint8 *pSrc, uint8 *pDst, uint16 numBytes)
 {
   while (numBytes-- > 0)
     pDst[numBytes] = pSrc[numBytes];
@@ -123,11 +123,25 @@ void Util_copyMemory(uint8* pSrc, uint8* pDst, uint16 numBytes)
 * DESCRIPTION  Swaps the upper and lower byte of a uint16
 * PARAMETERS   pToSwap: pointer to the LSB of the word to swap
 * RETURNS      Nothing
-* NOTES        None
+* NOTES        Used for changing endianness
 \**************************************************************************************************/
-void Util_swap16(uint16* pToSwap)
+void Util_swap16(uint16 *pToSwap)
 {
   uint16 temp = (*pToSwap >> 8) + (*pToSwap << 8);
+  *pToSwap = temp;
+}
+
+/**************************************************************************************************\
+* FUNCTION     Util_swap32
+* DESCRIPTION  Swaps the upper and lower byte of a uint16
+* PARAMETERS   pToSwap: pointer to the LSB of the word to swap
+* RETURNS      Nothing
+* NOTES        Used for changing endianness
+\**************************************************************************************************/
+void Util_swap32(uint32 *pToSwap)
+{
+  uint8 *pAsBytes = (uint8 *)pToSwap;
+  uint32 temp = pAsBytes[3] + (pAsBytes[2] << 8) + (pAsBytes[1] << 16) + (pAsBytes[0] << 24);
   *pToSwap = temp;
 }
 

@@ -167,3 +167,9 @@ boolean GPIO_configurePins(GPIO_TypeDef *GPIOx, GPIO_InitTypeDef *GPIO_InitStruc
   }
   return SUCCESS;
 }
+
+void GPIO_setDirection(GPIO_TypeDef *GPIOx, uint16 pinNumber, GPIOMode_TypeDef outMode)
+{
+  GPIOx->MODER &= ~(GPIO_MODER_MODER0 << (pinNumber * 2));
+  GPIOx->MODER |= (((uint32_t)outMode) << (pinNumber * 2));
+}

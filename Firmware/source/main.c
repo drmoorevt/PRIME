@@ -1,10 +1,11 @@
 #include "stm32f2xx.h"
 #include "adc.h"
-#include "dac.h"
 #include "analog.h"
+#include "dac.h"
 #include "eeprom.h"
 #include "gpio.h"
 #include "hih613x.h"
+#include "i2c.h"
 #include "sdcard.h"
 #include "serialflash.h"
 #include "spi.h"
@@ -25,14 +26,14 @@ int main(void)
   EEPROM_init();
 //  SerialFlash_init();
 //  SDCard_init();
-  SPI_init();
+//  SPI_init();
+//  I2C_init();
   Tests_init();
 
-  HIH613X_test();
 //  EEPROM_test();
 //  SDCard_test();
   
-  while(1) // Unreachable with above test code in place!
+  while(1)
   {
     Tests_run();
   }
