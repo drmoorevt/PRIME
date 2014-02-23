@@ -20,14 +20,8 @@
 
 #define ADDRBYTES_EE 2
 
-//#define SELECT_CHIP_EE0()   do { GPIOB->BSRRH |= 0x00000020; Util_spinWait(200); } while (0)
-//#define DESELECT_CHIP_EE0() do { Util_spinWait(200); GPIOB->BSRRL |= 0x00000020; } while (0)
-
 #define SELECT_CHIP_EE0()   do { GPIOB->BSRRH |= 0x00000020; } while (0)
 #define DESELECT_CHIP_EE0() do { GPIOB->BSRRL |= 0x00000020; } while (0)
-
-#define SELECT_CHIP_EE1()   do { GPIOB->BSRRH |= 0x00000100; } while (0)
-#define DESELECT_CHIP_EE1() do { GPIOB->BSRRL |= 0x00000100; } while (0)
 
 #define SELECT_EE_HOLD()    do { GPIOB->BSRRH |= 0x00000004; } while (0)
 #define DESELECT_EE_HOLD()  do { GPIOB->BSRRL |= 0x00000004; } while (0)
@@ -47,7 +41,7 @@ static const uint8 sFillBuf[] = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 \*****************************************************************************/
 void EEPROM_init(void)
 {
-  const uint16 eeCtrlPins = (GPIO_Pin_2 | GPIO_Pin_5 | GPIO_Pin_8);
+  const uint16 eeCtrlPins = (GPIO_Pin_2 | GPIO_Pin_5);
 
   // Initialize the EEPROM chip select and hold lines
   /*
@@ -59,7 +53,6 @@ void EEPROM_init(void)
   GPIO_setPortClock(GPIOB, TRUE);
   GPIO_configurePins(GPIOB, &eeCtrlPortB);
   DESELECT_CHIP_EE0();
-  DESELECT_CHIP_EE1();
   DESELECT_EE_HOLD();
 
   Util_fillMemory((uint8*)&sEEPROM, sizeof(sEEPROM), 0x00);

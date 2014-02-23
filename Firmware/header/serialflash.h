@@ -3,16 +3,12 @@
 
 #include "types.h"
 
-typedef struct
-{
-  uint8 testPage[128];
-} FlashMap;
-
-#define gpFlash ((const FlashMap*) 0)
+#pragma anon_unions
 
 typedef enum
 {
   SERIAL_FLASH_IDLE,
+  SERIAL_FLASH_ERASING,
   SERIAL_FLASH_WRITING,
   SERIAL_FLASH_WAITING,
   SERIAL_FLASH_READBACK
@@ -20,17 +16,76 @@ typedef enum
 
 typedef enum
 {
-  SERIAL_FLASH_CHIP     =     0x60,
-  SERIAL_FLASH_BLOCK4   =     0x20,
-  SERIAL_FLASH_BLOCK32  =     0x54,
-  SERIAL_FLASH_BLOCK64  =     0xD8
-} SerialFlashBlockSize;
+  SF_PAGE_SIZE      =     0x000100,
+  SF_SUBSECTOR_SIZE =     0x001000,
+  SF_SECTOR_SIZE    =     0x010000,
+  SF_CHIP_SIZE      =     0x200000,
+} SerialFlashSize;
+
+#define SF_SECTORS_PER_CHIP      (SF_CHIP_SIZE / SF_SECTOR_SIZE)
+#define SF_SUBSECTORS_PER_CHIP   (SF_CHIP_SIZE / SF_SUBSECTOR_SIZE)
+#define SF_PAGES_PER_CHIP        (SF_CHIP_SIZE / SF_PAGE_SIZE)
+#define SF_SUBSECTORS_PER_SECTOR (SF_SECTOR_SIZE / SF_SUBSECTOR_SIZE)
+#define SF_PAGES_PER_SECTOR      (SF_SECTOR_SIZE / SF_PAGE_SIZE)
+#define SF_PAGES_PER_SUBSECTOR   (SF_SUBSECTOR_SIZE / SF_PAGE_SIZE)
+
+typedef struct
+{
+  uint8 byte[SF_PAGE_SIZE];
+} FlashPage;
+
+typedef struct
+{
+  union
+  {
+    uint8     byte[SF_SUBSECTOR_SIZE];
+    FlashPage page[SF_PAGES_PER_SUBSECTOR];
+  };
+} FlashSubSector;
+
+typedef struct
+{
+  union
+  {
+    uint8          byte[SF_SECTOR_SIZE];
+    FlashPage      page[SF_PAGES_PER_SECTOR];
+    FlashSubSector subSector[SF_SUBSECTORS_PER_SECTOR];
+  };
+} FlashSector;
+
+typedef struct
+{
+  union
+  {
+    uint8          byte[SF_CHIP_SIZE];
+    FlashPage      page[SF_PAGES_PER_CHIP];
+    FlashSubSector subSector[SF_SUBSECTORS_PER_CHIP];
+    FlashSector    sector[SF_SECTORS_PER_CHIP];
+  };
+} FlashOrganization;
+
+typedef struct
+{
+  FlashSubSector subSector;
+} FlashMap;
+
+
+typedef struct
+{
+  uint8  manufacturerId;
+  uint8  memoryType;
+  uint8  memoryCapacity;
+  uint8  uidLength;
+  uint8  uniqueId[16];
+} FlashID;
+
+#define gpSerialFlash ((const FlashMap*) 0)
 
 void    SerialFlash_init(void);
 void    SerialFlash_test(void);
+FlashID SerialFlash_readFlashID(void);
 void    SerialFlash_readFlash(uint8 *pSrc, uint8 *pDest, uint16 length);
 boolean SerialFlash_writeFlash(uint8 *pSrc, uint8 *pDest, uint16 length);
-uint8   SerialFlash_eraseFlash(uint8 *pDest, SerialFlashBlockSize blockSize);
-uint8   SerialFlash_protectFlash(boolean bProtect);
+uint8   SerialFlash_eraseFlash(uint8 *pDest, SerialFlashSize blockSize);
 
 #endif

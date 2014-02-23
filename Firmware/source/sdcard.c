@@ -26,6 +26,9 @@
 #define OP_WRITE_STATUS     0x01
 #define OP_READ_STATUS      0x05
 
+#define OP_SD_SPI_MODE      0xFFFFFFFFFFFFFFFFFFFF // 10 bytes of 0xFF for 74cycles
+#define OP_SD_CMD_0         0x600000000095
+
 //Serial flash status register
 #define SF_SPRL_bm          0x80
 #define SF_EPE_bm           0x20
@@ -49,21 +52,20 @@ static struct
 \*****************************************************************************/
 void SDCard_init(void)
 {
-  const uint16 sfCtrlPins = (GPIO_Pin_2 | GPIO_Pin_5 | GPIO_Pin_8);
+  const uint16 sfCtrlPins = (GPIO_Pin_4);
 
-  // Initialize the chip select and hold lines
-  /*
-  GPIO_InitTypeDef eeCtrlPortB = {eeCtrlPins, GPIO_Mode_OUT, GPIO_Speed_25MHz, GPIO_OType_OD,
-                                              GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
-  */
-  GPIO_InitTypeDef eeCtrlPortB = {sfCtrlPins, GPIO_Mode_OUT, GPIO_Speed_25MHz, GPIO_OType_PP,
+  // Initialize the chip select line
+  GPIO_InitTypeDef sdCtrlPortB = {sfCtrlPins, GPIO_Mode_OUT, GPIO_Speed_25MHz, GPIO_OType_PP,
                                               GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
   GPIO_setPortClock(GPIOB, TRUE);
-  GPIO_configurePins(GPIOB, &eeCtrlPortB);
+  GPIO_configurePins(GPIOB, &sdCtrlPortB);
   DESELECT_CHIP_SF();
 
   Util_fillMemory((uint8*)&sSDCard, sizeof(sSDCard), 0x00);
   sSDCard.state = SD_CARD_IDLE;
+
+
+
 }
 
 /*****************************************************************************\
@@ -118,8 +120,6 @@ void SDCard_readFlash(uint8 *pSrc, uint8 *pDest, uint16 length)
   uint32 chipOffset;
   uint8 writeBuf[ADDRBYTES_SF + 1];
 
-  SPI_init();
-
   chipOffset = (uint32)pSrc;
 
   writeBuf[0] = OP_READ_MEMORY;
@@ -153,13 +153,11 @@ boolean SDCard_writeFlash(uint8 *pSrc, uint8 *pDest, uint16 length)
   boolean writeFailed = FALSE;
   uint8 writeResult;
 
-  SPI_init();
-
   //UNPROTECT_CHIP_SF();
   while (!writeFailed && length > 0)
   {
     // for SF, write must not go past a 256 byte boundary
-    numBytes = WRITEPAGESIZE_SF - ((uint32)pDest & (WRITEPAGESIZE_SF-1));
+    numBytes = WRITEPAGESIZE_SF - ((uint32)pDest & (WRITEPAGESIZE_SF - 1));
     if (length < numBytes)
       numBytes = length;
 
@@ -239,8 +237,6 @@ boolean SDCard_writeFlash(uint8 *pSrc, uint8 *pDest, uint16 length)
 uint8 SDCard_protectFlash(boolean bProtect)
 {
   uint8 buf[2];
-
-  SPI_init();
 
   //read status
   buf[0] = OP_READ_STATUS;

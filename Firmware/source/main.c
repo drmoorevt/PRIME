@@ -24,9 +24,9 @@ int main(void)
   UART_init();
   HIH613X_init();
   EEPROM_init();
-//  SerialFlash_init();
+  SerialFlash_init();
 //  SDCard_init();
-//  SPI_init();
+  SPI_init();
 //  I2C_init();
   Tests_init();
 

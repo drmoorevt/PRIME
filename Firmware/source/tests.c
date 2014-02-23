@@ -5,6 +5,7 @@
 #include "eeprom.h"
 #include "gpio.h"
 #include "hih613x.h"
+#include "serialflash.h"
 #include "time.h"
 #include "uart.h"
 #include "util.h"
@@ -220,7 +221,7 @@ const uint8 resetMessage[6] = {'R','e','s','e','t','\n'};
 void Tests_run(void)
 {
   // Testing
-  Tests_test15();
+  Tests_test4();
   switch (sTests.state)
   {
     case TEST_IDLE:            // Clear test data and setup listening for commands on the comm port
@@ -392,13 +393,10 @@ uint16 Tests_test0(void)
 * DESCRIPTION 
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       None
+* NOTES       Basic sampling test based on pushbutton switches
 \**************************************************************************************************/
 uint16 Tests_test1(void)
 {
-  Time_init();
-	ADC_init();
-  UART_init();
   while(1)
   {
     Util_spinWait(2000000);
@@ -419,32 +417,15 @@ uint16 Tests_test1(void)
 * DESCRIPTION 
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       
-* The goal of this test is to measure the current consumption of EEPROM during a complete write/flash erase/write cycle
-* We begin by starting the timer 0 interrupt to tick every 1MHz = 1us = (Timer1@120MHz) = underflow every 120 ticks
-*   The ISR should read/store the result of the previous ADC conversion and then begin another
-*   The ISR should increment a counter indicating how many samples have occurred and stop before overflowing the buffer
-*   The ISR should reset the timer value to 120 before exiting
-* We will not use an interrupt to on the ADC conversion complete
-* Next we 
+* NOTES       Testing DAC output on port 2
 \**************************************************************************************************/
 uint16 Tests_test2(void)
 {
-  uint8 testBuffer[128];
-  Time_init();
-  DAC_init();
-//  Analog_setDomain(EEPROM_DOMAIN, TRUE);
-//  Analog_adjustDomain(EEPROM_DOMAIN, 0.3);
-  
-  Analog_adjustDomain(ANALOG_DOMAIN, 0.4);
-
-  EEPROM_init();
-  
-  Util_fillMemory(testBuffer, 128, 0xA5);
+  float outVolts;
   while(1)
   {
-    EEPROM_writeEE(testBuffer, 0, 128);
-    Util_spinWait(2000000);
+    for (outVolts=0.0; outVolts < 3.3; outVolts+=.001)
+      DAC_setVoltage(DAC_PORT2, outVolts);
   }
 }
 
@@ -454,16 +435,28 @@ uint16 Tests_test2(void)
 * DESCRIPTION
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       Tests the DAC
+* NOTES       Tests writing to EEPROM
 \**************************************************************************************************/
 uint16 Tests_test3(void)
 {
-  float outVolts;
-  DAC_init();
+  uint8 testBuffer[128];
+
+  Analog_setDomain(MCU_DOMAIN,    FALSE);  // Does nothing
+  Analog_setDomain(ANALOG_DOMAIN, TRUE);   // Enable analog domain
+  Analog_setDomain(IO_DOMAIN,     TRUE);   // Enable I/O domain
+  Analog_setDomain(COMMS_DOMAIN,  TRUE);  // Disable comms domain
+  Analog_setDomain(SRAM_DOMAIN,   FALSE);  // Disable sram domain
+  Analog_setDomain(EEPROM_DOMAIN, TRUE);   // Enable SPI domain
+  Analog_setDomain(ENERGY_DOMAIN, FALSE);  // Disable energy domain
+  Analog_setDomain(BUCK_DOMAIN7,  FALSE);  // Disable relay domain
+  Analog_adjustDomain(EEPROM_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
+  Time_delay(1000); // Wait 1000ms for domains to settle
+
+  Util_fillMemory(testBuffer, 128, 0xA5);
   while(1)
   {
-    for (outVolts=0.0; outVolts < 3.3; outVolts+=.001)
-      DAC_setVoltage(DAC_PORT2, outVolts);
+    EEPROM_writeEE(testBuffer, 0, 128);
+    Util_spinWait(2000000);
   }
 }
 
@@ -476,12 +469,29 @@ uint16 Tests_test3(void)
 \**************************************************************************************************/
 uint16 Tests_test4(void)
 {
-  Time_init();
-  GPIO_init();
-  DAC_init();
+  uint8 txBuffer[128];
+  uint8 rxBuffer[128];
+
+  Analog_setDomain(MCU_DOMAIN,    FALSE);  // Does nothing
+  Analog_setDomain(ANALOG_DOMAIN, TRUE);   // Enable analog domain
+  Analog_setDomain(IO_DOMAIN,     TRUE);   // Enable I/O domain
+  Analog_setDomain(COMMS_DOMAIN,  TRUE);  // Disable comms domain
+  Analog_setDomain(SRAM_DOMAIN,   FALSE);  // Disable sram domain
+  Analog_setDomain(EEPROM_DOMAIN, TRUE);   // Enable SPI domain
+  Analog_setDomain(ENERGY_DOMAIN, FALSE);  // Disable energy domain
+  Analog_setDomain(BUCK_DOMAIN7,  FALSE);  // Disable relay domain
+  Analog_adjustDomain(EEPROM_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
+  Time_delay(1000); // Wait 1000ms for domains to settle
+
   while(1)
   {
-    Util_spinWait(1);
+    while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
+
+    Util_fillMemory(txBuffer, sizeof(txBuffer), 0x5A);
+    SerialFlash_writeFlash(txBuffer, 0, sizeof(txBuffer));
+
+    Util_fillMemory(rxBuffer, sizeof(txBuffer), 0x00);
+    SerialFlash_readFlash(0, rxBuffer, sizeof(txBuffer));
   }
 }
 
@@ -494,13 +504,7 @@ uint16 Tests_test4(void)
 \**************************************************************************************************/
 uint16 Tests_test5(void)
 {
-  Time_init();
-  GPIO_init();
-  DAC_init();
-  while(1)
-  {
-    Util_spinWait(1);
-  }
+  return 0;
 }
 
 /**************************************************************************************************\
@@ -513,9 +517,6 @@ uint16 Tests_test5(void)
 uint16 Tests_test6(void)
 { 
   uint8 testBuffer[128];
-  Time_init();
-  ADC_init();
-  DAC_init();
   
   Analog_setDomain(EEPROM_DOMAIN, TRUE); // Enable SPI domain********************
   Analog_adjustDomain(EEPROM_DOMAIN, 0.3);
@@ -1321,7 +1322,7 @@ uint16 Tests_test14(void)
 * DESCRIPTION
 * PARAMETERS  None
 * RETURNS     Number of bytes generated by the test
-* NOTES       This test attempts basic operation of the SDCARD
+* NOTES       This test attempts basic operation of the HIH_6130_021
 \**************************************************************************************************/
 uint16 Tests_test15(void)
 {
