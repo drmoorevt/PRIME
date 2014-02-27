@@ -37,14 +37,14 @@ uint8 Util_checksum(const uint8 *pData, uint8 nbrBytes)
 
 /**************************************************************************************************\
 * FUNCTION     Util_calcCRC16
-* DESCRIPTION  Computes the 16bit CRC of pData given the specified CRC polynomial.
+* DESCRIPTION  Computes the 16bit CRC of pData
 * PARAMETERS   pData      - pointer to data
 *              nbrBytes   - length of the data
-*              polynomial - The CRC polynomial to use. Typically IEEE or CCITT.
 * RETURNS      The CRC of pData
 * NOTES        None
 \**************************************************************************************************/
-uint16 Util_calcCRC16(uint8 *pData, uint16 numBytes){
+uint16 Util_calcCRC16(uint8 *pData, uint16 numBytes)
+{
    uint16 crc = 0xFFFF, i;
    uint8 dataByte, j, flag;
 
@@ -61,6 +61,33 @@ uint16 Util_calcCRC16(uint8 *pData, uint16 numBytes){
       }
    }
    return(crc);
+}
+
+/**************************************************************************************************\
+* FUNCTION     Util_calcCRC7
+* DESCRIPTION  Computes the 7bit CRC of pData
+* PARAMETERS   pData      - pointer to data
+*              nbrBytes   - length of the data
+* RETURNS      The CRC of pData
+* NOTES        None
+\**************************************************************************************************/
+uint8 Util_calcCRC7(uint8 initCRC, uint8 *pData, uint16 numBytes)
+{
+  uint8 i, ibit, byte;
+
+  for (i = 0; i < numBytes; i++, pData++)
+  {
+    byte = *pData;
+    for (ibit = 0; ibit < 8; ibit++)
+    {
+      initCRC <<= 1;
+      if ((byte ^ initCRC) & 0x80)
+        initCRC ^= 0x09;
+      byte <<= 1;
+    }
+    initCRC &= 0x7F;
+  }
+  return initCRC;
 }
 
 /**************************************************************************************************\

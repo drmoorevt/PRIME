@@ -47,19 +47,13 @@ void SPI_init(void)
 void SPI_write(const uint8 *pBytes, uint16 numBytes)
 {
   uint16 dummy = SPI2->DR; // clear the DR
-  // pBytes may point to RAM or ROM
   if (numBytes == 0)
     return;
-
-  
-  //UCB1IFG = 0x00; //clear rx/tx flags
-  
   
   while(numBytes--)
     SPI_TX(*pBytes++);
   
-	while(SPI2->SR & SPI_SR_BSY); //wait for spi to be complete
-//  while(P5IN & BIT5); //UCBUSY is cleared when the data is done, need clk to settle to idle too
+	while(SPI2->SR & SPI_SR_BSY); // Wait for tx to complete
 }
 
 /*****************************************************************************\
@@ -75,11 +69,7 @@ void SPI_read(uint8 *pBytes, uint16 numBytes)
   uint16 dummy = SPI2->DR; // clear the DR
   
   if (numBytes == 0)
-  {
-    return; // no assert, as this code is called in assert
-  }
-
-//  UCB1IFG = 0x00; //clear rx/tx flags
+    return;
 
   while(numBytes--)
   {
@@ -87,8 +77,8 @@ void SPI_read(uint8 *pBytes, uint16 numBytes)
 		while (!(SPI2->SR & SPI_SR_RXNE));
     *pBytes++ = SPI2->DR;   // read the incoming byte
   }
-	while(SPI2->SR & SPI_SR_BSY); //wait for spi to be complete
-//  while(P5IN & BIT5); //UCBUSY is cleared when the data is done, need clk to settle to idle too
+
+	while(SPI2->SR & SPI_SR_BSY); // Wait for tx to complete
 }
 
 

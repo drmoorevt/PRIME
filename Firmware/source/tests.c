@@ -5,6 +5,7 @@
 #include "eeprom.h"
 #include "gpio.h"
 #include "hih613x.h"
+#include "sdcard.h"
 #include "serialflash.h"
 #include "time.h"
 #include "uart.h"
@@ -221,7 +222,7 @@ const uint8 resetMessage[6] = {'R','e','s','e','t','\n'};
 void Tests_run(void)
 {
   // Testing
-  Tests_test4();
+  Tests_test5();
   switch (sTests.state)
   {
     case TEST_IDLE:            // Clear test data and setup listening for commands on the comm port
@@ -504,7 +505,33 @@ uint16 Tests_test4(void)
 \**************************************************************************************************/
 uint16 Tests_test5(void)
 {
-  return 0;
+  uint8 txBuffer[128];
+  uint8 rxBuffer[128];
+
+  Analog_setDomain(MCU_DOMAIN,    FALSE);  // Does nothing
+  Analog_setDomain(ANALOG_DOMAIN, TRUE);   // Enable analog domain
+  Analog_setDomain(IO_DOMAIN,     TRUE);   // Enable I/O domain
+  Analog_setDomain(COMMS_DOMAIN,  TRUE);  // Disable comms domain
+  Analog_setDomain(SRAM_DOMAIN,   FALSE);  // Disable sram domain
+  Analog_setDomain(EEPROM_DOMAIN, TRUE);   // Enable SPI domain
+  Analog_setDomain(ENERGY_DOMAIN, FALSE);  // Disable energy domain
+  Analog_setDomain(BUCK_DOMAIN7,  FALSE);  // Disable relay domain
+  Analog_adjustDomain(EEPROM_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
+  Time_delay(1000); // Wait 1000ms for domains to settle
+
+  while (1)
+    SDCard_setup();
+
+  while (1)
+  {
+    while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
+
+    Util_fillMemory(txBuffer, sizeof(txBuffer), 0x5A);
+    SDCard_writeFlash(txBuffer, 0, sizeof(txBuffer));
+
+    Util_fillMemory(rxBuffer, sizeof(txBuffer), 0x00);
+    SDCard_readFlash(0, rxBuffer, sizeof(txBuffer));
+  }
 }
 
 /**************************************************************************************************\

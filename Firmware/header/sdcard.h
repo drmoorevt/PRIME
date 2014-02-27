@@ -28,6 +28,7 @@ typedef enum
 
 void    SDCard_init(void);
 void    SDCard_test(void);
+boolean SDCard_setup(void);
 void    SDCard_readFlash(uint8 *pSrc, uint8 *pDest, uint16 length);
 boolean SDCard_writeFlash(uint8 *pSrc, uint8 *pDest, uint16 length);
 uint8   SDCard_eraseFlash(uint8 *pDest, SDCardBlockSize blockSize);
