@@ -44,7 +44,7 @@ void SPI_init(void)
 *              numBytes -- the number of bytes to write
 * RETURNS      nothing
 \*****************************************************************************/
-void SPI_write(const uint8 *pBytes, uint16 numBytes)
+void SPI_write(const uint8 *pBytes, uint32 numBytes)
 {
   uint16 dummy = SPI2->DR; // clear the DR
   if (numBytes == 0)
@@ -64,7 +64,7 @@ void SPI_write(const uint8 *pBytes, uint16 numBytes)
 *              numBytes - the number of bytes to read
 * RETURNS      nothing
 \*****************************************************************************/
-void SPI_read(uint8 *pBytes, uint16 numBytes)
+void SPI_read(uint8 *pBytes, uint32 numBytes)
 {
   uint16 dummy = SPI2->DR; // clear the DR
   

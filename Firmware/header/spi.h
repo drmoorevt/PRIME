@@ -4,7 +4,7 @@
 #include "types.h"
 
 void SPI_init(void);
-void SPI_write(const uint8_t *pBytes, uint16_t numBytes);
-void SPI_read(uint8_t *pBytes, uint16_t numBytes);
+void SPI_write(const uint8 *pBytes, uint32 numBytes);
+void SPI_read(uint8 *pBytes, uint32 numBytes);
 
 #endif // SPI_H

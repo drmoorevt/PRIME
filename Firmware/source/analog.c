@@ -169,6 +169,33 @@ void Analog_adjustDomain(VoltageDomain domain, float voltage)
 //  Analog_selectChannel(domain, TRUE);   // Turn on the inhibit switch
 }
 
+float Analog_convertFeedbackVoltage(VoltageDomain domain, float outVolts)
+{
+  switch (domain)
+  {
+    case MCU_DOMAIN:
+    case ANALOG_DOMAIN:
+    case SRAM_DOMAIN:
+      break;
+    case EEPROM_DOMAIN:
+      return 0.6 + (3.400 - outVolts)/2.4000;
+    case ENERGY_DOMAIN:
+    case COMMS_DOMAIN:
+    case IO_DOMAIN:
+    case BUCK_DOMAIN7:
+    case BOOST_DOMAIN0:
+    case BOOST_DOMAIN1:
+    case BOOST_DOMAIN2:
+    case BOOST_DOMAIN3:
+    case BOOST_DOMAIN4:
+    case BOOST_DOMAIN5:
+    case BOOST_DOMAIN6:
+    case BOOST_DOMAIN7:
+      break;
+  }
+  return 0.6;
+}
+
 /*************************************************************************************************\
 * FUNCTION    Analog_sampleDomain
 * DESCRIPTION Enables or disables a voltage domain

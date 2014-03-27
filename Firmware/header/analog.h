@@ -29,5 +29,6 @@ void Analog_sampleDomain(VoltageDomain analogSelect);
 void Analog_setDomain(VoltageDomain domain, boolean state);
 void Analog_selectChannel(VoltageDomain chan, boolean domen);
 void Analog_adjustDomain(VoltageDomain domain, float voltage);
+float Analog_convertFeedbackVoltage(VoltageDomain domain, float outVolts);
 
 #endif // ANALOG_H

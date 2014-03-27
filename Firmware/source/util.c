@@ -36,61 +36,6 @@ uint8 Util_checksum(const uint8 *pData, uint8 nbrBytes)
 }  // Util_checksum
 
 /**************************************************************************************************\
-* FUNCTION     Util_calcCRC16
-* DESCRIPTION  Computes the 16bit CRC of pData
-* PARAMETERS   pData      - pointer to data
-*              nbrBytes   - length of the data
-* RETURNS      The CRC of pData
-* NOTES        None
-\**************************************************************************************************/
-uint16 Util_calcCRC16(uint8 *pData, uint16 numBytes)
-{
-   uint16 crc = 0xFFFF, i;
-   uint8 dataByte, j, flag;
-
-   for (j = 0; j < numBytes; j++)  // Examine the input bytes one by one
-   {
-      dataByte= *pData++;
-      for (i = 0; i < 8; i++)  // Shift in each bit in the data byte
-      {
-         flag = (crc ^ dataByte) & 0x0001;
-         crc       >>= 1;
-         dataByte  >>= 1;
-         if (flag)
-           crc ^= 0xA001;
-      }
-   }
-   return(crc);
-}
-
-/**************************************************************************************************\
-* FUNCTION     Util_calcCRC7
-* DESCRIPTION  Computes the 7bit CRC of pData
-* PARAMETERS   pData      - pointer to data
-*              nbrBytes   - length of the data
-* RETURNS      The CRC of pData
-* NOTES        None
-\**************************************************************************************************/
-uint8 Util_calcCRC7(uint8 initCRC, uint8 *pData, uint16 numBytes)
-{
-  uint8 i, ibit, byte;
-
-  for (i = 0; i < numBytes; i++, pData++)
-  {
-    byte = *pData;
-    for (ibit = 0; ibit < 8; ibit++)
-    {
-      initCRC <<= 1;
-      if ((byte ^ initCRC) & 0x80)
-        initCRC ^= 0x09;
-      byte <<= 1;
-    }
-    initCRC &= 0x7F;
-  }
-  return initCRC;
-}
-
-/**************************************************************************************************\
 * FUNCTION     Util_compareMemory
 * DESCRIPTION  Little endian comparison of two memory locations
 * PARAMETERS   pLeft: The left value to compare
@@ -103,8 +48,8 @@ uint8 Util_calcCRC7(uint8 initCRC, uint8 *pData, uint16 numBytes)
 \**************************************************************************************************/
 int8 Util_compareMemory(uint8* pLeft, uint8* pRight, uint16 numBytes)
 {
-  uint16 i;
-  for (i = numBytes - 1; i > 0; i--) // Assuming little endian (MSB at highest addr)
+  int32 i;
+  for (i = numBytes - 1; i >= 0; i--) // Assuming little endian (MSB at highest addr)
   {
     if (pLeft[i] > pRight[i])
       return -1;

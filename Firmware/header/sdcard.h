@@ -12,26 +12,18 @@ typedef struct
 
 typedef enum
 {
-  SD_CARD_IDLE,
-  SD_CARD_WRITING,
-  SD_CARD_WAITING,
-  SD_CARD_READBACK
+  SDCARD_IDLE,
+  SDCARD_SETUP,
+  SDCARD_READY,
+  SDCARD_READING,
+  SDCARD_WRITING,
+  SDCARD_VERIFYING
 } SDCardState;
-
-typedef enum
-{
-  SD_CARD_CHIP     =     0x60,
-  SD_CARD_BLOCK4   =     0x20,
-  SD_CARD_BLOCK32  =     0x54,
-  SD_CARD_BLOCK64  =     0xD8
-} SDCardBlockSize;
 
 void    SDCard_init(void);
 void    SDCard_test(void);
 boolean SDCard_setup(void);
-void    SDCard_readFlash(uint8 *pSrc, uint8 *pDest, uint16 length);
-boolean SDCard_writeFlash(uint8 *pSrc, uint8 *pDest, uint16 length);
-uint8   SDCard_eraseFlash(uint8 *pDest, SDCardBlockSize blockSize);
-uint8   SDCard_protectFlash(boolean bProtect);
+boolean SDCard_read(uint8 *pSrc, uint8 *pDest, uint16 length);
+boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length);
 
 #endif
