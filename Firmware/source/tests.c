@@ -10,6 +10,9 @@
 #include "time.h"
 #include "uart.h"
 #include "util.h"
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #define FILE_ID TESTS_C
 
@@ -374,7 +377,7 @@ uint16 Tests_test0(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, FALSE); // Disable SPI domain
+  Analog_setDomain(SPI_DOMAIN, FALSE); // Disable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
 
@@ -407,7 +410,7 @@ uint16 Tests_test1(void)
     else if ((GPIOC->IDR & 0x00004000) == 0)
       Analog_sampleDomain(ANALOG_DOMAIN);
     else
-      Analog_sampleDomain(EEPROM_DOMAIN);
+      Analog_sampleDomain(SPI_DOMAIN);
   }
 }
 
@@ -445,10 +448,10 @@ uint16 Tests_test3(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);   // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  TRUE);  // Disable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE);  // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, TRUE);   // Enable SPI domain
+  Analog_setDomain(SPI_DOMAIN, TRUE);      // Enable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE);  // Disable relay domain
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
   Time_delay(1000); // Wait 1000ms for domains to settle
 
   Util_fillMemory(testBuffer, 128, 0xA5);
@@ -476,10 +479,10 @@ uint16 Tests_test4(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);   // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  TRUE);  // Disable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE);  // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, TRUE);   // Enable SPI domain
+  Analog_setDomain(SPI_DOMAIN, TRUE);      // Enable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE);  // Disable relay domain
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
   Time_delay(1000); // Wait 1000ms for domains to settle
 
   while(1)
@@ -487,10 +490,10 @@ uint16 Tests_test4(void)
     while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
 
     Util_fillMemory(txBuffer, sizeof(txBuffer), 0x5A);
-    SerialFlash_writeFlash(txBuffer, 0, sizeof(txBuffer));
+    SerialFlash_write(txBuffer, 0, sizeof(txBuffer));
 
     Util_fillMemory(rxBuffer, sizeof(txBuffer), 0x00);
-    SerialFlash_readFlash(0, rxBuffer, sizeof(txBuffer));
+    SerialFlash_read(0, rxBuffer, sizeof(txBuffer));
   }
 }
 
@@ -511,10 +514,10 @@ uint16 Tests_test5(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);   // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  TRUE);  // Disable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE);  // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, TRUE);   // Enable SPI domain
+  Analog_setDomain(SPI_DOMAIN, TRUE);      // Enable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE);  // Disable relay domain
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
   Time_delay(1000); // Wait 1000ms for domains to settle
 
   SDCard_setup();
@@ -542,8 +545,8 @@ uint16 Tests_test6(void)
 { 
   uint8 testBuffer[128];
   
-  Analog_setDomain(EEPROM_DOMAIN, TRUE); // Enable SPI domain********************
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.3);
+  Analog_setDomain(SPI_DOMAIN, TRUE); // Enable SPI domain********************
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.3);
   
   UART_init();
   EEPROM_init();
@@ -580,7 +583,7 @@ uint16 Tests_test7(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  TRUE);  // Enable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, FALSE); // Disable SPI domain
+  Analog_setDomain(SPI_DOMAIN, FALSE); // Disable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
 
@@ -651,10 +654,10 @@ uint16 Tests_test8(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, FALSE); // Disable SPI domain
+  Analog_setDomain(SPI_DOMAIN, FALSE); // Disable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
-  Analog_selectChannel(EEPROM_DOMAIN, TRUE);
+  Analog_selectChannel(SPI_DOMAIN, TRUE);
 
   ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
   ADC_openPort(ADC_PORT2, adc2Config);
@@ -715,11 +718,11 @@ uint16 Tests_test9(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, TRUE);  // Enable SPI domain
+  Analog_setDomain(SPI_DOMAIN, TRUE);  // Enable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
-//  Analog_selectChannel(EEPROM_DOMAIN, TRUE);
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.6);
+//  Analog_selectChannel(SPI_DOMAIN, TRUE);
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.6);
   Time_delay(100); // Wait 10ms for domains to settle
 
   ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
@@ -767,7 +770,7 @@ uint16 Tests_test9(void)
 
   // Return domains to initial state
   Analog_setDomain(COMMS_DOMAIN,  TRUE); // Disable comms domain
-  Analog_setDomain(EEPROM_DOMAIN, FALSE);  // Enable SPI domain
+  Analog_setDomain(SPI_DOMAIN, FALSE);  // Enable SPI domain
   Time_delay(10); // Wait 10ms for domains to settle
 
   return SUCCESS;
@@ -818,10 +821,10 @@ uint16 Tests_test10(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, TRUE);  // Enable SPI domain
+  Analog_setDomain(SPI_DOMAIN, TRUE);  // Enable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.6); // Set domain voltage to nominal
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.6); // Set domain voltage to nominal
   Time_delay(1000); // Wait 1000ms for domains to settle
 
   ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
@@ -866,7 +869,7 @@ uint16 Tests_test10(void)
 
   // Return domains to initial state
   Analog_setDomain(COMMS_DOMAIN,  TRUE); // Enable comms domain
-  Analog_setDomain(EEPROM_DOMAIN, FALSE);  // Disable SPI domain
+  Analog_setDomain(SPI_DOMAIN, FALSE);  // Disable SPI domain
   Time_delay(10); // Wait 10ms for domains to settle
 
   return SUCCESS;
@@ -917,10 +920,10 @@ uint16 Tests_test11(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, TRUE);  // Enable SPI domain
+  Analog_setDomain(SPI_DOMAIN, TRUE);  // Enable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.6); // Set domain voltage to nominal
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.6); // Set domain voltage to nominal
   Time_delay(1000); // Wait 10ms for domains to settle
 
   ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
@@ -935,15 +938,15 @@ uint16 Tests_test11(void)
   ADC_startSampleTimer(TIMER3, 300);     // Start timer3 triggered ADCs at 10us sample rate
 
   Time_delay(7);
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.0); // Set domain voltage to maximum
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.0); // Set domain voltage to maximum
   Time_delay(7);
-  Analog_adjustDomain(EEPROM_DOMAIN, 3.3); // Set domain voltage to minimum
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 3.3); // Set domain voltage to minimum
   Time_delay(7);
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.0); // Set domain voltage to maximum
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.0); // Set domain voltage to maximum
   Time_delay(7);
-  Analog_adjustDomain(EEPROM_DOMAIN, 3.3); // Set domain voltage to minimum
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 3.3); // Set domain voltage to minimum
   Time_delay(7);
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.6); // Set domain voltage to maximum
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.6); // Set domain voltage to maximum
   
 
   // Complete the samples
@@ -968,7 +971,7 @@ uint16 Tests_test11(void)
 
   // Return domains to initial state
   Analog_setDomain(COMMS_DOMAIN,  TRUE);   // Enable comms domain
-  Analog_setDomain(EEPROM_DOMAIN, FALSE);  // Disable SPI domain
+  Analog_setDomain(SPI_DOMAIN, FALSE);  // Disable SPI domain
   Time_delay(10); // Wait 10ms for domains to settle
 
   return SUCCESS;
@@ -1021,10 +1024,10 @@ uint16 Tests_test12(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, TRUE);  // Enable SPI domain
+  Analog_setDomain(SPI_DOMAIN, TRUE);  // Enable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.6); // Set domain voltage to nominal
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.6); // Set domain voltage to nominal
   Time_delay(1000); // Wait 1000ms for domains to settle
 
   ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
@@ -1091,7 +1094,7 @@ uint16 Tests_test12(void)
 
   // Return domains to initial state
   Analog_setDomain(COMMS_DOMAIN,  TRUE); // Enable comms domain
-  Analog_setDomain(EEPROM_DOMAIN, FALSE);  // Disable SPI domain
+  Analog_setDomain(SPI_DOMAIN, FALSE);  // Disable SPI domain
   Time_delay(10); // Wait 10ms for domains to settle
 
   return SUCCESS;
@@ -1143,10 +1146,10 @@ uint16 Tests_test13(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);   // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  FALSE);  // Disable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE);  // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, TRUE);   // Enable SPI domain
+  Analog_setDomain(SPI_DOMAIN, TRUE);      // Enable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE);  // Disable relay domain
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.6); // Set domain voltage to nominal
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.6); // Set domain voltage to nominal
   Time_delay(1000); // Wait 1000ms for domains to settle
 
   ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
@@ -1213,7 +1216,7 @@ uint16 Tests_test13(void)
 
   // Return domains to initial state
   Analog_setDomain(COMMS_DOMAIN,  TRUE); // Enable comms domain
-  Analog_setDomain(EEPROM_DOMAIN, FALSE);  // Disable SPI domain
+  Analog_setDomain(SPI_DOMAIN, FALSE);  // Disable SPI domain
   Time_delay(10); // Wait 10ms for domains to settle
 
   return SUCCESS;
@@ -1265,10 +1268,10 @@ uint16 Tests_test14(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);   // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  FALSE);  // Disable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE);  // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, TRUE);   // Enable SPI domain
+  Analog_setDomain(SPI_DOMAIN, TRUE);      // Enable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE);  // Disable relay domain
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
   Time_delay(1000); // Wait 1000ms for domains to settle
 
   ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
@@ -1335,7 +1338,7 @@ uint16 Tests_test14(void)
 
   // Return domains to initial state
   Analog_setDomain(COMMS_DOMAIN,  TRUE); // Enable comms domain
-  Analog_setDomain(EEPROM_DOMAIN, FALSE);  // Disable SPI domain
+  Analog_setDomain(SPI_DOMAIN, FALSE);  // Disable SPI domain
   Time_delay(10); // Wait 10ms for domains to settle
 
   return SUCCESS;
@@ -1359,10 +1362,10 @@ uint16 Tests_test15(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);   // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  TRUE);  // Disable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE);  // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, TRUE);   // Enable SPI domain
+  Analog_setDomain(SPI_DOMAIN, TRUE);      // Enable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE);  // Disable relay domain
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
   Time_delay(1000); // Wait 1000ms for domains to settle
 
   while (TRUE)

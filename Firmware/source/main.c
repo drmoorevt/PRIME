@@ -15,8 +15,6 @@
 
 int main(void)
 {
-  //GPIO_init();  // YOU NEED TO WRITE THE EEPROM/SPI INIT FUNCTIONS SO I DONT HAVE TO USE THIS DEFAULT ONE!********************
-
   Time_init();
   ADC_init();
   DAC_init();
@@ -27,7 +25,6 @@ int main(void)
   SerialFlash_init();
   SDCard_init();
   SPI_init();
-//  I2C_init();
   Tests_init();
   
   while(1)

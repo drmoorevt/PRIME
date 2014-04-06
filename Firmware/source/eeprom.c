@@ -192,7 +192,7 @@ boolean EEPROM_writeEELowPower(uint8 *pSrc, uint8 *pDest, uint16 length)
 
   while (length > 0)
   {
-    Analog_adjustDomain(EEPROM_DOMAIN, 0.0); // High voltage for high speed write
+    Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.0); // High voltage for high speed write
     
     // for EE, write must not go past a 16 byte boundary
     numBytes = WRITEPAGESIZE_EE - ((uint32)pDest & (WRITEPAGESIZE_EE-1));
@@ -225,8 +225,8 @@ boolean EEPROM_writeEELowPower(uint8 *pSrc, uint8 *pDest, uint16 length)
       DESELECT_CHIP_EE0();
 
       // Decreasing domain voltage for the flash erase/write cycle
-//      Analog_adjustDomain(EEPROM_DOMAIN, .775); // Low voltage for low speed write
-      Analog_adjustDomain(EEPROM_DOMAIN, 1.35); // Low voltage for low speed write
+//      Analog_adjustFeedbackVoltage(SPI_DOMAIN, .775); // Low voltage for low speed write
+      Analog_adjustFeedbackVoltage(SPI_DOMAIN, 1.35); // Low voltage for low speed write
 
       // wait for write to complete, set a timeout of 10 ticks which will be between 10-11ms
       sEEPROM.state = EEPROM_WAITING;
@@ -244,7 +244,7 @@ boolean EEPROM_writeEELowPower(uint8 *pSrc, uint8 *pDest, uint16 length)
       while(Time_getTimerValue(TIMER_SERIAL_MEM));
 
       // Increasing domain voltage for the readback cycle
-      Analog_adjustDomain(EEPROM_DOMAIN, 0.2);
+      Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.2);
 
       sEEPROM.state = EEPROM_READBACK;
       EEPROM_readEE((uint8*)chipOffset, readBuf, numBytes);
@@ -258,7 +258,7 @@ boolean EEPROM_writeEELowPower(uint8 *pSrc, uint8 *pDest, uint16 length)
   }
   sEEPROM.state = EEPROM_IDLE;
   // Reset domain
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.6);
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.6);
 
   return (boolean)!writeFailed;
 }
@@ -280,7 +280,7 @@ boolean EEPROM_writeEEXLP(uint8 *pSrc, uint8 *pDest, uint16 length)
 
   while (length > 0)
   {
-    Analog_adjustDomain(EEPROM_DOMAIN, 1.25); // High voltage for high speed write
+    Analog_adjustFeedbackVoltage(SPI_DOMAIN, 1.25); // High voltage for high speed write
 
     // for EE, write must not go past a 16 byte boundary
     numBytes = WRITEPAGESIZE_EE - ((uint32)pDest & (WRITEPAGESIZE_EE-1));
@@ -313,8 +313,8 @@ boolean EEPROM_writeEEXLP(uint8 *pSrc, uint8 *pDest, uint16 length)
       DESELECT_CHIP_EE0();
 
       // Decreasing domain voltage for the flash erase/write cycle
-//      Analog_adjustDomain(EEPROM_DOMAIN, .775); // Low voltage for low speed write
-      Analog_adjustDomain(EEPROM_DOMAIN, 1.35); // Low voltage for low speed write
+//      Analog_adjustFeedbackVoltage(SPI_DOMAIN, .775); // Low voltage for low speed write
+      Analog_adjustFeedbackVoltage(SPI_DOMAIN, 1.35); // Low voltage for low speed write
 
       // wait for write to complete, set a timeout of 10 ticks which will be between 10-11ms
       sEEPROM.state = EEPROM_WAITING;
@@ -332,7 +332,7 @@ boolean EEPROM_writeEEXLP(uint8 *pSrc, uint8 *pDest, uint16 length)
       while(Time_getTimerValue(TIMER_SERIAL_MEM));
 
       // Increasing domain voltage for the readback cycle
-      Analog_adjustDomain(EEPROM_DOMAIN, 1.25);
+      Analog_adjustFeedbackVoltage(SPI_DOMAIN, 1.25);
 
       sEEPROM.state = EEPROM_READBACK;
       EEPROM_readEE((uint8*)chipOffset, readBuf, numBytes);
@@ -346,7 +346,7 @@ boolean EEPROM_writeEEXLP(uint8 *pSrc, uint8 *pDest, uint16 length)
   }
   sEEPROM.state = EEPROM_IDLE;
   // Reset domain
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.6);
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.6);
 
   return (boolean)!writeFailed;
 }
@@ -393,10 +393,10 @@ void EEPROM_test(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);   // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  FALSE);  // Disable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE);  // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, TRUE);   // Enable SPI domain
+  Analog_setDomain(SPI_DOMAIN, TRUE);   // Enable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE);  // Disable relay domain
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
   Time_delay(1000); // Wait 1000ms for domains to settle
 
   // basic read test

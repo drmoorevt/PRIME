@@ -27,15 +27,16 @@ union
 
 typedef struct
 {
-  boolean isEnabled;
-  float voltSetting;
-  float voltActual;
-} DomainStatus;
-
+  RegulatorType regulator;
+  double r1;
+  double r2;
+  double rf;
+} DomainConfig;
 
 struct
 {
-  DomainStatus domain[NUM_ANALOG_DOMAINS];
+  DomainStatus domainStatus[NUM_ANALOG_DOMAINS];
+  DomainConfig domainConfig[NUM_ANALOG_DOMAINS];
 } sAnalog;
 
 #define SELECT_DOMLEN()   do { GPIOE->BSRRH |= 0x00000004; } while (0)
@@ -68,6 +69,25 @@ void Analog_init(void)
 
   GPIO_setPortClock(GPIOE, TRUE);
   GPIO_configurePins(GPIOE, &analogCtrlPortE);
+
+  Util_fillMemory(&sAnalog, sizeof(sAnalog), 0x00);
+}
+
+/*************************************************************************************************\
+* FUNCTION    Analog_setup
+* DESCRIPTION Configures the specified domain according to the supplied configuration
+* PARAMETERS  reg: The type of regulator to configure the domain for
+*             r1: The upper part of the resistor ladder
+*             r2: The lower part of the resistor ladder
+*             rf: The feedback resistor coming in from the Analog output buffer
+* RETURNS     TRUE if setup was successful, FALSE otherwise
+* NOTES       The function will not enable the domain
+\*************************************************************************************************/
+void Analog_setup(RegulatorType reg, double r1, double r2, double rf)
+{
+  // Use the resistors and regulator to determine how the conversion ration of fbVolts to domVolts
+  // store that ratio in sAnalog
+
 }
 
 /*************************************************************************************************\
@@ -111,7 +131,7 @@ void Analog_setDomain(VoltageDomain domain, boolean state)
         GPIOB->BSRRH = 0x0001;
       break;
     case SRAM_DOMAIN:
-    case EEPROM_DOMAIN:
+    case SPI_DOMAIN:
     case ENERGY_DOMAIN:
     case COMMS_DOMAIN:
     case IO_DOMAIN:
@@ -131,24 +151,25 @@ void Analog_setDomain(VoltageDomain domain, boolean state)
       Util_spinWait(12000);   // 100us to let the DOMLEN latch in
       break;
   }
+  sAnalog.domainStatus[domain].isEnabled = state;
 }
 
 /*************************************************************************************************\
-* FUNCTION    Analog_adjustDomain
+* FUNCTION    Analog_adjustFeedbackVoltage
 * DESCRIPTION Enables or disables a voltage domain
 * PARAMETERS  domain: The domain to enable or disable
               voltage: The voltage to put on the selected domain
 * RETURNS     Nothing
 * NOTES       None
 \*************************************************************************************************/
-void Analog_adjustDomain(VoltageDomain domain, float voltage)
+void Analog_adjustFeedbackVoltage(VoltageDomain domain, float fbVolts)
 { 
   switch (domain)
   {
     case MCU_DOMAIN:
     case ANALOG_DOMAIN:
     case SRAM_DOMAIN:
-    case EEPROM_DOMAIN:
+    case SPI_DOMAIN:
     case ENERGY_DOMAIN:
     case COMMS_DOMAIN:
     case IO_DOMAIN:
@@ -164,11 +185,20 @@ void Analog_adjustDomain(VoltageDomain domain, float voltage)
       break;
   }
   
-  DAC_setVoltage(DAC_PORT1, voltage);
+  DAC_setVoltage(DAC_PORT1, fbVolts);
   Analog_selectChannel(domain, FALSE);  // Charge up the voltage capacitor (domen active low)
 //  Analog_selectChannel(domain, TRUE);   // Turn on the inhibit switch
+  sAnalog.domainStatus[domain].fbOutputVoltage = fbVolts;
 }
 
+/*************************************************************************************************\
+* FUNCTION    Analog_convertFeedbackVoltage
+* DESCRIPTION Enables or disables a voltage domain
+* PARAMETERS  domain: The domain to enable or disable
+              voltage: The voltage to put on the selected domain
+* RETURNS     Nothing
+* NOTES       None
+\*************************************************************************************************/
 float Analog_convertFeedbackVoltage(VoltageDomain domain, float outVolts)
 {
   switch (domain)
@@ -177,7 +207,7 @@ float Analog_convertFeedbackVoltage(VoltageDomain domain, float outVolts)
     case ANALOG_DOMAIN:
     case SRAM_DOMAIN:
       break;
-    case EEPROM_DOMAIN:
+    case SPI_DOMAIN:
       return 0.6 + (3.400 - outVolts)/2.4000;
     case ENERGY_DOMAIN:
     case COMMS_DOMAIN:

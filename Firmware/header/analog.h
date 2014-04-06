@@ -8,7 +8,7 @@ typedef enum
   MCU_DOMAIN    = 0,
   ANALOG_DOMAIN = 1,
   SRAM_DOMAIN   = 2,
-  EEPROM_DOMAIN = 3,
+  SPI_DOMAIN    = 3,
   ENERGY_DOMAIN = 4,
   COMMS_DOMAIN  = 5,
   IO_DOMAIN     = 6,
@@ -24,11 +24,25 @@ typedef enum
   NUM_ANALOG_DOMAINS
 } VoltageDomain;
 
+typedef enum
+{
+  TPS62240 = 0,
+  NUM_REGULATORS
+} RegulatorType;
+
+typedef struct
+{
+  boolean isEnabled;
+  float fbOutputVoltage;
+  float domainVoltage;
+} DomainStatus;
+
 void Analog_init(void);
+void Analog_setup(RegulatorType reg, double r1, double r2, double rf);
 void Analog_sampleDomain(VoltageDomain analogSelect);
 void Analog_setDomain(VoltageDomain domain, boolean state);
 void Analog_selectChannel(VoltageDomain chan, boolean domen);
-void Analog_adjustDomain(VoltageDomain domain, float voltage);
+void Analog_adjustFeedbackVoltage(VoltageDomain domain, float voltage);
 float Analog_convertFeedbackVoltage(VoltageDomain domain, float outVolts);
 
 #endif // ANALOG_H

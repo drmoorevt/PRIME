@@ -25,5 +25,8 @@ void    SDCard_test(void);
 boolean SDCard_setup(void);
 boolean SDCard_read(uint8 *pSrc, uint8 *pDest, uint16 length);
 boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length);
+boolean SDCard_writeLP(uint8 *pSrc, uint8 *pDest, uint16 length);
+boolean SDCard_writeXLP(uint8 *pSrc, uint8 *pDest, uint16 length);
+SDCardState SDCard_getState(void);
 
 #endif

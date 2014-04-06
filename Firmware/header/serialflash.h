@@ -69,6 +69,8 @@ typedef struct
   FlashSubSector subSector;
 } FlashMap;
 
+#define gpSerialFlash ((const FlashMap*) 0)
+
 
 typedef struct
 {
@@ -79,13 +81,12 @@ typedef struct
   uint8  uniqueId[16];
 } FlashID;
 
-#define gpSerialFlash ((const FlashMap*) 0)
-
 void    SerialFlash_init(void);
 void    SerialFlash_test(void);
+boolean SerialFlash_read(uint8 *pSrc, uint8 *pDest, uint16 length);
+boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length);
+boolean SerialFlash_writeLP(uint8 *pSrc, uint8 *pDest, uint16 length);
+boolean SerialFlash_writeXLP(uint8 *pSrc, uint8 *pDest, uint16 length);
 FlashID SerialFlash_readFlashID(void);
-void    SerialFlash_readFlash(uint8 *pSrc, uint8 *pDest, uint16 length);
-boolean SerialFlash_writeFlash(uint8 *pSrc, uint8 *pDest, uint16 length);
-uint8   SerialFlash_eraseFlash(uint8 *pDest, SerialFlashSize blockSize);
 
 #endif

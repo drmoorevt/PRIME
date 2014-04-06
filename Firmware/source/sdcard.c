@@ -337,8 +337,8 @@ boolean SDCard_setup(void)
 
   Analog_setDomain(ANALOG_DOMAIN, TRUE);   // Enable analog domain
   Analog_setDomain(IO_DOMAIN,     TRUE);   // Enable I/O domain
-  Analog_setDomain(EEPROM_DOMAIN, TRUE);   // Enable SPI domain
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
+  Analog_setDomain(SPI_DOMAIN,    TRUE);      // Enable SPI domain
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
   Time_delay(1000); // Wait 1000ms for domains to settle
 
   // Send the SPI mode command with the chip deselected ... prime the pump if you will...
@@ -579,6 +579,84 @@ boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
           (verifyResult == SDCARD_RESPONSE_OK) && (verify == 0));
 }
 
+/**********************************************************************************************************************\
+* FUNCTION    SDCard_writeLP
+* DESCRIPTION Writes a buffer to the the SDCard and decreases card voltage during wait-states
+* PARAMETERS   pSrc  - pointer to source RAM buffer
+*              pDest - pointer to destination in SDCard
+*             length - number of bytes to write
+* RETURNS     TRUE if the write succeeds, FALSE otherwise
+\**********************************************************************************************************************/
+boolean SDCard_writeLP(uint8 *pSrc, uint8 *pDest, uint16 length)
+{
+  uint8 verify;
+  uint32 block, offset;
+  SDCommandResult readResult, writeResult, verifyResult;
+
+  if (length > 512)  // Currently can't handle multi-block writes
+    return SDCARD_ERROR;
+
+  // Read in the block that contains the data which will be overwritten
+  block = (uint32)pDest >> 9;
+  sSDCard.state = SDCARD_READING;
+  readResult = SDCard_readBlock(block);
+
+  // Copy the incoming data overtop of whatever currently resides there
+  offset = (uint32)pDest & 0x0000001FF;
+  Util_copyMemory(pSrc, (uint8 *)&sSDCard.respBlock + offset, length);
+
+  // Write the new contents of the block to the SDCard
+  sSDCard.state = SDCARD_WRITING;
+  writeResult = SDCard_writeBlock(block);
+
+  // Verify that the source data now resides in the block
+  sSDCard.state = SDCARD_VERIFYING;
+  verifyResult = SDCard_readBlock(block);
+  verify = Util_compareMemory(pSrc, (uint8 *)&sSDCard.respBlock + offset, length);
+
+  return ((readResult   == SDCARD_RESPONSE_OK) && (writeResult == SDCARD_RESPONSE_OK) &&
+          (verifyResult == SDCARD_RESPONSE_OK) && (verify == 0));
+}
+
+/**********************************************************************************************************************\
+* FUNCTION    SDCard_writeXLP
+* DESCRIPTION Writes a buffer to the the SDCard and decreases card voltage during wait-states and transmissions
+* PARAMETERS   pSrc  - pointer to source RAM buffer
+*              pDest - pointer to destination in SDCard
+*             length - number of bytes to write
+* RETURNS     TRUE if the write succeeds, FALSE otherwise
+\**********************************************************************************************************************/
+boolean SDCard_writeXLP(uint8 *pSrc, uint8 *pDest, uint16 length)
+{
+  uint8 verify;
+  uint32 block, offset;
+  SDCommandResult readResult, writeResult, verifyResult;
+
+  if (length > 512)  // Currently can't handle multi-block writes
+    return SDCARD_ERROR;
+
+  // Read in the block that contains the data which will be overwritten
+  block = (uint32)pDest >> 9;
+  sSDCard.state = SDCARD_READING;
+  readResult = SDCard_readBlock(block);
+
+  // Copy the incoming data overtop of whatever currently resides there
+  offset = (uint32)pDest & 0x0000001FF;
+  Util_copyMemory(pSrc, (uint8 *)&sSDCard.respBlock + offset, length);
+
+  // Write the new contents of the block to the SDCard
+  sSDCard.state = SDCARD_WRITING;
+  writeResult = SDCard_writeBlock(block);
+
+  // Verify that the source data now resides in the block
+  sSDCard.state = SDCARD_VERIFYING;
+  verifyResult = SDCard_readBlock(block);
+  verify = Util_compareMemory(pSrc, (uint8 *)&sSDCard.respBlock + offset, length);
+
+  return ((readResult   == SDCARD_RESPONSE_OK) && (writeResult == SDCARD_RESPONSE_OK) &&
+          (verifyResult == SDCARD_RESPONSE_OK) && (verify == 0));
+}
+
 /**************************************************************************************************\
 * FUNCTION    SDCard_getStatusSDC
 * DESCRIPTION txBuf: A pointer to the data to be transmitted. Can be NULL.
@@ -623,10 +701,10 @@ void SDCard_test(void)
   Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
-  Analog_setDomain(EEPROM_DOMAIN, TRUE);  // Enable SPI domain
+  Analog_setDomain(SPI_DOMAIN, TRUE);  // Enable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
-  Analog_adjustDomain(EEPROM_DOMAIN, 0.65); // Set domain voltage to nominal
+  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.65); // Set domain voltage to nominal
   Time_delay(1000); // Wait 1000ms for domains to settle
 
   SDCard_setup();
