@@ -24,8 +24,10 @@ typedef enum
 void    SDCard_init(void);
 boolean SDCard_setup(boolean state);
 boolean SDCard_initDisk(void);
+void SDCard_notifyVoltageChange(double newVoltage);
 boolean SDCard_read(uint8 *pSrc, uint8 *pDest, uint16 length);
 boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length);
+boolean SDCard_setPowerState(SDCardState state, double vDomain);
 SDCardState SDCard_getState(void);
 void    SDCard_test(void);
 

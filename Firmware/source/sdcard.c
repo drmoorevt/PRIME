@@ -231,6 +231,7 @@ static struct
   uint32          postReadWaitClocks;
   uint32          preWriteWaitClocks;
   uint32          postWriteWaitClocks;
+  boolean         isInitialized;
 } sSDCard;
 
 /**********************************************************************************************************************\
@@ -241,9 +242,14 @@ static struct
 \**********************************************************************************************************************/
 void SDCard_init(void)
 {
+  uint32 i;
   Util_fillMemory((uint8*)&sSDCard, sizeof(sSDCard), 0x00);
-  sSDCard.state = SDCARD_IDLE;
   sSDCard.blockLen = DEFAULT_BLOCK_LENGTH;
+  for (i = 0; i < SERIAL_FLASH_NUM_STATES; i++)
+    sSDCard.vDomain[i] = 3.3;  // Initialize the default of all states to operate at 3.3v
+  sSDCard.state = SDCARD_IDLE;
+  SDCard_setup(FALSE);
+  sSDCard.isInitialized = TRUE;
 }
 
 /**************************************************************************************************\
@@ -286,6 +292,8 @@ SDCardState SDCard_getState(void)
 \**************************************************************************************************/
 static void SDCard_setState(SDCardState state)
 {
+  if (sSDCard.isInitialized != TRUE)
+    return;  // Must run initialization before we risk changing the domain voltage
   sSDCard.state = state;
   Analog_setDomain(SPI_DOMAIN, TRUE, sSDCard.vDomain[state]);
 }
@@ -300,9 +308,23 @@ boolean SDCard_setPowerState(SDCardState state, double vDomain)
 {
   if (state >= SDCARD_NUM_STATES)
     return FALSE;
+  else if (vDomain > 3.3)
+    return FALSE;
   else
     sSDCard.vDomain[state] = vDomain;
   return TRUE;
+}
+
+/**************************************************************************************************\
+* FUNCTION    SDCard_notifyVoltageChange
+* DESCRIPTION Called when any other task changes the voltage of the domain
+* PARAMETERS  newVoltage: The voltage that the domain is now experiencing
+* RETURNS     Nothing
+\**************************************************************************************************/
+void SDCard_notifyVoltageChange(double newVoltage)
+{
+  if (newVoltage < 2.3)
+    sSDCard.state = SDCARD_IDLE;
 }
 
 /**********************************************************************************************************************\
@@ -503,14 +525,18 @@ boolean SDCard_read(uint8 *pSrc, uint8 *pDest, uint16 length)
   SDCommandResult readResult;
 
   if (length > 512)  // Currently can't handle multi-block reads
-    return SDCARD_ERROR;
+    return FALSE;
+  if (sSDCard.state != SDCARD_READY) // Card must be initialized first
+    return FALSE;
 
   block = (uint32)pSrc >> 9;
   offset = (uint32)pSrc & 0x0000001FF;
 
-  sSDCard.state = SDCARD_READING;
+  SDCard_setup(TRUE); // Turn on the SPI and control pins
+  SDCard_setState(SDCARD_READING); // Set the state and voltage
   readResult = SDCard_readBlock(block);
-  sSDCard.state = SDCARD_READY;
+  SDCard_setup(FALSE); // Turn off the SPI and control pins
+  SDCard_setState(SDCARD_READY); // Set the state and voltage
   Util_copyMemory((uint8*)&sSDCard.respBlock + offset, pDest, length);
 
   return readResult == SDCARD_RESPONSE_OK;
@@ -589,11 +615,15 @@ boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
   SDCommandResult readResult, writeResult, verifyResult;
 
   if (length > 512)  // Currently can't handle multi-block writes
-    return SDCARD_ERROR;
+    return FALSE;
+  if (sSDCard.state != SDCARD_READY) // Card must be initialized first
+    return FALSE;
 
   // Read in the block that contains the data which will be overwritten
   block = (uint32)pDest >> 9;
-  sSDCard.state = SDCARD_READING;
+
+  SDCard_setup(TRUE); // Turn on the SPI and control pins
+  SDCard_setState(SDCARD_READING); // Set the state and voltage
   readResult = SDCard_readBlock(block);
 
   // Copy the incoming data overtop of whatever currently resides there
@@ -601,13 +631,16 @@ boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
   Util_copyMemory(pSrc, (uint8 *)&sSDCard.respBlock + offset, length);
 
   // Write the new contents of the block to the SDCard
-  sSDCard.state = SDCARD_WRITING;
+  SDCard_setState(SDCARD_WRITING); // Set the state and voltage
   writeResult = SDCard_writeBlock(block);
 
   // Verify that the source data now resides in the block
-  sSDCard.state = SDCARD_VERIFYING;
+  SDCard_setState(SDCARD_VERIFYING); // Set the state and voltage
   verifyResult = SDCard_readBlock(block);
   verify = Util_compareMemory(pSrc, (uint8 *)&sSDCard.respBlock + offset, length);
+
+  SDCard_setup(FALSE); // Turn off the SPI and control pins
+  SDCard_setState(SDCARD_READY); // Set the state and voltage
 
   return ((readResult   == SDCARD_RESPONSE_OK) && (writeResult == SDCARD_RESPONSE_OK) &&
           (verifyResult == SDCARD_RESPONSE_OK) && (verify == 0));

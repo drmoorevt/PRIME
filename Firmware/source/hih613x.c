@@ -29,6 +29,7 @@ typedef struct
 
 static struct
 {
+  boolean     isInitialized;
   double      vDomain[HIH_NUM_STATES]; // The domain voltage for each state
   HIHState    state;
   HIH613XData currData;
@@ -48,7 +49,9 @@ void HIH613X_init(void)
   Util_fillMemory(&sHIH613X, sizeof(sHIH613X), 0x00);
   for (i = 0; i < HIH_NUM_STATES; i++)
     sHIH613X.vDomain[i] = 3.3;  // Initialize the default of all states to operate at 3.3v
+  sHIH613X.state = HIH_IDLE;
   HIH613X_setup(FALSE);
+  sHIH613X.isInitialized = TRUE;
 }
 
 /**************************************************************************************************\
@@ -89,6 +92,8 @@ HIHState HIH613X_getState(void)
 \**************************************************************************************************/
 static void HIH613X_setState(HIHState state)
 {
+  if (sHIH613X.isInitialized != TRUE)
+    return;  // Must run initialization before we risk changing the domain voltage
   sHIH613X.state = state;
   Analog_setDomain(SPI_DOMAIN, TRUE, sHIH613X.vDomain[state]);
 }
@@ -102,6 +107,8 @@ static void HIH613X_setState(HIHState state)
 boolean HIH613X_setPowerState(HIHState state, double vDomain)
 {
   if (state >= HIH_NUM_STATES)
+    return FALSE;
+  else if (vDomain > 5.0)
     return FALSE;
   else
     sHIH613X.vDomain[state] = vDomain;
@@ -128,6 +135,18 @@ boolean HIH613X_setPowerState(HIHState state, double vDomain)
  double HIH613X_getTemperature(void)
  {
    return sHIH613X.currTmp;
+ }
+
+ /**************************************************************************************************\
+ * FUNCTION    HIH613X_notifyVoltageChange
+ * DESCRIPTION Called when any other task changes the voltage of the domain
+ * PARAMETERS  newVoltage: The voltage that the domain is now experiencing
+ * RETURNS     Nothing
+ \**************************************************************************************************/
+ void HIH613X_notifyVoltageChange(double newVoltage)
+ {
+   if (newVoltage < 2.3)
+     sHIH613X.state = HIH_IDLE;
  }
 
 /**************************************************************************************************\
@@ -161,16 +180,26 @@ void HIH613X_readTempHumidSPI(void)
 HIHStatus HIH613X_readTempHumidI2CBB(boolean measure, boolean read, boolean convert)
 {
   if (measure)
+  {
+    HIH613X_setState(HIH_SENDING_CMD);
     I2CBB_readData(HIH_MEASURE_CMD, NULL, 0); // send measure command
+    HIH613X_setState(HIH_WAITING);
+  }
 
   if (measure && read)
+  {
     Time_delay(40); // tMeasure ~= 36.65ms, but 40ms for reliability
+    HIH613X_setState(HIH_DATA_READY);
+  }
 
   if (read)
   {
+    HIH613X_setState(HIH_READING);
     I2CBB_readData(HIH_READ_CMD, (uint8*)&sHIH613X.currData, sizeof(sHIH613X.currData));
     Util_swap32((uint32*)&sHIH613X.currData);
+    HIH613X_setState(HIH_DATA_READY);
   }
+
   if (convert)
   {
     sHIH613X.currHum = (((double)sHIH613X.currData.humidity    / 16383.0) * 100.0);

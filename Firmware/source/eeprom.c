@@ -33,6 +33,7 @@ static struct
 {
   double      vDomain[EEPROM_NUM_STATES]; // The domain voltage for each state
   EEPROMState state;
+  boolean     isInitialized;
 } sEEPROM;
 
 /**************************************************************************************************\
@@ -49,6 +50,7 @@ void EEPROM_init(void)
     sEEPROM.vDomain[i] = 3.3;  // Initialize the default of all states to operate at 3.3v
   sEEPROM.state = EEPROM_IDLE;
   EEPROM_setup(FALSE);
+  sEEPROM.isInitialized = TRUE;
 }
 
 /**************************************************************************************************\
@@ -92,6 +94,8 @@ EEPROMState EEPROM_getState(void)
 \**************************************************************************************************/
 static void EEPROM_setState(EEPROMState state)
 {
+  if (sEEPROM.isInitialized != TRUE);
+    return;  // Must run initialization before we risk changing the domain voltage
   sEEPROM.state = state;
   Analog_setDomain(SPI_DOMAIN, TRUE, sEEPROM.vDomain[state]);
 }
@@ -105,6 +109,8 @@ static void EEPROM_setState(EEPROMState state)
 boolean EEPROM_setPowerState(EEPROMState state, double vDomain)
 {
   if (state >= EEPROM_NUM_STATES)
+    return FALSE;
+  else if (vDomain > 5.0)
     return FALSE;
   else
     sEEPROM.vDomain[state] = vDomain;

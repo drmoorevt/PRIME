@@ -24,12 +24,12 @@ struct
 void Time_initSysTick(void);
 void Time_decrementTimerCounts(void);
 
-/******************************************************************************\
+/**************************************************************************************************\
 * FUNCTION      Time_init
 * DESCRIPTION   Initializes the 1ms SysTick and clears all software timers
 * PARAMETERS    none
 * RETURN        none
-\******************************************************************************/
+\**************************************************************************************************/
 void Time_init(void)
 {
   // Clear all of the software timers
@@ -47,12 +47,12 @@ void Time_stopTimer(HardTimer timer)
   }
 }
 
-/******************************************************************************\
-* FUNCTION			Time_initTimer1
-*	DESCRIPTION		Initializes timer1
-* PARAMETERS		none
-* RETURN				none
-\******************************************************************************/
+/**************************************************************************************************\
+* FUNCTION      Time_initTimer1
+*  DESCRIPTION    Initializes timer1
+* PARAMETERS    none
+* RETURN        none
+\**************************************************************************************************/
 void Time_initTimer1(void)
 {
   RCC->APB2ENR |= RCC_APB2ENR_TIM1EN; // Turn on Timer1 clocks (120 MHz)
@@ -63,22 +63,22 @@ void Time_initTimer1(void)
   NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
 }
 
-/******************************************************************************\
+/**************************************************************************************************\
 * FUNCTION    Time_timer1IRQ
 * DESCRIPTION Initializes timer1
 * PARAMETERS  none
-* RETURN				none
-\******************************************************************************/
+* RETURN        none
+\**************************************************************************************************/
 void TIM1_UP_TIM10_IRQHandler(void)
 {
   CLEAR_BIT(TIM2->SR, TIM_SR_UIF); // Clear the update interrupt flag
 }
 
 /**************************************************************************************************\
-* FUNCTION			Time_initTimer2
-*	DESCRIPTION		Initializes timer2
-* PARAMETERS		reloadValue: The automatic reload value, when reached an IRQ is triggered
-* RETURN				none
+* FUNCTION      Time_initTimer2
+*  DESCRIPTION    Initializes timer2
+* PARAMETERS    reloadValue: The automatic reload value, when reached an IRQ is triggered
+* RETURN        none
 \**************************************************************************************************/
 void Time_initTimer2(uint16 reloadValue)
 {
@@ -90,12 +90,12 @@ void Time_initTimer2(uint16 reloadValue)
   NVIC_EnableIRQ(TIM2_IRQn);
 }
 
-/******************************************************************************\
+/**************************************************************************************************\
 * FUNCTION      TIM2_IRQHandler
 * DESCRIPTION   Handles interrupts originating from Timer2
 * PARAMETERS    none
 * RETURN        none
-\******************************************************************************/
+\**************************************************************************************************/
 void TIM2_IRQHandler(void)
 {
   CLEAR_BIT(TIM2->SR, TIM_SR_UIF); // Clear the update interrupt flag
@@ -120,7 +120,7 @@ void Time_initTimer3(uint16 reloadValue)
   NVIC_EnableIRQ(TIM3_IRQn);
 }
 
-/******************************************************************************\
+/**************************************************************************************************\
 * FUNCTION      TIM3_IRQHandler
 * DESCRIPTION   Handles interrupts originating from Timer3
 * PARAMETERS    none
@@ -133,12 +133,12 @@ void TIM3_IRQHandler(void)
   Tests_notifySampleTrigger();
 }
 
-/******************************************************************************\
-* FUNCTION			Time_startTimer
-*	DESCRIPTION		Initializes timers
-* PARAMETERS		timer - index of timer
+/**************************************************************************************************\
+* FUNCTION      Time_startTimer
+*  DESCRIPTION    Initializes timers
+* PARAMETERS    timer - index of timer
 *               milliSeconds - number of milliseconds to run timer
-* RETURN				none
+* RETURN        none
 \******************************************************************************/
 void Time_startTimer(SoftTimer timer, uint16 milliSeconds)
 {
@@ -147,11 +147,11 @@ void Time_startTimer(SoftTimer timer, uint16 milliSeconds)
   ENABLE_TIME_INTERRUPT();
 }
 
-/******************************************************************************\
-* FUNCTION			Time_delay
-*	DESCRIPTION		Blocking delay
-* PARAMETERS		numSubTicks - number of subticks to delay
-* RETURN				none
+/**************************************************************************************************\
+* FUNCTION      Time_delay
+*  DESCRIPTION    Blocking delay
+* PARAMETERS    numSubTicks - number of subticks to delay
+* RETURN        none
 \******************************************************************************/
 void Time_delay(uint16 milliSeconds)
 {
@@ -159,11 +159,11 @@ void Time_delay(uint16 milliSeconds)
   while (Time_getTimerValue(TIMER_DELAY));
 }
 
-/******************************************************************************\
-* FUNCTION			Time_getTimerValue
-*	DESCRIPTION		Blocking delay
-* PARAMETERS		timer - index of timer
-* RETURN				uint16 - number of subticks left on the timer
+/**************************************************************************************************\
+* FUNCTION      Time_getTimerValue
+*  DESCRIPTION    Blocking delay
+* PARAMETERS    timer - index of timer
+* RETURN        uint16 - number of subticks left on the timer
 \******************************************************************************/
 uint16 Time_getTimerValue(SoftTimer timer)
 {
@@ -176,11 +176,11 @@ uint16 Time_getTimerValue(SoftTimer timer)
   return value;
 }
 
-/******************************************************************************\
-* FUNCTION			Time_getSystemTime
-*	DESCRIPTION		Gets system time as a 32 bit UTC since Jan. 1, 1970 value (secs)
-* PARAMETERS		none
-* RETURN				uint32 - systemTime
+/**************************************************************************************************\
+* FUNCTION      Time_getSystemTime
+*  DESCRIPTION    Gets system time as a 32 bit UTC since Jan. 1, 1970 value (secs)
+* PARAMETERS    none
+* RETURN        uint32 - systemTime
 \******************************************************************************/
 uint32 Time_getSystemTime(void)
 {
@@ -192,11 +192,11 @@ uint32 Time_getSystemTime(void)
 
   return sysTime;
 }
-/******************************************************************************\
-* FUNCTION			Time_getTimeOfday
-* DESCRIPTION		Gets the time within the day
-* PARAMETERS		none
-* RETURN			  uint32 - time
+/**************************************************************************************************\
+* FUNCTION      Time_getTimeOfday
+* DESCRIPTION    Gets the time within the day
+* PARAMETERS    none
+* RETURN        uint32 - time
 \******************************************************************************/
 uint32 Time_getTimeOfday(void)
 {
@@ -209,12 +209,12 @@ uint32 Time_getTimeOfday(void)
   return timeOfDay;
 }
 
-/******************************************************************************\
-* FUNCTION			Time_handleSubTick
-*	DESCRIPTION		Called in interrupt to decrement timers
-* PARAMETERS		none
-* RETURN				none
-\******************************************************************************/
+/**************************************************************************************************\
+* FUNCTION      Time_handleSubTick
+*  DESCRIPTION    Called in interrupt to decrement timers
+* PARAMETERS    none
+* RETURN        none
+\**************************************************************************************************/
 void Time_handleSubTick(void)
 {
 
@@ -236,11 +236,11 @@ void Time_handleSubTick(void)
 }
 
 /**************************************************************************************************\
-* FUNCTION			Time_isSecondBoundary
-*	DESCRIPTION		Checks to see if we have crossed a second boundary.  This clears
+* FUNCTION      Time_isSecondBoundary
+*  DESCRIPTION    Checks to see if we have crossed a second boundary.  This clears
 *               the boundary flag
-* PARAMETERS		none
-* RETURN				none
+* PARAMETERS    none
+* RETURN        none
 \**************************************************************************************************/
 boolean Time_isSecondBoundary(void)
 {
@@ -254,10 +254,10 @@ boolean Time_isSecondBoundary(void)
 }
 
 /**************************************************************************************************\
-* FUNCTION			Time_incrementSystemTime
-*	DESCRIPTION		Adds 1 second to the system time
-* PARAMETERS		none
-* RETURN				none
+* FUNCTION      Time_incrementSystemTime
+*  DESCRIPTION    Adds 1 second to the system time
+* PARAMETERS    none
+* RETURN        none
 \**************************************************************************************************/
 void Time_incrementSystemTime(void)
 {
@@ -265,10 +265,10 @@ void Time_incrementSystemTime(void)
 }
 
 /**************************************************************************************************\
-* FUNCTION			Time_decrementTimerCounts
-*	DESCRIPTION		Decrements all timers that aren't already 0
-* PARAMETERS		none
-* RETURN				none
+* FUNCTION      Time_decrementTimerCounts
+*  DESCRIPTION    Decrements all timers that aren't already 0
+* PARAMETERS    none
+* RETURN        none
 \**************************************************************************************************/
 void Time_decrementTimerCounts(void)
 {

@@ -6,10 +6,11 @@
 typedef enum
 {
   HIH_IDLE         = 0,
-  HIH_TRANSMITTING = 1,
-  HIH_WAITING      = 2,
-  HIH_READING      = 3,
-  HIH_NUM_STATES   = 4,
+  HIH_DATA_READY   = 1,
+  HIH_SENDING_CMD  = 2,
+  HIH_WAITING      = 3,
+  HIH_READING      = 4,
+  HIH_NUM_STATES   = 5
 } HIHState;
 
 typedef enum
@@ -23,6 +24,7 @@ typedef enum
 void HIH613X_init(void);
 boolean HIH613X_setup(boolean state);
 HIHState HIH613X_getState(void);
+void HIH613X_notifyVoltageChange(double newVoltage)
 boolean HIH613X_setPowerState(HIHState state, double vDomain);
 void HIH613X_readTempHumidSPI(void);
 HIHStatus HIH613X_readTempHumidI2CBB(boolean measure, boolean read, boolean convert);

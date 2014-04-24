@@ -79,6 +79,7 @@ static struct
   SerialFlashState state;
   FlashSubSector   subSector;
   FlashPage        testPage;
+  boolean          isInitialized
 } sSerialFlash;
 
 static boolean SerialFlash_erase(uint8 *pDest, SerialFlashSize blockSize);
@@ -98,6 +99,7 @@ void SerialFlash_init(void)
     sSerialFlash.vDomain[i] = 3.3;  // Initialize the default of all states to operate at 3.3v
   sSerialFlash.state = SERIAL_FLASH_IDLE;
   SerialFlash_setup(FALSE);
+  sSerialFlash.isInitialized = TRUE;
 }
 
 /**************************************************************************************************\
@@ -141,6 +143,8 @@ SerialFlashState SerialFlash_getState(void)
 \**************************************************************************************************/
 static void SerialFlash_setState(SerialFlashState state)
 {
+  if (sSerialFlash.isInitialized != TRUE)
+    return;  // Must run initialization before we risk changing the domain voltage
   sSerialFlash.state = state;
   Analog_setDomain(SPI_DOMAIN, TRUE, sSerialFlash.vDomain[state]);
 }
@@ -154,6 +158,8 @@ static void SerialFlash_setState(SerialFlashState state)
 boolean SerialFlash_setPowerState(SerialFlashState state, double vDomain)
 {
   if (state >= SERIAL_FLASH_NUM_STATES)
+    return FALSE;
+  else if (vDomain < 3.3)
     return FALSE;
   else
     sSerialFlash.vDomain[state] = vDomain;
@@ -218,19 +224,25 @@ static FlashStatusRegister SerialFlash_readStatusRegister(void)
 /**************************************************************************************************\
 * FUNCTION    SerialFlash_waitForWriteComplete
 * DESCRIPTION Wait for the status register to transition to specified value or timeout
-* PARAMETERS  timeout - timeout in ticks
-* RETURNS     status byte for serial flash
+* PARAMETERS  pollChip: Routine will poll the status register for write complete indication
+*             timeout:  Timeout in milliseconds
+* RETURNS     TRUE if polling was not required, or if the timeout did not expire while polling
 \**************************************************************************************************/
-static boolean SerialFlash_waitForWriteComplete(uint32 timeout)
+static boolean SerialFlash_waitForWriteComplete(boolean pollChip, uint32 timeout)
 {
   SerialFlash_setState(SERIAL_FLASH_WAITING);
-  Util_spinWait(30000 * (timeout / 2));
-  /*
-  Time_startTimer(TIMER_SERIAL_MEM, timeout);
-  while (SerialFlash_readStatusRegister().writeInProgress && Time_getTimerValue(TIMER_SERIAL_MEM));
-  return (Time_getTimerValue(TIMER_SERIAL_MEM) > 0);
-  */
-  return TRUE;
+
+  if (pollChip)
+  {
+    Time_startTimer(TIMER_SERIAL_MEM, timeout);
+    while (SerialFlash_readStatusRegister().writeInProgress && Time_getTimerValue(TIMER_SERIAL_MEM));
+    return (Time_getTimerValue(TIMER_SERIAL_MEM) > 0);
+  }
+  else
+  {
+    Util_spinWait(30000 * (timeout / 2));
+    return TRUE;
+  }
 }
 
 /**************************************************************************************************\
@@ -273,7 +285,7 @@ boolean SerialFlash_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
     SPI_write((uint8 *)&writeCommand, sizeof(writeCommand));
     SPI_write(pSrc, bytesToWrite);
     DESELECT_CHIP_SF();
-    success &= SerialFlash_waitForWriteComplete(PAGE_WRITE_TIME);
+    success &= SerialFlash_waitForWriteComplete(FALSE, PAGE_WRITE_TIME);
     length -= bytesToWrite;
   }
   SerialFlash_setState(SERIAL_FLASH_IDLE);
@@ -363,7 +375,7 @@ static boolean SerialFlash_erase(uint8 *pDest, SerialFlashSize size)
 
   // Wait for erase to complete depending on timeout
 //  SPI_setup(FALSE, FALSE, TRUE, FALSE, FALSE);
-  success = SerialFlash_waitForWriteComplete(timeout);
+  success = SerialFlash_waitForWriteComplete(FALSE, timeout);
   SerialFlash_setState(SERIAL_FLASH_IDLE);
 //  SPI_setup(FALSE, FALSE, TRUE, FALSE, TRUE);
   return success;
