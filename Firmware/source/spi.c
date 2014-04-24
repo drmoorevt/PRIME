@@ -4,23 +4,21 @@
 
 #define FILE_ID SPI_C
 
+#define SPI_MSCK_PIN (GPIO_Pin_13)
+#define SPI_MISO_PIN (GPIO_Pin_14)
+#define SPI_MOSI_PIN (GPIO_Pin_15)
+
 #define SPI_TX(x)    do { SPI2->DR = x; while(!(SPI2->SR&SPI_SR_TXE)); } while(0)
 
-/*****************************************************************************\
+/**************************************************************************************************\
 * FUNCTION     SPI_init
 * DESCRIPTION  Initializes SPI support
 * PARAMETERS   none
 * RETURNS      nothing
-\*****************************************************************************/
+\**************************************************************************************************/
 void SPI_init(void)
 {
-  const uint16 spiPinsPortB = (GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15);
-
-  // Initialize all potential ADC pins to analog configuration
-  GPIO_InitTypeDef spiCtrlPortB = {spiPinsPortB, GPIO_Mode_AF, GPIO_Speed_25MHz, GPIO_OType_PP,
-                                                 GPIO_PuPd_NOPULL, GPIO_AF_SPI1_2 };
-  GPIO_setPortClock(GPIOB, TRUE);
-  GPIO_configurePins(GPIOB, &spiCtrlPortB);
+  SPI_setup(FALSE);
 
   RCC->APB2RSTR |=  (RCC_APB1RSTR_SPI2RST);  // Reset the SPI peripheral
   RCC->APB2RSTR &=  (~RCC_APB1RSTR_SPI2RST); // Release the SPI peripheral from reset
@@ -37,13 +35,28 @@ void SPI_init(void)
   SPI2->CR2 = (0x00000000);
 }
 
-/*****************************************************************************\
+/**************************************************************************************************\
+* FUNCTION     SPI_setup
+* DESCRIPTION
+* PARAMETERS   none
+* RETURNS      nothing
+\**************************************************************************************************/
+boolean SPI_setup(boolean state)
+{
+  GPIO_InitTypeDef spiPortB  = {(SPI_MSCK_PIN | SPI_MISO_PIN | SPI_MOSI_PIN), GPIO_Mode_AF,
+                                GPIO_Speed_25MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM};
+  spiPortB.GPIO_Mode    = (state == TRUE) ? GPIO_Mode_AF   : GPIO_Mode_IN;
+  spiPortB.GPIO_AltFunc = (state == TRUE) ? GPIO_AF_SPI1_2 : GPIO_AF_SYSTEM;
+  GPIO_configurePins(GPIOB, &spiPortB);
+}
+
+/**************************************************************************************************\
 * FUNCTION     SPI_write
 * DESCRIPTION  Writes numBytes beginning at pBytes to the SPI.
 * PARAMETERS   pBytes -- the bytes to write
 *              numBytes -- the number of bytes to write
 * RETURNS      nothing
-\*****************************************************************************/
+\**************************************************************************************************/
 void SPI_write(const uint8 *pBytes, uint32 numBytes)
 {
   uint16 dummy = SPI2->DR; // clear the DR

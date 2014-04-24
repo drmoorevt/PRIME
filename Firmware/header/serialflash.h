@@ -7,11 +7,12 @@
 
 typedef enum
 {
-  SERIAL_FLASH_IDLE,
-  SERIAL_FLASH_ERASING,
-  SERIAL_FLASH_WRITING,
-  SERIAL_FLASH_WAITING,
-  SERIAL_FLASH_READBACK
+  SERIAL_FLASH_IDLE        = 0,
+  SERIAL_FLASH_READING     = 1,
+  SERIAL_FLASH_ERASING     = 2,
+  SERIAL_FLASH_WRITING     = 3,
+  SERIAL_FLASH_WAITING     = 4,
+  SERIAL_FLASH_NUM_STATES  = 5
 } SerialFlashState;
 
 typedef enum
@@ -82,11 +83,12 @@ typedef struct
 } FlashID;
 
 void    SerialFlash_init(void);
-void    SerialFlash_test(void);
+boolean SerialFlash_setup(boolean state);
 boolean SerialFlash_read(uint8 *pSrc, uint8 *pDest, uint16 length);
 boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length);
-boolean SerialFlash_writeLP(uint8 *pSrc, uint8 *pDest, uint16 length);
-boolean SerialFlash_writeXLP(uint8 *pSrc, uint8 *pDest, uint16 length);
+boolean SerialFlash_setPowerState(SerialFlashState state, double vDomain);
+SerialFlashState SerialFlash_getState(void);
 FlashID SerialFlash_readFlashID(void);
+void    SerialFlash_test(void);
 
 #endif

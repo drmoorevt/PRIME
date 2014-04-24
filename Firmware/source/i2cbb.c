@@ -5,8 +5,8 @@
 
 #define FILE_ID I2CBB_C
 
-#define SCL_PIN GPIO_Pin_9
-#define SDA_PIN GPIO_Pin_13
+#define SCL_PIN (GPIO_Pin_9)
+#define SDA_PIN (GPIO_Pin_13)
 #define SDA_DIR_HIH613X_I2C(x) do { GPIOB->MODER &= ~(GPIO_MODER_MODER0 << 26); \
                                     GPIOB->MODER |= (((uint32_t)x) << 26);      \
                                   } while (0)
@@ -17,7 +17,7 @@
 
 static struct
 {
-  GPIO_TypeDef orgGPIOB;
+  uint16 freqKhz;
   uint16 tClockLow;
   uint16 tClockHigh;
 } sI2CBB;
@@ -28,6 +28,44 @@ static boolean I2CBB_getAck(void);
 static boolean I2CBB_sendByte(uint8 byte);
 static void    I2CBB_sendAckNack(boolean ack);
 static uint8   I2CBB_getByte(boolean ack);
+
+/**************************************************************************************************\
+* FUNCTION    I2CBB_init
+* DESCRIPTION Initializes the I2CBB (bit-banged) module
+* PARAMETERS  None
+* RETURNS     Nothing
+\**************************************************************************************************/
+void I2CBB_init(void)
+{
+  Util_fillMemory(&sI2CBB, sizeof(sI2CBB), 0x00);
+  sI2CBB.freqKhz    = (150);
+  sI2CBB.tClockHigh = (125 * 100) / sI2CBB.freqKhz; // 125*2 = 10uS = 100kHz
+  sI2CBB.tClockLow  = (125 * 100) / sI2CBB.freqKhz;
+  I2CBB_setup(FALSE);
+}
+
+/**************************************************************************************************\
+* FUNCTION    I2CBB_setup
+* DESCRIPTION Enables or Disables the pins required to operate the HIH613X sensor
+* PARAMETERS  state: If TRUE, required pins will be output. Otherwise control pins will be
+*                    set to input.
+* RETURNS     TRUE
+\**************************************************************************************************/
+boolean I2CBB_setup(boolean state)
+{
+  // Initialize the SCL and SDA lines (Note open drain on SDA and push pull on SCL)
+  GPIO_InitTypeDef SCLI2CBBCtrl = {SCL_PIN, GPIO_Mode_OUT, GPIO_Speed_25MHz, GPIO_OType_PP,
+                                                     GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
+  GPIO_InitTypeDef SDAI2CBBCtrl = {SDA_PIN, GPIO_Mode_OUT, GPIO_Speed_25MHz, GPIO_OType_OD,
+                                                     GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
+  SCLI2CBBCtrl.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
+  SDAI2CBBCtrl.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
+  GPIO_configurePins(GPIOB, &SCLI2CBBCtrl);
+  GPIO_configurePins(GPIOB, &SDAI2CBBCtrl);
+  GPIO_setPortClock(GPIOB, TRUE);
+  SDA_HIGH_HIH613X_I2C();
+  SCL_HIGH_HIH613X_I2C();
+}
 
 /**************************************************************************************************\
 * FUNCTION    I2CBB_sendStart
@@ -153,8 +191,7 @@ uint8 I2CBB_getByte(boolean ack)
 /**************************************************************************************************\
 * FUNCTION    I2CBB_readData
 * DESCRIPTION Sends and command and reads the response at the specified frequency on portB
-* PARAMETERS  freqKhz: The frequency at which to read the data in KHz
-*             command: The command to send, preceding the response
+* PARAMETERS  command: The command to send, preceding the response
 *             pResponse: A buffer in which to store the response (can be NULL if respLength == 0)
 *             respLength: The number of bytes to retrieve as response
 * RETURNS     TRUE if the command was acknowledged
@@ -162,19 +199,11 @@ uint8 I2CBB_getByte(boolean ack)
 *             2) The configuration of GPIOB is stored on entry and restored on exit.
 *                NOTE THAT IF INTERRUPTS CHANGE THE PORT CONFIGURATION THAT IT WILL BE RESTORED
 \**************************************************************************************************/
-boolean I2CBB_readData(uint16 freqKHz, uint8 command, uint8 *pResponse, uint8 respLength)
+boolean I2CBB_readData(uint8 command, uint8 *pResponse, uint8 respLength)
 {
   boolean ack;
-  GPIO_InitTypeDef port = {SCL_PIN | SDA_PIN, GPIO_Mode_OUT, GPIO_Speed_25MHz,
-                           GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
 
-  sI2CBB.tClockHigh = (125 * 100) / freqKHz; // 125*2 = 10uS = 100kHz
-  sI2CBB.tClockLow  = (125 * 100) / freqKHz;
-
-  sI2CBB.orgGPIOB = *GPIOB;         // Save original GPIOB configuration
-  SDA_HIGH_HIH613X_I2C();           // Get the ODR ready to output high
-  SCL_HIGH_HIH613X_I2C();           // Get the ODR ready to output high
-  GPIO_configurePins(GPIOB, &port); // Set SCL and SDA to output with no alternate function
+  I2CBB_setup(TRUE);
 
   I2CBB_sendStart();
   ack = I2CBB_sendByte(command);
@@ -182,6 +211,5 @@ boolean I2CBB_readData(uint16 freqKHz, uint8 command, uint8 *pResponse, uint8 re
     *pResponse++ = I2CBB_getByte(respLength); // Send NAK on last byte
   I2CBB_sendStop();
 
-  *GPIOB = sI2CBB.orgGPIOB;         // Restore original GPIOB configuration
   return ack;
 }

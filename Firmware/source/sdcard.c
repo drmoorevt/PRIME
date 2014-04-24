@@ -10,6 +10,8 @@
 
 #define FILE_ID SDCARD_C
 
+#define SD_SELECT_PIN   (GPIO_Pin_2)
+
 #define SD_MAX_WAIT_BUS_BYTES   (65535)
 #define SD_MAX_WAIT_INIT_BYTES  (4095)
 #define SD_MAX_WAIT_WRITE_BYTES (4095)
@@ -220,6 +222,7 @@ typedef struct
 static struct
 {
   SDCardState     state;
+  double          vDomain[SDCARD_NUM_STATES]; // The domain voltage for each state
   SDResponseBlock respBlock;
   uint32          blockLen;
   uint32          cmdWaitClocks;
@@ -238,29 +241,68 @@ static struct
 \**********************************************************************************************************************/
 void SDCard_init(void)
 {
-  const uint16 sfCtrlPins = (GPIO_Pin_4);
-
-  // Initialize the chip select line
-  GPIO_InitTypeDef sdCtrlPortB = {sfCtrlPins, GPIO_Mode_OUT, GPIO_Speed_25MHz, GPIO_OType_PP,
-                                              GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
-  GPIO_setPortClock(GPIOB, TRUE);
-  GPIO_configurePins(GPIOB, &sdCtrlPortB);
-  DESELECT_CHIP_SD();
-
   Util_fillMemory((uint8*)&sSDCard, sizeof(sSDCard), 0x00);
   sSDCard.state = SDCARD_IDLE;
   sSDCard.blockLen = DEFAULT_BLOCK_LENGTH;
 }
 
-/**********************************************************************************************************************\
+/**************************************************************************************************\
+* FUNCTION    SDCard_setup
+* DESCRIPTION Enables or Disables the peripheral pins required to operate the SDCard
+* PARAMETERS  state: If TRUE, required peripherals will be enabled. Otherwise control pins will be
+*                    set to input.
+* RETURNS     TRUE
+* NOTES       Also configures the state if the SPI pins
+\**************************************************************************************************/
+boolean SDCard_setup(boolean state)
+{
+  // Initialize the EEPROM chip select and hold lines
+  GPIO_InitTypeDef sdCtrlPortB = {SD_SELECT_PIN, GPIO_Mode_OUT, GPIO_Speed_25MHz,
+                                  GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
+  sdCtrlPortB.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
+  GPIO_configurePins(GPIOB, &sdCtrlPortB);
+  GPIO_setPortClock(GPIOB, TRUE);
+  DESELECT_CHIP_SD();
+  SPI_setup(state);
+  return TRUE;
+}
+
+/**************************************************************************************************\
 * FUNCTION    SDCard_getState
-* DESCRIPTION Returns the internal state of the SDCard module
+* DESCRIPTION Returns the current state of the SDCard
 * PARAMETERS  None
-* RETURNS     The SDCardState
-\**********************************************************************************************************************/
+* RETURNS     The current state of SDCard
+\**************************************************************************************************/
 SDCardState SDCard_getState(void)
 {
   return sSDCard.state;
+}
+
+/**************************************************************************************************\
+* FUNCTION    SDCard_setState
+* DESCRIPTION Sets the internal state of the SDCard and applies the voltage of the associated state
+* PARAMETERS  None
+* RETURNS     None
+\**************************************************************************************************/
+static void SDCard_setState(SDCardState state)
+{
+  sSDCard.state = state;
+  Analog_setDomain(SPI_DOMAIN, TRUE, sSDCard.vDomain[state]);
+}
+
+/**************************************************************************************************\
+* FUNCTION    SDCard_setPowerState
+* DESCRIPTION Sets the buck feedback voltage for a particular state of the SDCard
+* PARAMETERS  None
+* RETURNS     TRUE if the voltage can be set for the state, false otherwise
+\**************************************************************************************************/
+boolean SDCard_setPowerState(SDCardState state, double vDomain)
+{
+  if (state >= SDCARD_NUM_STATES)
+    return FALSE;
+  else
+    sSDCard.vDomain[state] = vDomain;
+  return TRUE;
 }
 
 /**********************************************************************************************************************\
@@ -318,12 +360,12 @@ static SDCommandResponseR1 SDCard_sendCommand(SDCommand cmd, uint32 arg, uint32 
 }
 
 /**********************************************************************************************************************\
-* FUNCTION    SDCard_setup
+* FUNCTION    SDCard_initDisk
 * DESCRIPTION Puts the SDCard into SPI mode, and prepares it to accept commands
 * PARAMETERS  None
 * RETURNS     TRUE if successful, FALSE otherwise
 \**********************************************************************************************************************/
-boolean SDCard_setup(void)
+boolean SDCard_initDisk(void)
 {
   uint8 OP_SD_SPI_MODE[10] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   SDCommandResponseR2 cardStatusResp;
@@ -333,13 +375,8 @@ boolean SDCard_setup(void)
   boolean success;
   uint32 trys = 0;
 
-  sSDCard.state = SDCARD_SETUP;
-
-  Analog_setDomain(ANALOG_DOMAIN, TRUE);   // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,     TRUE);   // Enable I/O domain
-  Analog_setDomain(SPI_DOMAIN,    TRUE);      // Enable SPI domain
-  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.65); // Set domain voltage to nominal (3.25V)
-  Time_delay(1000); // Wait 1000ms for domains to settle
+  SDCard_setup(TRUE); // Turn on the SPI and control pins
+  SDCard_setState(SDCARD_SETUP); // Set the state and voltage
 
   // Send the SPI mode command with the chip deselected ... prime the pump if you will...
   SPI_write(OP_SD_SPI_MODE, sizeof(OP_SD_SPI_MODE));
@@ -380,11 +417,8 @@ boolean SDCard_setup(void)
   } while(FALSE);
   DESELECT_CHIP_SD();
 
-  if (success)
-    sSDCard.state = SDCARD_READY;
-  else
-    sSDCard.state = SDCARD_IDLE;
-
+  SDCard_setup(FALSE); // Turn off the SPI and control pins
+  SDCard_setState((success == TRUE) ? SDCARD_READY : SDCARD_IDLE); // Set the state and voltage
   return success;
 }
 
@@ -579,84 +613,6 @@ boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
           (verifyResult == SDCARD_RESPONSE_OK) && (verify == 0));
 }
 
-/**********************************************************************************************************************\
-* FUNCTION    SDCard_writeLP
-* DESCRIPTION Writes a buffer to the the SDCard and decreases card voltage during wait-states
-* PARAMETERS   pSrc  - pointer to source RAM buffer
-*              pDest - pointer to destination in SDCard
-*             length - number of bytes to write
-* RETURNS     TRUE if the write succeeds, FALSE otherwise
-\**********************************************************************************************************************/
-boolean SDCard_writeLP(uint8 *pSrc, uint8 *pDest, uint16 length)
-{
-  uint8 verify;
-  uint32 block, offset;
-  SDCommandResult readResult, writeResult, verifyResult;
-
-  if (length > 512)  // Currently can't handle multi-block writes
-    return SDCARD_ERROR;
-
-  // Read in the block that contains the data which will be overwritten
-  block = (uint32)pDest >> 9;
-  sSDCard.state = SDCARD_READING;
-  readResult = SDCard_readBlock(block);
-
-  // Copy the incoming data overtop of whatever currently resides there
-  offset = (uint32)pDest & 0x0000001FF;
-  Util_copyMemory(pSrc, (uint8 *)&sSDCard.respBlock + offset, length);
-
-  // Write the new contents of the block to the SDCard
-  sSDCard.state = SDCARD_WRITING;
-  writeResult = SDCard_writeBlock(block);
-
-  // Verify that the source data now resides in the block
-  sSDCard.state = SDCARD_VERIFYING;
-  verifyResult = SDCard_readBlock(block);
-  verify = Util_compareMemory(pSrc, (uint8 *)&sSDCard.respBlock + offset, length);
-
-  return ((readResult   == SDCARD_RESPONSE_OK) && (writeResult == SDCARD_RESPONSE_OK) &&
-          (verifyResult == SDCARD_RESPONSE_OK) && (verify == 0));
-}
-
-/**********************************************************************************************************************\
-* FUNCTION    SDCard_writeXLP
-* DESCRIPTION Writes a buffer to the the SDCard and decreases card voltage during wait-states and transmissions
-* PARAMETERS   pSrc  - pointer to source RAM buffer
-*              pDest - pointer to destination in SDCard
-*             length - number of bytes to write
-* RETURNS     TRUE if the write succeeds, FALSE otherwise
-\**********************************************************************************************************************/
-boolean SDCard_writeXLP(uint8 *pSrc, uint8 *pDest, uint16 length)
-{
-  uint8 verify;
-  uint32 block, offset;
-  SDCommandResult readResult, writeResult, verifyResult;
-
-  if (length > 512)  // Currently can't handle multi-block writes
-    return SDCARD_ERROR;
-
-  // Read in the block that contains the data which will be overwritten
-  block = (uint32)pDest >> 9;
-  sSDCard.state = SDCARD_READING;
-  readResult = SDCard_readBlock(block);
-
-  // Copy the incoming data overtop of whatever currently resides there
-  offset = (uint32)pDest & 0x0000001FF;
-  Util_copyMemory(pSrc, (uint8 *)&sSDCard.respBlock + offset, length);
-
-  // Write the new contents of the block to the SDCard
-  sSDCard.state = SDCARD_WRITING;
-  writeResult = SDCard_writeBlock(block);
-
-  // Verify that the source data now resides in the block
-  sSDCard.state = SDCARD_VERIFYING;
-  verifyResult = SDCard_readBlock(block);
-  verify = Util_compareMemory(pSrc, (uint8 *)&sSDCard.respBlock + offset, length);
-
-  return ((readResult   == SDCARD_RESPONSE_OK) && (writeResult == SDCARD_RESPONSE_OK) &&
-          (verifyResult == SDCARD_RESPONSE_OK) && (verify == 0));
-}
-
 /**************************************************************************************************\
 * FUNCTION    SDCard_getStatusSDC
 * DESCRIPTION txBuf: A pointer to the data to be transmitted. Can be NULL.
@@ -695,19 +651,18 @@ void SDCard_test(void)
 {
   uint8 buffer[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   volatile uint16 crcNorm, crcRev;
-  
-  Analog_setDomain(MCU_DOMAIN,    FALSE); // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN, TRUE);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,     TRUE);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,  FALSE); // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE); // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN, TRUE);  // Enable SPI domain
-  Analog_setDomain(ENERGY_DOMAIN, FALSE); // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE); // Disable relay domain
-  Analog_adjustFeedbackVoltage(SPI_DOMAIN, 0.65); // Set domain voltage to nominal
+
+  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
+  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
+  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
+  Analog_setDomain(COMMS_DOMAIN,  FALSE, 3.3);  // Disable comms domain
+  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
+  Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
+  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
+  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
   Time_delay(1000); // Wait 1000ms for domains to settle
 
-  SDCard_setup();
+  SDCard_initDisk();
 
   while(1)
   {

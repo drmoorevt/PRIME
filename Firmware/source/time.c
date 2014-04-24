@@ -111,7 +111,7 @@ void TIM2_IRQHandler(void)
 void Time_initTimer3(uint16 reloadValue)
 {
   RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Turn on Timer3 clocks (60 MHz)
-  TIM3->ARR     = reloadValue; // Autoreload set to 1ms overflow
+  TIM3->ARR     = reloadValue;
   TIM3->CR1    |= (TIM_CR1_CEN | TIM_CR1_URS | TIM_CR1_ARPE);
   TIM3->CR2    &= (~TIM_CR2_MMS);
   TIM3->CR2    |= (TIM_TRGOSource_Update);

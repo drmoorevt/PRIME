@@ -9,38 +9,67 @@
 
 #define FILE_ID ANALOG_C
 
-union
-{
-  struct
-  {
-    uint32_t domen   : 1;
-    uint32_t domsel1 : 1;
-    uint32_t domsel2 : 1;
-    uint32_t domsel0 : 1;
-    uint32_t domsel3 : 1;
-    uint32_t domrst  : 1;
-    uint32_t filler  : 26;
-  } asBfldLH;
-  uint32_t asWord;
-  uint8_t  asBytes[4];
-} portCLSB;
+// Static definitions
+#define ANALOG_TPS62240_VREF ((double)0.600000000)
+#define ANALOG_LM2623_VREF ((double)1.240000000)
 
-typedef struct
-{
-  RegulatorType regulator;
-  double r1;
-  double r2;
-  double rf;
-} DomainConfig;
+#define ANALOG_MAX4378_GAIN ((double)100.0)
 
+// Macro Definitions
+#define SELECT_DOMLEN()   do { GPIOE->BSRRH |= 0x00000004; } while (0)
+#define DESELECT_DOMLEN() do { GPIOE->BSRRL |= 0x00000004; } while (0)
+
+const DomainConfig DEFAULT_CONFIGURATION[NUM_ANALOG_DOMAINS] = {
+//Regulator,   inAmp,  outAmp,     r1,     r2,     rf,  vMax, vMin,  rIn, rOut
+  {TPS62240, MAX4378, MAX4378, 360000, 180000, 144000,   3.3,  1.8, 10.0, 10.0}, // MCU_DOMAIN
+  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 10.0, 10.0}, // ANALOG_DOMAIN
+  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 10.0, 10.0}, // SRAM_DOMAIN
+  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 10.0, 10.0}, // SPI_DOMAIN
+  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 10.0, 10.0}, // ENERGY_DOMAIN
+  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 10.0, 10.0}, // COMMS_DOMAIN
+  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 10.0, 10.0}, // IO_DOMAIN
+  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 10.0, 10.0}, // BUCK_DOMAIN7
+  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 10.0, 10.0}, // BOOST_DOMAIN0
+  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 10.0, 10.0}, // BOOST_DOMAIN1
+  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 10.0, 10.0}, // BOOST_DOMAIN2
+  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 10.0, 10.0}, // BOOST_DOMAIN3
+  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 10.0, 10.0}, // BOOST_DOMAIN4
+  {LM2623,   MAX4378, MAX4378, 180000,  75000,  22000,  12.0,  0.6, 10.0, 10.0}, // BOOST_DOMAIN5
+  {LM2623,   MAX4378, MAX4378, 180000,  75000,  22000,  12.0,  0.6, 10.0, 10.0}, // BOOST_DOMAIN6
+  {LM2623,   MAX4378, MAX4378, 180000,  75000,  22000,  12.0,  0.6, 10.0, 10.0}, // BOOST_DOMAIN7
+};
+
+// Static structures
 struct
 {
   DomainStatus domainStatus[NUM_ANALOG_DOMAINS];
   DomainConfig domainConfig[NUM_ANALOG_DOMAINS];
 } sAnalog;
 
-#define SELECT_DOMLEN()   do { GPIOE->BSRRH |= 0x00000004; } while (0)
-#define DESELECT_DOMLEN() do { GPIOE->BSRRL |= 0x00000004; } while (0)
+// Local function prototypes
+static double Analog_getReferenceVoltage(RegulatorType type);
+static double Analog_getFeedbackVoltage(VoltageDomain domain, double vDomain);
+static double Analog_getOutputVoltage(VoltageDomain domain, double vFeedback);
+
+/*************************************************************************************************\
+* FUNCTION    Analog_getReferenceVoltage
+* DESCRIPTION Returns the reference voltage for a particular regulator type
+* PARAMETERS  type: The type of regulator to investigate
+* RETURNS     The reference voltage of the selected regulator type
+* NOTES       None
+\*************************************************************************************************/
+static double Analog_getReferenceVoltage(RegulatorType type)
+{
+  switch (type)
+  {
+    case TPS62240:
+      return ANALOG_TPS62240_VREF;
+    case LM2623:
+      return ANALOG_LM2623_VREF;
+    default:
+      return 0.0;
+  }
+}
 
 /*************************************************************************************************\
 * FUNCTION    Analog_init
@@ -51,6 +80,7 @@ struct
 \*************************************************************************************************/
 void Analog_init(void)
 {
+  uint32 i;
   const uint16 ctrlPortB = GPIO_Pin_0;
   const uint16 ctrlPortC = GPIO_Pin_0|GPIO_Pin_1|GPIO_Pin_2|GPIO_Pin_3|GPIO_Pin_4|GPIO_Pin_5;
   const uint16 ctrlPortE = GPIO_Pin_2;
@@ -71,23 +101,28 @@ void Analog_init(void)
   GPIO_configurePins(GPIOE, &analogCtrlPortE);
 
   Util_fillMemory(&sAnalog, sizeof(sAnalog), 0x00);
+  // Set up each domain
+  for (i = 0; i < NUM_ANALOG_DOMAINS; i++)
+    Analog_setup((VoltageDomain)i, DEFAULT_CONFIGURATION[i]);
 }
 
 /*************************************************************************************************\
 * FUNCTION    Analog_setup
 * DESCRIPTION Configures the specified domain according to the supplied configuration
-* PARAMETERS  reg: The type of regulator to configure the domain for
-*             r1: The upper part of the resistor ladder
-*             r2: The lower part of the resistor ladder
-*             rf: The feedback resistor coming in from the Analog output buffer
+* PARAMETERS  domain: A voltage domain to configure
+*             config: The configuration for the selected voltage domain
 * RETURNS     TRUE if setup was successful, FALSE otherwise
 * NOTES       The function will not enable the domain
 \*************************************************************************************************/
-void Analog_setup(RegulatorType reg, double r1, double r2, double rf)
+void Analog_setup(VoltageDomain domain, DomainConfig config)
 {
-  // Use the resistors and regulator to determine how the conversion ration of fbVolts to domVolts
-  // store that ratio in sAnalog
+  sAnalog.domainConfig[domain] = config;
 
+  sAnalog.domainStatus[domain].isEnabled       = FALSE;
+  sAnalog.domainStatus[domain].feedbackVoltage = Analog_getReferenceVoltage(config.regulator);
+  sAnalog.domainStatus[domain].domainVoltage   = 0;
+  sAnalog.domainStatus[domain].inputCurrent    = 0;
+  sAnalog.domainStatus[domain].outputCurrent   = 0;
 }
 
 /*************************************************************************************************\
@@ -100,6 +135,22 @@ void Analog_setup(RegulatorType reg, double r1, double r2, double rf)
 \*************************************************************************************************/
 void Analog_selectChannel(VoltageDomain chan, boolean domen)
 { 
+  union
+  {
+    struct
+    {
+      uint32 domen   : 1;
+      uint32 domsel1 : 1;
+      uint32 domsel2 : 1;
+      uint32 domsel0 : 1;
+      uint32 domsel3 : 1;
+      uint32 domrst  : 1;
+      uint32 filler  : 26;
+    } asBfldLH;
+    uint32 asWord;
+    uint8  asBytes[4];
+  } portCLSB;
+
   portCLSB.asWord = 0;
   portCLSB.asBfldLH.domen   = (domen == FALSE)          ? 0 : 1;
   portCLSB.asBfldLH.domsel0 = ((chan & 0x00000001) > 0) ? 1 : 0;
@@ -107,7 +158,7 @@ void Analog_selectChannel(VoltageDomain chan, boolean domen)
   portCLSB.asBfldLH.domsel2 = ((chan & 0x00000004) > 0) ? 1 : 0;
   portCLSB.asBfldLH.domsel3 = ((chan & 0x00000008) > 0) ? 1 : 0;
   portCLSB.asBfldLH.domrst  = (1);  // keep domrst high so we dont latch->demux the 259s
-  GPIOC->ODR = (GPIOC->ODR & 0xFFC0) | (portCLSB.asBytes[0]);
+  GPIOC->ODR = (GPIOC->ODR & 0xFFC0) | (portCLSB.asWord & 0x003F);
 }
 
 /*************************************************************************************************\
@@ -118,12 +169,20 @@ void Analog_selectChannel(VoltageDomain chan, boolean domen)
 * RETURNS     Nothing
 * NOTES       None
 \*************************************************************************************************/
-void Analog_setDomain(VoltageDomain domain, boolean state)
+boolean Analog_setDomain(VoltageDomain domain, boolean state, double vOut)
 {
+  // If a task is requesting a dangerous range then NAK the request
+  if ((vOut > sAnalog.domainConfig[domain].vMax) || (vOut < sAnalog.domainConfig[domain].vMin))
+    return FALSE;
+
+  sAnalog.domainStatus[domain].isEnabled       = state;
+  sAnalog.domainStatus[domain].domainVoltage   = vOut;
+  sAnalog.domainStatus[domain].feedbackVoltage = Analog_getFeedbackVoltage(domain, vOut);
+
   switch (domain)
   {
     case MCU_DOMAIN:
-      break; // Can't enable or disable the MUC domain
+      break; // Can't enable or disable the MCU domain
     case ANALOG_DOMAIN:  // V1EN is connected to a pin PB0
       if (state)
         GPIOB->BSRRL = 0x0001;
@@ -144,6 +203,7 @@ void Analog_setDomain(VoltageDomain domain, boolean state)
     case BOOST_DOMAIN5:
     case BOOST_DOMAIN6:
     case BOOST_DOMAIN7:
+      DAC_setVoltage(DAC_PORT1, sAnalog.domainStatus[domain].feedbackVoltage);
       Analog_selectChannel(domain, state);
       SELECT_DOMLEN();        // DOMLEN low to latch in new vals
       Util_spinWait(12000);   // 100us to latch in the new value
@@ -151,79 +211,42 @@ void Analog_setDomain(VoltageDomain domain, boolean state)
       Util_spinWait(12000);   // 100us to let the DOMLEN latch in
       break;
   }
-  sAnalog.domainStatus[domain].isEnabled = state;
+
+  return TRUE;
 }
 
 /*************************************************************************************************\
-* FUNCTION    Analog_adjustFeedbackVoltage
-* DESCRIPTION Enables or disables a voltage domain
+* FUNCTION    Analog_getFeedbackVoltage
+* DESCRIPTION Finds the appropriate feedback voltage for a given domain and desired domain voltage
 * PARAMETERS  domain: The domain to enable or disable
-              voltage: The voltage to put on the selected domain
-* RETURNS     Nothing
+              vDomain: The voltage to put on the selected domain
+* RETURNS     The feedback voltage corresponding to vDomain on the desired domain
 * NOTES       None
 \*************************************************************************************************/
-void Analog_adjustFeedbackVoltage(VoltageDomain domain, float fbVolts)
-{ 
-  switch (domain)
-  {
-    case MCU_DOMAIN:
-    case ANALOG_DOMAIN:
-    case SRAM_DOMAIN:
-    case SPI_DOMAIN:
-    case ENERGY_DOMAIN:
-    case COMMS_DOMAIN:
-    case IO_DOMAIN:
-    case BUCK_DOMAIN7:
-    case BOOST_DOMAIN0:
-    case BOOST_DOMAIN1:
-    case BOOST_DOMAIN2:
-    case BOOST_DOMAIN3:
-    case BOOST_DOMAIN4:
-    case BOOST_DOMAIN5:
-    case BOOST_DOMAIN6:
-    case BOOST_DOMAIN7:
-      break;
-  }
-  
-  DAC_setVoltage(DAC_PORT1, fbVolts);
-  Analog_selectChannel(domain, FALSE);  // Charge up the voltage capacitor (domen active low)
-//  Analog_selectChannel(domain, TRUE);   // Turn on the inhibit switch
-  sAnalog.domainStatus[domain].fbOutputVoltage = fbVolts;
-}
-
-/*************************************************************************************************\
-* FUNCTION    Analog_convertFeedbackVoltage
-* DESCRIPTION Enables or disables a voltage domain
-* PARAMETERS  domain: The domain to enable or disable
-              voltage: The voltage to put on the selected domain
-* RETURNS     Nothing
-* NOTES       None
-\*************************************************************************************************/
-float Analog_convertFeedbackVoltage(VoltageDomain domain, float outVolts)
+static double Analog_getFeedbackVoltage(VoltageDomain domain, double vDomain)
 {
-  switch (domain)
-  {
-    case MCU_DOMAIN:
-    case ANALOG_DOMAIN:
-    case SRAM_DOMAIN:
-      break;
-    case SPI_DOMAIN:
-      return 0.6 + (3.400 - outVolts)/2.4000;
-    case ENERGY_DOMAIN:
-    case COMMS_DOMAIN:
-    case IO_DOMAIN:
-    case BUCK_DOMAIN7:
-    case BOOST_DOMAIN0:
-    case BOOST_DOMAIN1:
-    case BOOST_DOMAIN2:
-    case BOOST_DOMAIN3:
-    case BOOST_DOMAIN4:
-    case BOOST_DOMAIN5:
-    case BOOST_DOMAIN6:
-    case BOOST_DOMAIN7:
-      break;
-  }
-  return 0.6;
+  double r1 = sAnalog.domainConfig[domain].r1,
+         r2 = sAnalog.domainConfig[domain].r2,
+         rf = sAnalog.domainConfig[domain].rf,
+         vRef = Analog_getReferenceVoltage(sAnalog.domainConfig[domain].regulator);
+  return (rf * (vRef * (1/r1 + 1/r2 + 1/rf) - vDomain * (1/r1)));
+}
+
+/*************************************************************************************************\
+* FUNCTION    Analog_getOutputVoltage
+* DESCRIPTION Finds the ideal output voltage for a given domain based on the input feedback voltage
+* PARAMETERS  domain: The domain to enable or disable
+              vFeedback: The voltage to put on the selected domain
+* RETURNS     The ideal output voltage corresponding to vFeedback on the desired domain
+* NOTES       None
+\*************************************************************************************************/
+static double Analog_getOutputVoltage(VoltageDomain domain, double vFeedback)
+{
+  double r1 = sAnalog.domainConfig[domain].r1,
+         r2 = sAnalog.domainConfig[domain].r2,
+         rf = sAnalog.domainConfig[domain].rf,
+         vRef = Analog_getReferenceVoltage(sAnalog.domainConfig[domain].regulator);
+  return vRef + (r1 * (vRef * (1/r2 + 1/rf) - (vFeedback/rf)));
 }
 
 /*************************************************************************************************\
@@ -233,7 +256,7 @@ float Analog_convertFeedbackVoltage(VoltageDomain domain, float outVolts)
 * RETURNS     Nothing
 * NOTES       None
 \*************************************************************************************************/
-void Analog_sampleDomain(VoltageDomain analogSelect)
+void Analog_testAnalog(void)
 {
   /*
   uint8 bytesToSend = 0;

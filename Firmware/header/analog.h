@@ -27,22 +27,43 @@ typedef enum
 typedef enum
 {
   TPS62240 = 0,
+  LM2623   = 1,
   NUM_REGULATORS
 } RegulatorType;
+
+typedef enum
+{
+  MAX4378 = 0,
+  NUM_AMPLIFIERS
+} AmplifierType;
+
+typedef struct
+{
+  RegulatorType regulator;
+  AmplifierType inputAmp;
+  AmplifierType outputAmp;
+  double r1;
+  double r2;
+  double rf;
+  double vMax;
+  double vMin;
+  double rInputSense;
+  double rOutputSense;
+} DomainConfig;
 
 typedef struct
 {
   boolean isEnabled;
-  float fbOutputVoltage;
-  float domainVoltage;
+  double  feedbackVoltage;
+  double  domainVoltage;
+  double  inputCurrent;
+  double  outputCurrent;
 } DomainStatus;
 
 void Analog_init(void);
-void Analog_setup(RegulatorType reg, double r1, double r2, double rf);
-void Analog_sampleDomain(VoltageDomain analogSelect);
-void Analog_setDomain(VoltageDomain domain, boolean state);
+void Analog_testAnalog(void);
+void Analog_setup(VoltageDomain domain, DomainConfig config);
+boolean Analog_setDomain(VoltageDomain domain, boolean state, double domainVoltage);
 void Analog_selectChannel(VoltageDomain chan, boolean domen);
-void Analog_adjustFeedbackVoltage(VoltageDomain domain, float voltage);
-float Analog_convertFeedbackVoltage(VoltageDomain domain, float outVolts);
 
 #endif // ANALOG_H
