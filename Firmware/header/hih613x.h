@@ -24,7 +24,7 @@ typedef enum
 void HIH613X_init(void);
 boolean HIH613X_setup(boolean state);
 HIHState HIH613X_getState(void);
-void HIH613X_notifyVoltageChange(double newVoltage)
+void HIH613X_notifyVoltageChange(double newVoltage);
 boolean HIH613X_setPowerState(HIHState state, double vDomain);
 void HIH613X_readTempHumidSPI(void);
 HIHStatus HIH613X_readTempHumidI2CBB(boolean measure, boolean read, boolean convert);

@@ -139,7 +139,8 @@ void Tests_init(void)
                            &sTests.comms.txBuffer[0], &Tests_notifyTransmitComplete,
                                                       &Tests_notifyUnexpectedReceive };
   Util_fillMemory(&sTests, sizeof(sTests), 0x00);
-  Analog_setDomain(COMMS_DOMAIN,  TRUE, 3.3); // Enable comms domain
+  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3); // Enable analog domain
+  Analog_setDomain(COMMS_DOMAIN,  TRUE, 3.3);  // Enable comms domain
   UART_openPort(UART_PORT5, comm5);
   sTests.comms.portOpen = TRUE;
 }
@@ -251,7 +252,7 @@ const uint8 resetMessage[6] = {'R','e','s','e','t','\n'};
 
 void Tests_run(void)
 {
-  Tests_test3();
+//  Tests_test3();
   switch (sTests.state)
   {
     case TEST_IDLE:            // Clear test data and setup listening for commands on the comm port
@@ -441,7 +442,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 reloadVal)
   adc3Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
 
   // Prepare data structures for retrieval
-  sTests.testHeader.timeScale = reloadVal / 60; // in microseconds
+  sTests.testHeader.timeScale = reloadVal / 60; // in microseconds (60MHz clock)
   sTests.testHeader.numChannels = 4;
   sTests.testHeader.bytesPerChan = TESTS_MAX_SAMPLES * 2;
   sTests.chanHeader[0].chanNum  = adc1Config.adcConfig.chan[0].chanNum;
@@ -566,12 +567,19 @@ uint16 Tests_test3(void)
   EEPROM_setup(FALSE);
   SerialFlash_setup(FALSE);
 
-  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900); // 15us sample rate
+  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 6000); // 100us sample rate
 
+  Util_spinWait(1000000);  // Adjusting the graph so as to have a distinct beginning of the test
   for (i = 3300; i > 0; i--)
+  {
     Analog_setDomain(SPI_DOMAIN, TRUE, (double)i / 1000.0);
+    Util_spinWait(1000);
+  }
   for (i = 0; i < 3300; i++)
+  {
     Analog_setDomain(SPI_DOMAIN, TRUE, (double)i / 1000.0);
+    Util_spinWait(1000);
+  }
 
   // Complete the samples
   while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
@@ -942,13 +950,18 @@ uint16 Tests_test11(void)
   uint8 aBuf[128], bBuf[128];
   Util_fillMemory(aBuf, 128, 0xAA);
   Util_fillMemory(bBuf, 128, 0xBB);
+
+  // Fill test locations with an erroneous value so we know success or failure
+  EEPROM_setPowerState(EEPROM_WAITING, 3.3);
+  EEPROM_fill((uint8*)0, 256, 0xCC);
+
   Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900); // 15us sample rate
 
   Time_delay(5);
   EEPROM_setPowerState(EEPROM_WAITING, 3.3);
   EEPROM_write(aBuf, (uint8*)0, 128);
   Time_delay(5);
-  EEPROM_setPowerState(EEPROM_WAITING, 2.0);
+  EEPROM_setPowerState(EEPROM_WAITING, 1.8);
   EEPROM_write(bBuf, (uint8*)128, 128);
   // Complete the samples
   while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
@@ -984,7 +997,7 @@ uint16 Tests_test12(void)
     EEPROM_setPowerState(EEPROM_WAITING, 3.3);
     EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
     Util_spinWait(30000 * 4); // Can't use Time_delay due to non-determinism
-    EEPROM_setPowerState(EEPROM_WAITING, 2.0);
+    EEPROM_setPowerState(EEPROM_WAITING, 1.8);
     EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
 
     // Complete the samples
@@ -1043,9 +1056,9 @@ uint16 Tests_test13(void)
     EEPROM_setPowerState(EEPROM_READING, 3.3);
     EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
     Util_spinWait(30000 * 4);
-    EEPROM_setPowerState(EEPROM_WRITING, 2.0);
-    EEPROM_setPowerState(EEPROM_WAITING, 2.0);
-    EEPROM_setPowerState(EEPROM_READING, 2.0);
+    EEPROM_setPowerState(EEPROM_WRITING, 1.8);
+    EEPROM_setPowerState(EEPROM_WAITING, 1.8);
+    EEPROM_setPowerState(EEPROM_READING, 1.8);
     EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
 
     // Complete the samples
@@ -1091,20 +1104,30 @@ uint16 Tests_test14(void)
   Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
 
 
-  while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
+//  while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
 
-  Tests_setupSPITests(SF_CHANNEL_OVERLOAD, 48000); // 800us sample rate
   for (i = 0; i < numSweeps; i++)
   {
+    Tests_setupSPITests(SF_CHANNEL_OVERLOAD, 24000); // 400us sample rate
+
     // Using a variety of write bytes (i)
     Util_fillMemory(&sTests.comms.rxBuffer[0], 128, i);
 
     // write one page in each regular and low power mode
-    Util_spinWait(30000 * 12);
+    Util_spinWait(120 * 28000); // ~28000us
+    SerialFlash_setPowerState(SERIAL_FLASH_IDLE,    3.30);
+    SerialFlash_setPowerState(SERIAL_FLASH_READING, 3.30);
+    SerialFlash_setPowerState(SERIAL_FLASH_ERASING, 3.30);
+    SerialFlash_setPowerState(SERIAL_FLASH_WAITING, 3.30);
+    SerialFlash_setPowerState(SERIAL_FLASH_WRITING, 3.30);
     SerialFlash_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
-//    Util_spinWait(30000 * 12);
-//    SerialFlash_setPowerState(SERIAL_FLASH_WAITING, 1.30);
-//    SerialFlash_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
+    Util_spinWait(120 * 28000); // ~28000us
+    SerialFlash_setPowerState(SERIAL_FLASH_IDLE,    2.30);
+    SerialFlash_setPowerState(SERIAL_FLASH_READING, 2.30);
+    SerialFlash_setPowerState(SERIAL_FLASH_ERASING, 2.30);
+    SerialFlash_setPowerState(SERIAL_FLASH_WAITING, 2.30);
+    SerialFlash_setPowerState(SERIAL_FLASH_WRITING, 2.30);
+    SerialFlash_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i + 1), 128);
 
     // Complete the samples
     while(sTests.adc1.isSampling || sTests.adc3.isSampling);
@@ -1155,7 +1178,7 @@ uint16 Tests_test15(void)
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
   Time_delay(1000); // Wait 1000ms for domains to settle
 
-  while (TRUE)
+  while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000))
   {
     sensorStatus = HIH613X_readTempHumidI2CBB(TRUE, TRUE, TRUE);
     temperature  = (int16)(HIH613X_getTemperature() * 100);

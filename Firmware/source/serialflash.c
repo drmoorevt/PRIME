@@ -15,11 +15,11 @@
 #define SF_NUM_RETRIES 3
 #define ADDRBYTES_SF 3
 
-#define SELECT_CHIP_SF()    do { GPIOB->BSRRH |= 0x00000100; } while (0)
-#define DESELECT_CHIP_SF()  do { GPIOB->BSRRL |= 0x00000100; } while (0)
-
-#define SELECT_SF_HOLD()    do { GPIOB->BSRRH |= 0x00000004; } while (0)
-#define DESELECT_SF_HOLD()  do { GPIOB->BSRRL |= 0x00000004; } while (0)
+// Can remove the wait by configuring the pins as push-pull, but risk leakage into the domain
+#define SELECT_CHIP_SF()    do { GPIOB->BSRRH |= 0x00000100; Util_spinWait(60); } while (0)
+#define DESELECT_CHIP_SF()  do { GPIOB->BSRRL |= 0x00000100; Util_spinWait(60); } while (0)
+#define SELECT_SF_HOLD()    do { GPIOB->BSRRH |= 0x00000004; Util_spinWait(60); } while (0)
+#define DESELECT_SF_HOLD()  do { GPIOB->BSRRL |= 0x00000004; Util_spinWait(60); } while (0)
 
 typedef enum
 {
@@ -79,7 +79,7 @@ static struct
   SerialFlashState state;
   FlashSubSector   subSector;
   FlashPage        testPage;
-  boolean          isInitialized
+  boolean          isInitialized;
 } sSerialFlash;
 
 static boolean SerialFlash_erase(uint8 *pDest, SerialFlashSize blockSize);
@@ -114,7 +114,7 @@ boolean SerialFlash_setup(boolean state)
 {
   // Initialize the EEPROM chip select and hold lines
   GPIO_InitTypeDef sfCtrlPortB = {(SF_HOLD_PIN | SF_SELECT_PIN), GPIO_Mode_OUT, GPIO_Speed_25MHz,
-                                   GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
+                                   GPIO_OType_OD, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
   sfCtrlPortB.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
   GPIO_configurePins(GPIOB, &sfCtrlPortB);
   GPIO_setPortClock(GPIOB, TRUE);
@@ -159,7 +159,7 @@ boolean SerialFlash_setPowerState(SerialFlashState state, double vDomain)
 {
   if (state >= SERIAL_FLASH_NUM_STATES)
     return FALSE;
-  else if (vDomain < 3.3)
+  else if (vDomain < 2.3)
     return FALSE;
   else
     sSerialFlash.vDomain[state] = vDomain;
@@ -231,7 +231,7 @@ static FlashStatusRegister SerialFlash_readStatusRegister(void)
 static boolean SerialFlash_waitForWriteComplete(boolean pollChip, uint32 timeout)
 {
   SerialFlash_setState(SERIAL_FLASH_WAITING);
-
+  SerialFlash_setup(pollChip);
   if (pollChip)
   {
     Time_startTimer(TIMER_SERIAL_MEM, timeout);
@@ -257,8 +257,8 @@ boolean SerialFlash_read(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
   uint32 readCommand = (((uint32)pSrc & 0xFFFFFF00) | (OP_READ_MEMORY));
   SerialFlash_setState(SERIAL_FLASH_READING);
+  SerialFlash_setup(TRUE);
   SerialFlash_transceive((uint8 *)&readCommand, sizeof(readCommand), pDest, length);
-  SerialFlash_setState(SERIAL_FLASH_IDLE);
   return TRUE;
 }
 
@@ -276,6 +276,7 @@ boolean SerialFlash_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
   uint32 writeCommand, bytesToWrite;
 
   SerialFlash_setState(SERIAL_FLASH_WRITING);
+  SerialFlash_setup(TRUE);
   while (length > 0)
   {
     bytesToWrite = (length > SF_PAGE_SIZE) ? SF_PAGE_SIZE : length;
@@ -288,7 +289,6 @@ boolean SerialFlash_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
     success &= SerialFlash_waitForWriteComplete(FALSE, PAGE_WRITE_TIME);
     length -= bytesToWrite;
   }
-  SerialFlash_setState(SERIAL_FLASH_IDLE);
   return success;
 }
 
@@ -317,7 +317,6 @@ boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 
     for (retries = SF_NUM_RETRIES, result = TRUE; (retries > 0); retries--)
     {
-//      SPI_setup(FALSE, FALSE, TRUE, FALSE, TRUE);
       pSubSector = (uint8 *)(((uint32)pDest >> 12) & 0x000001FF);
       // Read the sub sector to be written into local cache
       SerialFlash_read(pSubSector, pCache, SF_SUBSECTOR_SIZE);
@@ -336,6 +335,8 @@ boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
     pDest  += numToWrite; // update destination pointer
     length -= numToWrite;
   }
+  SerialFlash_setState(SERIAL_FLASH_IDLE);
+  SerialFlash_setup(FALSE);
   return result;
 }
 
@@ -352,6 +353,7 @@ static boolean SerialFlash_erase(uint8 *pDest, SerialFlashSize size)
   uint32 timeout, eraseCmd;
 
   SerialFlash_setState(SERIAL_FLASH_ERASING);
+  SerialFlash_setup(TRUE);
   SerialFlash_sendWriteEnable();
   // Put the erase command into the transmit buffer and set timeouts, both according to size
   switch (size)
@@ -374,10 +376,7 @@ static boolean SerialFlash_erase(uint8 *pDest, SerialFlashSize size)
   SerialFlash_transceive((uint8 *)&eraseCmd, sizeof(eraseCmd), NULL, 0);
 
   // Wait for erase to complete depending on timeout
-//  SPI_setup(FALSE, FALSE, TRUE, FALSE, FALSE);
   success = SerialFlash_waitForWriteComplete(FALSE, timeout);
-  SerialFlash_setState(SERIAL_FLASH_IDLE);
-//  SPI_setup(FALSE, FALSE, TRUE, FALSE, TRUE);
   return success;
 }
 

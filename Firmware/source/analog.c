@@ -171,13 +171,11 @@ void Analog_selectChannel(VoltageDomain chan, boolean domen)
 \*************************************************************************************************/
 boolean Analog_setDomain(VoltageDomain domain, boolean state, double vOut)
 {
+  double fbVoltage = Analog_getFeedbackVoltage(domain, vOut);
+
   // If a task is requesting a dangerous range then NAK the request
   if ((vOut > sAnalog.domainConfig[domain].vMax) || (vOut < sAnalog.domainConfig[domain].vMin))
     return FALSE;
-
-  sAnalog.domainStatus[domain].isEnabled       = state;
-  sAnalog.domainStatus[domain].domainVoltage   = vOut;
-  sAnalog.domainStatus[domain].feedbackVoltage = Analog_getFeedbackVoltage(domain, vOut);
 
   switch (domain)
   {
@@ -203,14 +201,39 @@ boolean Analog_setDomain(VoltageDomain domain, boolean state, double vOut)
     case BOOST_DOMAIN5:
     case BOOST_DOMAIN6:
     case BOOST_DOMAIN7:
-      DAC_setVoltage(DAC_PORT1, sAnalog.domainStatus[domain].feedbackVoltage);
-      Analog_selectChannel(domain, state);
-      SELECT_DOMLEN();        // DOMLEN low to latch in new vals
-      Util_spinWait(12000);   // 100us to latch in the new value
-      DESELECT_DOMLEN();      // DOMLEN high so we can otherwise use the bus
-      Util_spinWait(12000);   // 100us to let the DOMLEN latch in
+      // Only enable the domain if it is disabled to avoid fbVoltage glitches
+      if (sAnalog.domainStatus[domain].isEnabled != state)
+      {
+        Analog_selectChannel(domain, state);
+        SELECT_DOMLEN();      // DOMLEN low to latch in new vals
+        Util_spinWait(120);   // 1us to latch in the new value
+        DESELECT_DOMLEN();    // DOMLEN high so we can otherwise use the bus
+        Util_spinWait(120);   // 1us to let the DOMLEN latch in
+        if (state == TRUE)
+          Util_spinWait(120 * 250); // 250us from EN to active, per datasheet
+      }
+      DAC_setVoltage(DAC_PORT1, fbVoltage);
+      /***** This is a hack to ensure that the fbVoltage is reaching the selected domain *****/
+      Analog_selectChannel(domain, FALSE);
+      // If this is the first time enabling the domain, give it some time for voltage to stabilize
+      if ((sAnalog.domainStatus[domain].isEnabled != state) && (state == TRUE))
+        Util_spinWait(120 * 250); // 250us to stabilize voltage (datasheet says 500us...)
+
+      // Make a record of what we just did here
+      sAnalog.domainStatus[domain].isEnabled       = state;
+      sAnalog.domainStatus[domain].domainVoltage   = vOut;
+      sAnalog.domainStatus[domain].feedbackVoltage = fbVoltage;
       break;
   }
+  // DOMEN needs to be low in order for fbVoltage to flow into the domain
+  // DOMEN needs to be high before selecting another channel such that you don't unintentionally
+  //       change the voltage on either the first or second domain
+  // DOMEN is used to set the state of the D-latches which enable or disable each domain. This
+  //       value is stored via DOMLEN high to low
+
+  // Therefore, each domain would ideally operate as designed, with the analog module sweeping
+  // through each domain refreshing the feedback voltage as it goes, but the above hack is
+  // necessary because that isn't implemented yet.
 
   return TRUE;
 }
@@ -240,7 +263,7 @@ static double Analog_getFeedbackVoltage(VoltageDomain domain, double vDomain)
 * RETURNS     The ideal output voltage corresponding to vFeedback on the desired domain
 * NOTES       None
 \*************************************************************************************************/
-static double Analog_getOutputVoltage(VoltageDomain domain, double vFeedback)
+double Analog_getOutputVoltage(VoltageDomain domain, double vFeedback)
 {
   double r1 = sAnalog.domainConfig[domain].r1,
          r2 = sAnalog.domainConfig[domain].r2,

@@ -23,11 +23,11 @@
 
 #define ADDRBYTES_EE 2
 
-#define SELECT_CHIP_EE0()   do { GPIOB->BSRRH |= 0x00000020; } while (0)
-#define DESELECT_CHIP_EE0() do { GPIOB->BSRRL |= 0x00000020; } while (0)
-
-#define SELECT_EE_HOLD()    do { GPIOB->BSRRH |= 0x00000004; } while (0)
-#define DESELECT_EE_HOLD()  do { GPIOB->BSRRL |= 0x00000004; } while (0)
+// Can remove the wait by configuring the pins as push-pull, but risk leakage into the domain
+#define SELECT_CHIP_EE0()   do { GPIOB->BSRRH |= 0x00000020; Util_spinWait(60); } while (0)
+#define DESELECT_CHIP_EE0() do { GPIOB->BSRRL |= 0x00000020; Util_spinWait(60); } while (0)
+#define SELECT_EE_HOLD()    do { GPIOB->BSRRH |= 0x00000004; Util_spinWait(60); } while (0)
+#define DESELECT_EE_HOLD()  do { GPIOB->BSRRL |= 0x00000004; Util_spinWait(60); } while (0)
 
 static struct
 {
@@ -65,7 +65,7 @@ boolean EEPROM_setup(boolean state)
 {
   // Initialize the EEPROM chip select and hold lines
   GPIO_InitTypeDef eeCtrlPortB = {(EE_HOLD_PIN | EE_SELECT_PIN), GPIO_Mode_OUT, GPIO_Speed_25MHz,
-                                   GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
+                                   GPIO_OType_OD, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
   eeCtrlPortB.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
   GPIO_configurePins(GPIOB, &eeCtrlPortB);
   GPIO_setPortClock(GPIOB, TRUE);
@@ -94,7 +94,7 @@ EEPROMState EEPROM_getState(void)
 \**************************************************************************************************/
 static void EEPROM_setState(EEPROMState state)
 {
-  if (sEEPROM.isInitialized != TRUE);
+  if (sEEPROM.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
   sEEPROM.state = state;
   Analog_setDomain(SPI_DOMAIN, TRUE, sEEPROM.vDomain[state]);
@@ -129,11 +129,12 @@ void EEPROM_readEE(const uint8 *pSrc, uint8 *pDest, uint16 length)
 {
   uint8 cmd[ADDRBYTES_EE + 1];
   cmd[0] = OP_READ_MEMORY;
-  cmd[1] = (uint8)((uint32)pSrc >> 16);
-  cmd[2] = (uint8)((uint32)pSrc >> 24);
+  cmd[1] = (uint8)((uint32)pSrc >> 8);
+  cmd[2] = (uint8)((uint32)pSrc >> 0);
 
+  // Set state before enabling the pins to avoid glitches
+  EEPROM_setState(EEPROM_READING); // Set for monitoring and voltage control purposes
   EEPROM_setup(TRUE); // Enable the EEPROM control and SPI pins for the transaction
-  EEPROM_setState(EEPROM_READING);
 
   SELECT_CHIP_EE0();
   SPI_write(cmd, ADDRBYTES_EE + 1);
@@ -154,10 +155,10 @@ void EEPROM_readEE(const uint8 *pSrc, uint8 *pDest, uint16 length)
 \**************************************************************************************************/
 boolean EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
-  uint16 chipOffset, numBytes;
-  uint8 writeBuf[ADDRBYTES_EE + 1], readBuf[WRITEPAGESIZE_EE];
   uint8 retries;
+  uint16 numBytes;
   boolean writeFailed = FALSE;
+  uint8 writeBuf[ADDRBYTES_EE + 1], readBuf[WRITEPAGESIZE_EE];
 
   while (length > 0)
   {
@@ -167,37 +168,35 @@ boolean EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
     if (length < numBytes)
       numBytes = length;
 
-    chipOffset = (uint16)((uint32)pDest);
-    retries = EE_NUM_RETRIES;
+    retries = EE_NUM_RETRIES; // change this to a for loop
 
     do
     {
-      EEPROM_setup(TRUE); // Enable the EEPROM control and SPI pins for the transaction
+      // Must set state (voltage) before setting control pins!
       EEPROM_setState(EEPROM_WRITING); // For monitoring and voltage control purposes
+      EEPROM_setup(TRUE); // Enable the EEPROM control and SPI pins for the transaction
+
+      // enable EEPROM
       SELECT_CHIP_EE0();
-
-       // enable EEPROM
       writeBuf[0] = OP_WRITE_ENABLE;
-      SPI_write(writeBuf,1);
-
+      SPI_write(writeBuf, 1);
       DESELECT_CHIP_EE0();
 
       // write to EEPROM
       writeBuf[0] = OP_WRITE_MEMORY;
-
-      writeBuf[2] = (uint8)(chipOffset & 0xFF);
-      writeBuf[1] = (uint8)(chipOffset >> 8);
+      writeBuf[1] = (uint8)((uint32)pDest >> 8);
+      writeBuf[2] = (uint8)((uint32)pDest >> 0);
 
       SELECT_CHIP_EE0();
-      SPI_write(writeBuf,ADDRBYTES_EE + 1);
-      SPI_write(pSrc,numBytes);
+      SPI_write(writeBuf, ADDRBYTES_EE + 1);
+      SPI_write(pSrc, numBytes);
       DESELECT_CHIP_EE0();
 
       EEPROM_setup(FALSE); // Disable the EEPROM control and SPI pins while waiting
       EEPROM_setState(EEPROM_WAITING); // For monitoring and voltage control purposes
       Util_spinWait(30000 * 4); // == ~10ms
 
-      EEPROM_readEE((uint8*)chipOffset, readBuf, numBytes); // Verify the write, re-enables EEPROM
+      EEPROM_readEE(pDest, readBuf, numBytes); // Verify the write, re-enables then disables EEPROM
 
       writeFailed = (Util_compareMemory(pSrc, readBuf, (uint8)numBytes) != 0);
     } while (writeFailed && (retries-- != 0));
@@ -206,8 +205,6 @@ boolean EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
     pDest  +=  numBytes; // update destination pointer
     length -= numBytes;
   }
-  EEPROM_setup(FALSE); // Enable the EEPROM control and SPI pins for the transaction
-  EEPROM_setState(EEPROM_IDLE); // For monitoring and voltage control purposes
 
   return (boolean)!writeFailed;
 }

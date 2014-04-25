@@ -65,6 +65,7 @@ boolean I2CBB_setup(boolean state)
   GPIO_setPortClock(GPIOB, TRUE);
   SDA_HIGH_HIH613X_I2C();
   SCL_HIGH_HIH613X_I2C();
+  return TRUE;
 }
 
 /**************************************************************************************************\

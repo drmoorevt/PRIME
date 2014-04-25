@@ -10,7 +10,7 @@
 
 #define FILE_ID SDCARD_C
 
-#define SD_SELECT_PIN   (GPIO_Pin_2)
+#define SD_SELECT_PIN   (GPIO_Pin_4)
 
 #define SD_MAX_WAIT_BUS_BYTES   (65535)
 #define SD_MAX_WAIT_INIT_BYTES  (4095)
@@ -245,7 +245,7 @@ void SDCard_init(void)
   uint32 i;
   Util_fillMemory((uint8*)&sSDCard, sizeof(sSDCard), 0x00);
   sSDCard.blockLen = DEFAULT_BLOCK_LENGTH;
-  for (i = 0; i < SERIAL_FLASH_NUM_STATES; i++)
+  for (i = 0; i < SDCARD_NUM_STATES; i++)
     sSDCard.vDomain[i] = 3.3;  // Initialize the default of all states to operate at 3.3v
   sSDCard.state = SDCARD_IDLE;
   SDCard_setup(FALSE);

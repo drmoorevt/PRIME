@@ -39,7 +39,7 @@ void SPI_init(void)
 * FUNCTION     SPI_setup
 * DESCRIPTION
 * PARAMETERS   none
-* RETURNS      nothing
+* RETURNS      TRUE
 \**************************************************************************************************/
 boolean SPI_setup(boolean state)
 {
@@ -48,6 +48,7 @@ boolean SPI_setup(boolean state)
   spiPortB.GPIO_Mode    = (state == TRUE) ? GPIO_Mode_AF   : GPIO_Mode_IN;
   spiPortB.GPIO_AltFunc = (state == TRUE) ? GPIO_AF_SPI1_2 : GPIO_AF_SYSTEM;
   GPIO_configurePins(GPIOB, &spiPortB);
+  return TRUE;
 }
 
 /**************************************************************************************************\

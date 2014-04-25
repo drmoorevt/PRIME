@@ -63,6 +63,7 @@ typedef struct
 void Analog_init(void);
 void Analog_testAnalog(void);
 void Analog_setup(VoltageDomain domain, DomainConfig config);
+double Analog_getOutputVoltage(VoltageDomain domain, double vFeedback);
 boolean Analog_setDomain(VoltageDomain domain, boolean state, double domainVoltage);
 void Analog_selectChannel(VoltageDomain chan, boolean domen);
 
