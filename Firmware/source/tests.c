@@ -1095,7 +1095,7 @@ uint16 Tests_test13(void)
 \**************************************************************************************************/
 uint16 Tests_test14(void)
 {
-  uint16 i, j, numSweeps = 5;
+  uint16 i, j, numSweeps = 2;
 
   Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
   Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
@@ -1106,7 +1106,7 @@ uint16 Tests_test14(void)
 
 //  while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
 
-  for (i = 0; i < numSweeps; i++)
+  for (i = 1; i < numSweeps; i++)
   {
     Tests_setupSPITests(SF_CHANNEL_OVERLOAD, 24000); // 400us sample rate
 
@@ -1114,7 +1114,7 @@ uint16 Tests_test14(void)
     Util_fillMemory(&sTests.comms.rxBuffer[0], 128, i);
 
     // write one page in each regular and low power mode
-    Util_spinWait(120 * 28000); // ~28000us
+    Util_spinWait(120 * 25000); // ~25000us
     SerialFlash_setPowerState(SERIAL_FLASH_IDLE,    3.30);
     SerialFlash_setPowerState(SERIAL_FLASH_READING, 3.30);
     SerialFlash_setPowerState(SERIAL_FLASH_ERASING, 3.30);
@@ -1122,12 +1122,12 @@ uint16 Tests_test14(void)
     SerialFlash_setPowerState(SERIAL_FLASH_WRITING, 3.30);
     SerialFlash_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
     Util_spinWait(120 * 28000); // ~28000us
-    SerialFlash_setPowerState(SERIAL_FLASH_IDLE,    2.30);
-    SerialFlash_setPowerState(SERIAL_FLASH_READING, 2.30);
-    SerialFlash_setPowerState(SERIAL_FLASH_ERASING, 2.30);
-    SerialFlash_setPowerState(SERIAL_FLASH_WAITING, 2.30);
-    SerialFlash_setPowerState(SERIAL_FLASH_WRITING, 2.30);
-    SerialFlash_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i + 1), 128);
+    SerialFlash_setPowerState(SERIAL_FLASH_IDLE,    3.30);
+    SerialFlash_setPowerState(SERIAL_FLASH_READING, 3.30);
+    SerialFlash_setPowerState(SERIAL_FLASH_ERASING, 3.30);
+    SerialFlash_setPowerState(SERIAL_FLASH_WAITING, 3.30);
+    SerialFlash_setPowerState(SERIAL_FLASH_WRITING, 3.30);
+    SerialFlash_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * (i + 1)), 128);
 
     // Complete the samples
     while(sTests.adc1.isSampling || sTests.adc3.isSampling);

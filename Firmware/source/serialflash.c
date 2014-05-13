@@ -240,7 +240,7 @@ static boolean SerialFlash_waitForWriteComplete(boolean pollChip, uint32 timeout
   }
   else
   {
-    Util_spinWait(30000 * (timeout / 2));
+    Util_spinWait((SystemCoreClock / 1000) * timeout);
     return TRUE;
   }
 }
@@ -255,7 +255,9 @@ static boolean SerialFlash_waitForWriteComplete(boolean pollChip, uint32 timeout
 \**************************************************************************************************/
 boolean SerialFlash_read(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
-  uint32 readCommand = (((uint32)pSrc & 0xFFFFFF00) | (OP_READ_MEMORY));
+  uint32 readCommand = ((uint32)pSrc & 0x00FFFFFF);
+  Util_swap32(&readCommand);
+  readCommand |= OP_READ_MEMORY;
   SerialFlash_setState(SERIAL_FLASH_READING);
   SerialFlash_setup(TRUE);
   SerialFlash_transceive((uint8 *)&readCommand, sizeof(readCommand), pDest, length);
@@ -280,7 +282,9 @@ boolean SerialFlash_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
   while (length > 0)
   {
     bytesToWrite = (length > SF_PAGE_SIZE) ? SF_PAGE_SIZE : length;
-    writeCommand = (((uint32)pDest & 0xFFFFFF00) | (OP_WRITE_PAGE));
+    writeCommand = ((uint32)pDest & 0x00FFFFFF);
+    Util_swap32(&writeCommand);
+    writeCommand |= OP_WRITE_PAGE;
     SerialFlash_sendWriteEnable();
     SELECT_CHIP_SF();
     SPI_write((uint8 *)&writeCommand, sizeof(writeCommand));
@@ -288,6 +292,8 @@ boolean SerialFlash_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
     DESELECT_CHIP_SF();
     success &= SerialFlash_waitForWriteComplete(FALSE, PAGE_WRITE_TIME);
     length -= bytesToWrite;
+    pDest  += bytesToWrite;
+    pSrc   += bytesToWrite;
   }
   return success;
 }
@@ -303,7 +309,7 @@ boolean SerialFlash_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
 boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
   uint8  *pCache = (uint8 *)&sSerialFlash.subSector;
-  uint8  *pSubSector;
+  uint8  *pSubSector, *pCacheDest;
   uint8   retries;
   boolean result = TRUE;
   uint16  numToWrite;
@@ -315,21 +321,25 @@ boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
     if (length < numToWrite)
       numToWrite = length;
 
-    for (retries = SF_NUM_RETRIES, result = TRUE; (retries > 0); retries--)
+    for (retries = SF_NUM_RETRIES, result = TRUE; retries > 0; retries--)
     {
+      Util_fillMemory(pCache, SF_SUBSECTOR_SIZE, 0xAB); // Test code
       pSubSector = (uint8 *)(((uint32)pDest >> 12) & 0x000001FF);
+      pCacheDest = (uint8 *)((((uint32)pDest >> 0) & 0x00000FFF) + pCache);
       // Read the sub sector to be written into local cache
       SerialFlash_read(pSubSector, pCache, SF_SUBSECTOR_SIZE);
       // Erase sub sector, it is now in local cache
       SerialFlash_erase(pSubSector, SF_SUBSECTOR_SIZE);
       // Overwrite local cache with the source data at the specified destination
-      Util_copyMemory(pSrc, pCache, length);
-      // Write to flash
-      SerialFlash_directWrite(pCache, pDest, SF_SUBSECTOR_SIZE);
+      Util_copyMemory(pSrc, pCacheDest, length);
+      // Write the whole sub-sector back to flash
+      SerialFlash_directWrite(pCache, pSubSector, SF_SUBSECTOR_SIZE);
       // Compare memory to determine if the write was successful
-      SerialFlash_read(pDest, sSerialFlash.testPage.byte, sizeof(SF_PAGE_SIZE));
+      SerialFlash_read(pDest, sSerialFlash.testPage.byte, numToWrite);
       if (0 == Util_compareMemory(pSrc, sSerialFlash.testPage.byte, numToWrite))
         break;
+      else
+        Util_fillMemory(sSerialFlash.testPage.byte, numToWrite, 0xBA);
     }
     pSrc   += numToWrite; // update source pointer
     pDest  += numToWrite; // update destination pointer
@@ -350,25 +360,27 @@ boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 static boolean SerialFlash_erase(uint8 *pDest, SerialFlashSize size)
 {
   boolean success;
-  uint32 timeout, eraseCmd;
-
+  uint32 timeout;
+  uint32 eraseCmd = ((uint32)pDest & 0x00FFFFFF);
+  Util_swap32(&eraseCmd);
   SerialFlash_setState(SERIAL_FLASH_ERASING);
   SerialFlash_setup(TRUE);
   SerialFlash_sendWriteEnable();
+
   // Put the erase command into the transmit buffer and set timeouts, both according to size
   switch (size)
   {
     case SF_SUBSECTOR_SIZE:
-      eraseCmd = (((uint32)pDest & 0xFFFFFF00) | (OP_SUBSECTOR_ERASE));
-      timeout  = SUBSECTOR_ERASE_TIME;
+      eraseCmd |= OP_SUBSECTOR_ERASE;
+      timeout   = SUBSECTOR_ERASE_TIME;
       break;
     case SF_SECTOR_SIZE:
-      eraseCmd = (((uint32)pDest & 0xFFFFFF00) | (OP_SECTOR_ERASE));
-      timeout = SECTOR_ERASE_TIME;
+      eraseCmd |= OP_SECTOR_ERASE;
+      timeout   = SECTOR_ERASE_TIME;
       break;
     case SF_CHIP_SIZE:
-      eraseCmd = (((uint32)pDest & 0xFFFFFF00) | (OP_BULK_ERASE));
-      timeout = BULK_ERASE_TIME;
+      eraseCmd |= OP_BULK_ERASE;
+      timeout   = BULK_ERASE_TIME;
       break;
     default:
       return FALSE;
