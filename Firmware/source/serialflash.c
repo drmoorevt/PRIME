@@ -273,9 +273,9 @@ static boolean SerialFlash_waitForWriteComplete(boolean pollChip, uint32 timeout
 \**************************************************************************************************/
 boolean SerialFlash_read(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
-  uint32 readCommand = ((uint32)pSrc & 0x00FFFFFF);
+  uint32 readCommand = ((uint32)pSrc & 0x00FFFFFF) | (OP_READ_MEMORY << 24);
   Util_swap32(&readCommand);
-  readCommand |= OP_READ_MEMORY;
+
   SerialFlash_setState(SERIAL_FLASH_STATE_READING);
   SerialFlash_setup(TRUE);
   SerialFlash_transceive((uint8 *)&readCommand, sizeof(readCommand), pDest, length);
@@ -290,30 +290,21 @@ boolean SerialFlash_read(uint8 *pSrc, uint8 *pDest, uint16 length)
 *             length - number of bytes to read
 * RETURNS     nothing
 \**************************************************************************************************/
-boolean SerialFlash_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
+static boolean SerialFlash_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
-  boolean success = TRUE;
-  uint32 writeCommand, bytesToWrite;
+  uint32 writeCommand = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_WRITE_PAGE << 24);
+  Util_swap32(&writeCommand);
 
   SerialFlash_setState(SERIAL_FLASH_STATE_WRITING);
   SerialFlash_setup(TRUE);
-  while (length > 0)
-  {
-    bytesToWrite = (length > SERIAL_FLASH_SIZE_PAGE) ? SERIAL_FLASH_SIZE_PAGE : length;
-    writeCommand = ((uint32)pDest & 0x00FFFFFF);
-    Util_swap32(&writeCommand);
-    writeCommand |= OP_WRITE_PAGE;
-    SerialFlash_sendWriteEnable();
-    SELECT_CHIP_SF();
-    SPI_write((uint8 *)&writeCommand, sizeof(writeCommand));
-    SPI_write(pSrc, bytesToWrite);
-    DESELECT_CHIP_SF();
-    success &= SerialFlash_waitForWriteComplete(FALSE, PAGE_WRITE_TIME);
-    length -= bytesToWrite;
-    pDest  += bytesToWrite;
-    pSrc   += bytesToWrite;
-  }
-  return success;
+  SerialFlash_sendWriteEnable();
+
+  SELECT_CHIP_SF();
+  SPI_write((uint8 *)&writeCommand, sizeof(writeCommand));
+  SPI_write(pSrc, length);
+  DESELECT_CHIP_SF();
+
+  return SerialFlash_waitForWriteComplete(FALSE, PAGE_WRITE_TIME);
 }
 
 /*****************************************************************************\
@@ -326,7 +317,7 @@ boolean SerialFlash_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
 \*****************************************************************************/
 boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
-  uint8  *pCache = (uint8 *)&sSerialFlash.subSector;
+  uint8  *pCache = (uint8 *)&sSerialFlash.subSector.byte[0];
   uint8  *pSubSector, *pCacheDest;
   uint8   retries;
   boolean result = TRUE;
@@ -339,17 +330,18 @@ boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
     if (length < numToWrite)
       numToWrite = length;
 
+    // Determine the which subsector we'll be manipulating and the data destination in local cache
+    pSubSector = (uint8 *)(((uint32)pDest >> 12) & 0x000001FF);
+    pCacheDest = (uint8 *)((((uint32)pDest >> 0) & 0x00000FFF) + pCache);
+
     for (retries = 3, result = TRUE; retries > 0; retries--)
     {
-      Util_fillMemory(pCache, SERIAL_FLASH_SIZE_SUBSECTOR, 0xAB); // Test code
-      pSubSector = (uint8 *)(((uint32)pDest >> 12) & 0x000001FF);
-      pCacheDest = (uint8 *)((((uint32)pDest >> 0) & 0x00000FFF) + pCache);
       // Read the sub sector to be written into local cache
       SerialFlash_read(pSubSector, pCache, SERIAL_FLASH_SIZE_SUBSECTOR);
       // Erase sub sector, it is now in local cache
       SerialFlash_erase(pSubSector, SERIAL_FLASH_SIZE_SUBSECTOR);
       // Overwrite local cache with the source data at the specified destination
-      Util_copyMemory(pSrc, pCacheDest, length);
+      Util_copyMemory(pSrc, pCacheDest, numToWrite);
       // Write the whole sub-sector back to flash
       SerialFlash_directWrite(pCache, pSubSector, SERIAL_FLASH_SIZE_SUBSECTOR);
       // Compare memory to determine if the write was successful
@@ -357,7 +349,7 @@ boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
       if (0 == Util_compareMemory(pSrc, sSerialFlash.testPage.byte, numToWrite))
         break;
       else
-        Util_fillMemory(sSerialFlash.testPage.byte, numToWrite, 0xBA);
+        Util_fillMemory(sSerialFlash.testPage.byte, numToWrite, 0xBA); // test code, remove
     }
     pSrc   += numToWrite; // update source pointer
     pDest  += numToWrite; // update destination pointer
@@ -377,36 +369,36 @@ boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 \**************************************************************************************************/
 static boolean SerialFlash_erase(uint8 *pDest, SerialFlashSize size)
 {
+  uint32 eraseCmd = ((uint32)pDest & 0x00FFFFFF);
   boolean success;
   uint32 timeout;
-  uint32 eraseCmd = ((uint32)pDest & 0x00FFFFFF);
-  Util_swap32(&eraseCmd);
-  SerialFlash_setState(SERIAL_FLASH_STATE_ERASING);
-  SerialFlash_setup(TRUE);
-  SerialFlash_sendWriteEnable();
 
   // Put the erase command into the transmit buffer and set timeouts, both according to size
   switch (size)
   {
     case SERIAL_FLASH_SIZE_SUBSECTOR:
-      eraseCmd |= OP_SUBSECTOR_ERASE;
-      timeout   = SUBSECTOR_ERASE_TIME;
+      eraseCmd = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_SUBSECTOR_ERASE << 24);
+      timeout  = (SUBSECTOR_ERASE_TIME);
       break;
     case SERIAL_FLASH_SIZE_SECTOR:
-      eraseCmd |= OP_SECTOR_ERASE;
-      timeout   = SECTOR_ERASE_TIME;
+      eraseCmd = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_SECTOR_ERASE << 24);
+      timeout  = (SECTOR_ERASE_TIME);
       break;
     case SERIAL_FLASH_SIZE_CHIP:
-      eraseCmd |= OP_BULK_ERASE;
-      timeout   = BULK_ERASE_TIME;
+      eraseCmd = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_BULK_ERASE << 24);
+      timeout  = (BULK_ERASE_TIME);
       break;
     default:
       return FALSE;
   }
-  SerialFlash_transceive((uint8 *)&eraseCmd, sizeof(eraseCmd), NULL, 0);
+  Util_swap32(&eraseCmd);
 
-  // Wait for erase to complete depending on timeout
+  SerialFlash_setState(SERIAL_FLASH_STATE_ERASING);
+  SerialFlash_setup(TRUE);
+  SerialFlash_sendWriteEnable();
+  SerialFlash_transceive((uint8 *)&eraseCmd, sizeof(eraseCmd), NULL, 0);
   success = SerialFlash_waitForWriteComplete(FALSE, timeout);
+
   return success;
 }
 
