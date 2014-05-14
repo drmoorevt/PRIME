@@ -7,39 +7,49 @@
 
 typedef enum
 {
-  SERIAL_FLASH_IDLE        = 0,
-  SERIAL_FLASH_READING     = 1,
-  SERIAL_FLASH_ERASING     = 2,
-  SERIAL_FLASH_WRITING     = 3,
-  SERIAL_FLASH_WAITING     = 4,
-  SERIAL_FLASH_NUM_STATES  = 5
+  SERIAL_FLASH_STATE_IDLE    = 0,
+  SERIAL_FLASH_STATE_READING = 1,
+  SERIAL_FLASH_STATE_ERASING = 2,
+  SERIAL_FLASH_STATE_WRITING = 3,
+  SERIAL_FLASH_STATE_WAITING = 4,
+  SERIAL_FLASH_STATE_MAX     = 5
 } SerialFlashState;
 
 typedef enum
 {
-  SF_PAGE_SIZE      =     0x000100,
-  SF_SUBSECTOR_SIZE =     0x001000,
-  SF_SECTOR_SIZE    =     0x010000,
-  SF_CHIP_SIZE      =     0x200000,
+  SERIAL_FLASH_PROFILE_STANDARD    = 0,
+  SERIAL_FLASH_PROFILE_LP_WAIT     = 1,
+  SERIAL_FLASH_PROFILE_LP_ALL      = 2,
+  SERIAL_FLASH_PROFILE_XLP_WAIT    = 3,
+  SERIAL_FLASH_PROFILE_LP_XLP_WAIT = 4,
+  SERIAL_FLASH_PROFILE_MAX         = 5
+} SerialFlashPowerProfile;
+
+typedef enum
+{
+  SERIAL_FLASH_SIZE_PAGE      = 0x000100,
+  SERIAL_FLASH_SIZE_SUBSECTOR = 0x001000,
+  SERIAL_FLASH_SIZE_SECTOR    = 0x010000,
+  SERIAL_FLASH_SIZE_CHIP      = 0x200000,
 } SerialFlashSize;
 
-#define SF_SECTORS_PER_CHIP      (SF_CHIP_SIZE / SF_SECTOR_SIZE)
-#define SF_SUBSECTORS_PER_CHIP   (SF_CHIP_SIZE / SF_SUBSECTOR_SIZE)
-#define SF_PAGES_PER_CHIP        (SF_CHIP_SIZE / SF_PAGE_SIZE)
-#define SF_SUBSECTORS_PER_SECTOR (SF_SECTOR_SIZE / SF_SUBSECTOR_SIZE)
-#define SF_PAGES_PER_SECTOR      (SF_SECTOR_SIZE / SF_PAGE_SIZE)
-#define SF_PAGES_PER_SUBSECTOR   (SF_SUBSECTOR_SIZE / SF_PAGE_SIZE)
+#define SF_SECTORS_PER_CHIP      (SERIAL_FLASH_SIZE_CHIP      / SERIAL_FLASH_SIZE_SECTOR)
+#define SF_SUBSECTORS_PER_CHIP   (SERIAL_FLASH_SIZE_CHIP      / SERIAL_FLASH_SIZE_SUBSECTOR)
+#define SF_PAGES_PER_CHIP        (SERIAL_FLASH_SIZE_CHIP      / SERIAL_FLASH_SIZE_PAGE)
+#define SF_SUBSECTORS_PER_SECTOR (SERIAL_FLASH_SIZE_SECTOR    / SERIAL_FLASH_SIZE_SUBSECTOR)
+#define SF_PAGES_PER_SECTOR      (SERIAL_FLASH_SIZE_SECTOR    / SERIAL_FLASH_SIZE_PAGE)
+#define SF_PAGES_PER_SUBSECTOR   (SERIAL_FLASH_SIZE_SUBSECTOR / SERIAL_FLASH_SIZE_PAGE)
 
 typedef struct
 {
-  uint8 byte[SF_PAGE_SIZE];
+  uint8 byte[SERIAL_FLASH_SIZE_PAGE];
 } FlashPage;
 
 typedef struct
 {
   union
   {
-    uint8     byte[SF_SUBSECTOR_SIZE];
+    uint8     byte[SERIAL_FLASH_SIZE_SUBSECTOR];
     FlashPage page[SF_PAGES_PER_SUBSECTOR];
   };
 } FlashSubSector;
@@ -48,7 +58,7 @@ typedef struct
 {
   union
   {
-    uint8          byte[SF_SECTOR_SIZE];
+    uint8          byte[SERIAL_FLASH_SIZE_SECTOR];
     FlashPage      page[SF_PAGES_PER_SECTOR];
     FlashSubSector subSector[SF_SUBSECTORS_PER_SECTOR];
   };
@@ -58,7 +68,7 @@ typedef struct
 {
   union
   {
-    uint8          byte[SF_CHIP_SIZE];
+    uint8          byte[SERIAL_FLASH_SIZE_CHIP];
     FlashPage      page[SF_PAGES_PER_CHIP];
     FlashSubSector subSector[SF_SUBSECTORS_PER_CHIP];
     FlashSector    sector[SF_SECTORS_PER_CHIP];
@@ -87,6 +97,7 @@ boolean SerialFlash_setup(boolean state);
 boolean SerialFlash_read(uint8 *pSrc, uint8 *pDest, uint16 length);
 boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length);
 boolean SerialFlash_setPowerState(SerialFlashState state, double vDomain);
+boolean SerialFlash_setPowerProfile(SerialFlashPowerProfile profile);
 SerialFlashState SerialFlash_getState(void);
 FlashID SerialFlash_readFlashID(void);
 void    SerialFlash_test(void);

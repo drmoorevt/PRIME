@@ -192,9 +192,9 @@ boolean EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
       SPI_write(pSrc, numBytes);
       DESELECT_CHIP_EE0();
 
-      EEPROM_setup(FALSE); // Disable the EEPROM control and SPI pins while waiting
+      EEPROM_setup(FALSE);    // Disable the EEPROM control and SPI pins while waiting
       EEPROM_setState(EEPROM_WAITING); // For monitoring and voltage control purposes
-      Util_spinWait(30000 * 4); // == ~10ms
+      Util_spinDelay(10000);  // == ~10ms
 
       EEPROM_readEE(pDest, readBuf, numBytes); // Verify the write, re-enables then disables EEPROM
 

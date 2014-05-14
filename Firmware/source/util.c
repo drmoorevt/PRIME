@@ -15,6 +15,18 @@ void Util_spinWait(uint32 spinVal)
 } // Util_spinWait
 
 /**************************************************************************************************\
+* FUNCTION     Util_spinDelay
+* DESCRIPTION  Spins in a loop for approximately the duration of the specified delay
+* PARAMETERS   microSecondDelay: The minimum number of microseconds for which to delay
+* RETURNS      Nothing
+* NOTES        None
+\**************************************************************************************************/
+void Util_spinDelay(uint32 microSecondDelay)
+{
+  Util_spinWait((SystemCoreClock / 1000000) * microSecondDelay);
+} // Util_spinWait
+
+/**************************************************************************************************\
 * FUNCTION     Util_checksum
 * DESCRIPTION  Computes the 8bit checksum of pData. The checksum is the sum of all the data bytes,
 *              negate the result and add 1.

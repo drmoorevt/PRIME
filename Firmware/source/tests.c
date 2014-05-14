@@ -1115,18 +1115,10 @@ uint16 Tests_test14(void)
 
     // write one page in each regular and low power mode
     Util_spinWait(120 * 25000); // ~25000us
-    SerialFlash_setPowerState(SERIAL_FLASH_IDLE,    3.30);
-    SerialFlash_setPowerState(SERIAL_FLASH_READING, 3.30);
-    SerialFlash_setPowerState(SERIAL_FLASH_ERASING, 3.30);
-    SerialFlash_setPowerState(SERIAL_FLASH_WAITING, 3.30);
-    SerialFlash_setPowerState(SERIAL_FLASH_WRITING, 3.30);
+    SerialFlash_setPowerProfile(SERIAL_FLASH_PROFILE_STANDARD);
     SerialFlash_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
     Util_spinWait(120 * 28000); // ~28000us
-    SerialFlash_setPowerState(SERIAL_FLASH_IDLE,    3.30);
-    SerialFlash_setPowerState(SERIAL_FLASH_READING, 3.30);
-    SerialFlash_setPowerState(SERIAL_FLASH_ERASING, 3.30);
-    SerialFlash_setPowerState(SERIAL_FLASH_WAITING, 3.30);
-    SerialFlash_setPowerState(SERIAL_FLASH_WRITING, 3.30);
+    SerialFlash_setPowerProfile(SERIAL_FLASH_PROFILE_STANDARD);
     SerialFlash_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * (i + 1)), 128);
 
     // Complete the samples

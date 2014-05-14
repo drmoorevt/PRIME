@@ -160,9 +160,9 @@ void HIH613X_readTempHumidSPI(void)
   int16 hihDataBuffer[2];
 
   SELECT_CHIP_HIH613X();
-  Util_spinWait(1000);
+  Util_spinDelay(10);
   SPI_read((uint8*)&hihDataBuffer, 4); // Note that SPI can only write at 800kHz
-  Util_spinWait(1500);
+  Util_spinDelay(15);
   DESELECT_CHIP_HIH613X();
 }
 

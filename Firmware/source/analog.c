@@ -205,19 +205,19 @@ boolean Analog_setDomain(VoltageDomain domain, boolean state, double vOut)
       if (sAnalog.domainStatus[domain].isEnabled != state)
       {
         Analog_selectChannel(domain, state);
-        SELECT_DOMLEN();      // DOMLEN low to latch in new vals
-        Util_spinWait(120);   // 1us to latch in the new value
-        DESELECT_DOMLEN();    // DOMLEN high so we can otherwise use the bus
-        Util_spinWait(120);   // 1us to let the DOMLEN latch in
+        SELECT_DOMLEN();       // DOMLEN low to latch in new vals
+        Util_spinDelay(1);     // 1us to latch in the new value
+        DESELECT_DOMLEN();     // DOMLEN high so we can otherwise use the bus
+        Util_spinDelay(1);     // 1us to let the DOMLEN latch in
         if (state == TRUE)
-          Util_spinWait(120 * 250); // 250us from EN to active, per datasheet
+          Util_spinDelay(250); // 250us from EN to active, per datasheet
       }
       DAC_setVoltage(DAC_PORT1, fbVoltage);
       /***** This is a hack to ensure that the fbVoltage is reaching the selected domain *****/
       Analog_selectChannel(domain, FALSE);
       // If this is the first time enabling the domain, give it some time for voltage to stabilize
       if ((sAnalog.domainStatus[domain].isEnabled != state) && (state == TRUE))
-        Util_spinWait(120 * 250); // 250us to stabilize voltage (datasheet says 500us...)
+        Util_spinDelay(250);  // 250us to stabilize voltage (datasheet says 500us...)
 
       // Make a record of what we just did here
       sAnalog.domainStatus[domain].isEnabled       = state;
