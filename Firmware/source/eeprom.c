@@ -9,19 +9,8 @@
 
 #define FILE_ID EEPROM_C
 
-#define EE_HOLD_PIN   (GPIO_Pin_2)
-#define EE_SELECT_PIN (GPIO_Pin_5)
-
-#define WRITEPAGESIZE_EE ((uint16)128)
-#define EE_NUM_RETRIES 3
-
-#define OP_WRITE_ENABLE     0x06
-#define OP_WRITE_MEMORY     0x02
-#define OP_READ_MEMORY      0x03
-#define OP_WRITE_STATUS     0x01
-#define OP_READ_STATUS      0x05
-
-#define ADDRBYTES_EE 2
+#define EEPROM_PIN_HOLD   (GPIO_Pin_2)
+#define EEPROM_PIN_SELECT (GPIO_Pin_5)
 
 // Can remove the wait by configuring the pins as push-pull, but risk leakage into the domain
 #define SELECT_CHIP_EE0()   do { GPIOB->BSRRH |= 0x00000020; Util_spinWait(60); } while (0)
@@ -29,9 +18,32 @@
 #define SELECT_EE_HOLD()    do { GPIOB->BSRRH |= 0x00000004; Util_spinWait(60); } while (0)
 #define DESELECT_EE_HOLD()  do { GPIOB->BSRRL |= 0x00000004; Util_spinWait(60); } while (0)
 
+#define WRITEPAGESIZE_EE ((uint16)128)
+#define EE_NUM_RETRIES   (3)
+#define ADDRBYTES_EE     (2)
+
+typedef enum
+{
+  OP_WRITE_ENABLE = 0x06,
+  OP_WRITE_MEMORY = 0x02,
+  OP_READ_MEMORY  = 0x03,
+  OP_WRITE_STATUS = 0x01,
+  OP_READ_STATUS  = 0x05
+} EEPROMCommand;
+
+// Power profile voltage definitions, in SerialFlashPowerProfile / SerialFlashState order
+static const double EEPROM_POWER_PROFILES[EEPROM_PROFILE_MAX][EEPROM_STATE_MAX] =
+{
+  {3.3, 3.3, 3.3, 3.3},  // Standard profile
+  {3.3, 3.3, 3.3, 1.8},  // Low power wait profile
+  {1.8, 1.8, 1.8, 1.8},  // Low power all profile
+  {3.3, 3.3, 3.3, 1.3},  // Extreme low power wait profile
+  {1.8, 1.8, 1.8, 1.3}   // Low power all, extreme low power wait profile
+};
+
 static struct
 {
-  double      vDomain[EEPROM_NUM_STATES]; // The domain voltage for each state
+  double      vDomain[EEPROM_STATE_MAX]; // The domain voltage for each state
   EEPROMState state;
   boolean     isInitialized;
 } sEEPROM;
@@ -44,12 +56,10 @@ static struct
 \**************************************************************************************************/
 void EEPROM_init(void)
 {
-  uint32 i;
   Util_fillMemory((uint8*)&sEEPROM, sizeof(sEEPROM), 0x00);
-  for (i = 0; i < EEPROM_NUM_STATES; i++)
-    sEEPROM.vDomain[i] = 3.3;  // Initialize the default of all states to operate at 3.3v
-  sEEPROM.state = EEPROM_IDLE;
+  EEPROM_setPowerProfile(EEPROM_PROFILE_STANDARD);  // Set all states to 3.3v
   EEPROM_setup(FALSE);
+  sEEPROM.state = EEPROM_STATE_IDLE;
   sEEPROM.isInitialized = TRUE;
 }
 
@@ -64,8 +74,9 @@ void EEPROM_init(void)
 boolean EEPROM_setup(boolean state)
 {
   // Initialize the EEPROM chip select and hold lines
-  GPIO_InitTypeDef eeCtrlPortB = {(EE_HOLD_PIN | EE_SELECT_PIN), GPIO_Mode_OUT, GPIO_Speed_25MHz,
-                                   GPIO_OType_OD, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
+  GPIO_InitTypeDef eeCtrlPortB = {(EEPROM_PIN_HOLD | EEPROM_PIN_SELECT), GPIO_Mode_OUT,
+                                   GPIO_Speed_25MHz, GPIO_OType_OD, GPIO_PuPd_NOPULL,
+                                   GPIO_AF_SYSTEM };
   eeCtrlPortB.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
   GPIO_configurePins(GPIOB, &eeCtrlPortB);
   GPIO_setPortClock(GPIOB, TRUE);
@@ -108,12 +119,28 @@ static void EEPROM_setState(EEPROMState state)
 \**************************************************************************************************/
 boolean EEPROM_setPowerState(EEPROMState state, double vDomain)
 {
-  if (state >= EEPROM_NUM_STATES)
+  if (state >= EEPROM_STATE_MAX)
     return FALSE;
   else if (vDomain > 5.0)
     return FALSE;
   else
     sEEPROM.vDomain[state] = vDomain;
+  return TRUE;
+}
+
+/**************************************************************************************************\
+* FUNCTION    EEPROM_setPowerProfile
+* DESCRIPTION Sets all power states of EEPROM to the specified profile
+* PARAMETERS  None
+* RETURNS     TRUE if the voltage can be set for the state, false otherwise
+\**************************************************************************************************/
+boolean EEPROM_setPowerProfile(EEPROMPowerProfile profile)
+{
+  uint32 state;
+  if (profile >= EEPROM_PROFILE_MAX)
+    return FALSE;  // Invalid profile, inform the caller
+  for (state = 0; state < EEPROM_STATE_MAX; state++)
+    sEEPROM.vDomain[state] = EEPROM_POWER_PROFILES[profile][state];
   return TRUE;
 }
 
@@ -133,7 +160,7 @@ void EEPROM_readEE(const uint8 *pSrc, uint8 *pDest, uint16 length)
   cmd[2] = (uint8)((uint32)pSrc >> 0);
 
   // Set state before enabling the pins to avoid glitches
-  EEPROM_setState(EEPROM_READING); // Set for monitoring and voltage control purposes
+  EEPROM_setState(EEPROM_STATE_READING); // Set for monitoring and voltage control purposes
   EEPROM_setup(TRUE); // Enable the EEPROM control and SPI pins for the transaction
 
   SELECT_CHIP_EE0();
@@ -142,7 +169,7 @@ void EEPROM_readEE(const uint8 *pSrc, uint8 *pDest, uint16 length)
   DESELECT_CHIP_EE0();
 
   EEPROM_setup(FALSE); // Disable the EEPROM control and SPI pins for the transaction
-  EEPROM_setState(EEPROM_IDLE);
+  EEPROM_setState(EEPROM_STATE_IDLE);
 }
 
 /**************************************************************************************************\
@@ -173,7 +200,7 @@ boolean EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
     do
     {
       // Must set state (voltage) before setting control pins!
-      EEPROM_setState(EEPROM_WRITING); // For monitoring and voltage control purposes
+      EEPROM_setState(EEPROM_STATE_WRITING); // For monitoring and voltage control purposes
       EEPROM_setup(TRUE); // Enable the EEPROM control and SPI pins for the transaction
 
       // enable EEPROM
@@ -193,7 +220,7 @@ boolean EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
       DESELECT_CHIP_EE0();
 
       EEPROM_setup(FALSE);    // Disable the EEPROM control and SPI pins while waiting
-      EEPROM_setState(EEPROM_WAITING); // For monitoring and voltage control purposes
+      EEPROM_setState(EEPROM_STATE_WAITING); // For monitoring and voltage control purposes
       Util_spinDelay(10000);  // == ~10ms
 
       EEPROM_readEE(pDest, readBuf, numBytes); // Verify the write, re-enables then disables EEPROM

@@ -18,6 +18,12 @@
 #define SELECT_SF_HOLD()    do { GPIOB->BSRRH |= 0x00000004; Util_spinWait(60); } while (0)
 #define DESELECT_SF_HOLD()  do { GPIOB->BSRRL |= 0x00000004; Util_spinWait(60); } while (0)
 
+// Write/Erase times defined in milliseconds
+#define PAGE_WRITE_TIME      ((uint32)5)
+#define SUBSECTOR_ERASE_TIME ((uint32)150)
+#define SECTOR_ERASE_TIME    ((uint32)3000)
+#define BULK_ERASE_TIME      ((uint32)80000)
+
 typedef enum
 {
   SF_UNPROTECT_GLOBAL = 0x00,
@@ -67,12 +73,6 @@ static const double SERIAL_FLASH_POWER_PROFILES[SERIAL_FLASH_PROFILE_MAX][SERIAL
   {3.3, 3.3, 3.3, 3.3, 1.8},  // Extreme low power wait profile
   {2.3, 2.3, 2.3, 2.3, 2.3}   // Low power all, extreme low power wait profile
 };
-
-// Write/Erase times defined in milliseconds
-#define PAGE_WRITE_TIME      ((uint32)5)
-#define SUBSECTOR_ERASE_TIME ((uint32)150)
-#define SECTOR_ERASE_TIME    ((uint32)3000)
-#define BULK_ERASE_TIME      ((uint32)80000)
 
 static struct
 {

@@ -952,16 +952,16 @@ uint16 Tests_test11(void)
   Util_fillMemory(bBuf, 128, 0xBB);
 
   // Fill test locations with an erroneous value so we know success or failure
-  EEPROM_setPowerState(EEPROM_WAITING, 3.3);
+  EEPROM_setPowerState(EEPROM_STATE_WAITING, 3.3);
   EEPROM_fill((uint8*)0, 256, 0xCC);
 
   Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900); // 15us sample rate
 
   Time_delay(5);
-  EEPROM_setPowerState(EEPROM_WAITING, 3.3);
+  EEPROM_setPowerState(EEPROM_STATE_WAITING, 3.3);
   EEPROM_write(aBuf, (uint8*)0, 128);
   Time_delay(5);
-  EEPROM_setPowerState(EEPROM_WAITING, 1.8);
+  EEPROM_setPowerState(EEPROM_STATE_WAITING, 1.8);
   EEPROM_write(bBuf, (uint8*)128, 128);
   // Complete the samples
   while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
@@ -994,10 +994,10 @@ uint16 Tests_test12(void)
 
     // write one page in each regular and low power mode
     Util_spinWait(30000 * 4); // Can't use Time_delay due to non-determinism
-    EEPROM_setPowerState(EEPROM_WAITING, 3.3);
+    EEPROM_setPowerState(EEPROM_STATE_WAITING, 3.3);
     EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
     Util_spinWait(30000 * 4); // Can't use Time_delay due to non-determinism
-    EEPROM_setPowerState(EEPROM_WAITING, 1.8);
+    EEPROM_setPowerState(EEPROM_STATE_WAITING, 1.8);
     EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
 
     // Complete the samples
@@ -1051,14 +1051,14 @@ uint16 Tests_test13(void)
 
     // write one page in each regular and low power mode
     Util_spinWait(30000 * 4);
-    EEPROM_setPowerState(EEPROM_WRITING, 3.3);
-    EEPROM_setPowerState(EEPROM_WAITING, 3.3);
-    EEPROM_setPowerState(EEPROM_READING, 3.3);
+    EEPROM_setPowerState(EEPROM_STATE_WRITING, 3.3);
+    EEPROM_setPowerState(EEPROM_STATE_WAITING, 3.3);
+    EEPROM_setPowerState(EEPROM_STATE_READING, 3.3);
     EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
     Util_spinWait(30000 * 4);
-    EEPROM_setPowerState(EEPROM_WRITING, 1.8);
-    EEPROM_setPowerState(EEPROM_WAITING, 1.8);
-    EEPROM_setPowerState(EEPROM_READING, 1.8);
+    EEPROM_setPowerState(EEPROM_STATE_WRITING, 1.8);
+    EEPROM_setPowerState(EEPROM_STATE_WAITING, 1.8);
+    EEPROM_setPowerState(EEPROM_STATE_READING, 1.8);
     EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
 
     // Complete the samples
