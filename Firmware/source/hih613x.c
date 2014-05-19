@@ -30,7 +30,7 @@ typedef struct
 static struct
 {
   boolean     isInitialized;
-  double      vDomain[HIH_NUM_STATES]; // The domain voltage for each state
+  double      vDomain[HIH_STATE_MAX]; // The domain voltage for each state
   HIHState    state;
   HIH613XData currData;
   double      currTmp;
@@ -47,9 +47,9 @@ void HIH613X_init(void)
 {
   uint32 i;
   Util_fillMemory(&sHIH613X, sizeof(sHIH613X), 0x00);
-  for (i = 0; i < HIH_NUM_STATES; i++)
+  for (i = 0; i < HIH_STATE_MAX; i++)
     sHIH613X.vDomain[i] = 3.3;  // Initialize the default of all states to operate at 3.3v
-  sHIH613X.state = HIH_IDLE;
+  sHIH613X.state = HIH_STATE_IDLE;
   HIH613X_setup(FALSE);
   sHIH613X.isInitialized = TRUE;
 }
@@ -106,7 +106,7 @@ static void HIH613X_setState(HIHState state)
 \**************************************************************************************************/
 boolean HIH613X_setPowerState(HIHState state, double vDomain)
 {
-  if (state >= HIH_NUM_STATES)
+  if (state >= HIH_STATE_MAX)
     return FALSE;
   else if (vDomain > 5.0)
     return FALSE;
@@ -146,7 +146,7 @@ boolean HIH613X_setPowerState(HIHState state, double vDomain)
  void HIH613X_notifyVoltageChange(double newVoltage)
  {
    if (newVoltage < 2.3)
-     sHIH613X.state = HIH_IDLE;
+     sHIH613X.state = HIH_STATE_IDLE;
  }
 
 /**************************************************************************************************\
@@ -181,23 +181,23 @@ HIHStatus HIH613X_readTempHumidI2CBB(boolean measure, boolean read, boolean conv
 {
   if (measure)
   {
-    HIH613X_setState(HIH_SENDING_CMD);
+    HIH613X_setState(HIH_STATE_SENDING_CMD);
     I2CBB_readData(HIH_MEASURE_CMD, NULL, 0); // send measure command
-    HIH613X_setState(HIH_WAITING);
+    HIH613X_setState(HIH_STATE_WAITING);
   }
 
   if (measure && read)
   {
     Time_delay(40); // tMeasure ~= 36.65ms, but 40ms for reliability
-    HIH613X_setState(HIH_DATA_READY);
+    HIH613X_setState(HIH_STATE_DATA_READY);
   }
 
   if (read)
   {
-    HIH613X_setState(HIH_READING);
+    HIH613X_setState(HIH_STATE_READING);
     I2CBB_readData(HIH_READ_CMD, (uint8*)&sHIH613X.currData, sizeof(sHIH613X.currData));
     Util_swap32((uint32*)&sHIH613X.currData);
-    HIH613X_setState(HIH_DATA_READY);
+    HIH613X_setState(HIH_STATE_DATA_READY);
   }
 
   if (convert)
