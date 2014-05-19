@@ -222,7 +222,7 @@ typedef struct
 static struct
 {
   SDCardState     state;
-  double          vDomain[SDCARD_NUM_STATES]; // The domain voltage for each state
+  double          vDomain[SDCARD_STATE_MAX]; // The domain voltage for each state
   SDResponseBlock respBlock;
   uint32          blockLen;
   uint32          cmdWaitClocks;
@@ -234,20 +234,20 @@ static struct
   boolean         isInitialized;
 } sSDCard;
 
-/**********************************************************************************************************************\
+/**************************************************************************************************\
 * FUNCTION    SDCard_init
 * DESCRIPTION Initializes the SDCard module
 * PARAMETERS  None
 * RETURNS     Nothing
-\**********************************************************************************************************************/
+\**************************************************************************************************/
 void SDCard_init(void)
 {
   uint32 i;
   Util_fillMemory((uint8*)&sSDCard, sizeof(sSDCard), 0x00);
   sSDCard.blockLen = DEFAULT_BLOCK_LENGTH;
-  for (i = 0; i < SDCARD_NUM_STATES; i++)
+  for (i = 0; i < SDCARD_STATE_MAX; i++)
     sSDCard.vDomain[i] = 3.3;  // Initialize the default of all states to operate at 3.3v
-  sSDCard.state = SDCARD_IDLE;
+  sSDCard.state = SDCARD_STATE_IDLE;
   SDCard_setup(FALSE);
   sSDCard.isInitialized = TRUE;
 }
@@ -306,7 +306,7 @@ static void SDCard_setState(SDCardState state)
 \**************************************************************************************************/
 boolean SDCard_setPowerState(SDCardState state, double vDomain)
 {
-  if (state >= SDCARD_NUM_STATES)
+  if (state >= SDCARD_STATE_MAX)
     return FALSE;
   else if (vDomain > 3.3)
     return FALSE;
@@ -324,16 +324,16 @@ boolean SDCard_setPowerState(SDCardState state, double vDomain)
 void SDCard_notifyVoltageChange(double newVoltage)
 {
   if (newVoltage < 2.3)
-    sSDCard.state = SDCARD_IDLE;
+    sSDCard.state = SDCARD_STATE_IDLE;
 }
 
-/**********************************************************************************************************************\
+/**************************************************************************************************\
 * FUNCTION    SDCard_waitReady
 * DESCRIPTION Waits for the specified byte for a specified # of SPI_Reads
 * PARAMETERS      waitByte - When this byte appears on the SPI bus, the function will return
 *             maxWaitBytes - The maximum number of SPI bytes to check before returning
 * RETURNS     The number of bytes elapsed before finding the waitByte
-\**********************************************************************************************************************/
+\**************************************************************************************************/
 static uint32 SDCard_waitReady(uint8 waitByte, uint32 maxWaitBytes)
 {
   uint32 clocks = 0;
@@ -343,14 +343,15 @@ static uint32 SDCard_waitReady(uint8 waitByte, uint32 maxWaitBytes)
   return clocks;
 }
 
-/**********************************************************************************************************************\
+/**************************************************************************************************\
 * FUNCTION    SDCard_sendCommand
 * DESCRIPTION Sends one of the SDCommands with its associated argument and returns the R1 response
 * PARAMETERS        cmd - One of the SDCommands
 *                   arg - The argument (little-endian) of the SDCommand cmd
-*             waitBytes - The number of bytes to wait for a valid R1 response from the SDCard, 0 indicates no response
+*             waitBytes - The number of bytes to wait for a valid R1 response from the SDCard, 0
+*                         indicates no response
 * RETURNS     The R1 response to the command from the SDCard
-\**********************************************************************************************************************/
+\**************************************************************************************************/
 static SDCommandResponseR1 SDCard_sendCommand(SDCommand cmd, uint32 arg, uint32 waitBytes)
 {
   SDCommandResponseR1 resp;
@@ -371,7 +372,7 @@ static SDCommandResponseR1 SDCard_sendCommand(SDCommand cmd, uint32 arg, uint32 
   cmdTx[4] = (arg & 0x000000FF) >> 0;
   cmdTx[5] = (CRC_calcCRC7(CRC7_SDCARD_POLY, cmdTx, 5) << 1) | 0x01;
 
-  sSDCard.cmdWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_BUS_BYTES); // Wait for the bus to be idle
+  sSDCard.cmdWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_BUS_BYTES); // Wait for bus to be idle
   SPI_write(cmdTx, 6);
   do
   {
@@ -381,12 +382,12 @@ static SDCommandResponseR1 SDCard_sendCommand(SDCommand cmd, uint32 arg, uint32 
   return resp;
 }
 
-/**********************************************************************************************************************\
+/**************************************************************************************************\
 * FUNCTION    SDCard_initDisk
 * DESCRIPTION Puts the SDCard into SPI mode, and prepares it to accept commands
 * PARAMETERS  None
 * RETURNS     TRUE if successful, FALSE otherwise
-\**********************************************************************************************************************/
+\**************************************************************************************************/
 boolean SDCard_initDisk(void)
 {
   uint8 OP_SD_SPI_MODE[10] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -398,7 +399,7 @@ boolean SDCard_initDisk(void)
   uint32 trys = 0;
 
   SDCard_setup(TRUE); // Turn on the SPI and control pins
-  SDCard_setState(SDCARD_SETUP); // Set the state and voltage
+  SDCard_setState(SDCARD_STATE_SETUP); // Set the state and voltage
 
   // Send the SPI mode command with the chip deselected ... prime the pump if you will...
   SPI_write(OP_SD_SPI_MODE, sizeof(OP_SD_SPI_MODE));
@@ -407,7 +408,7 @@ boolean SDCard_initDisk(void)
   do
   {
     success = FALSE; // Early breaks in the following sequence will result in a failure
-    cmdResp = SDCard_sendCommand(GO_IDLE_STATE, 0x00000000, SD_MAX_WAIT_RESP_BYTES); // Only R1 Reply
+    cmdResp = SDCard_sendCommand(GO_IDLE_STATE, 0x00000000, SD_MAX_WAIT_RESP_BYTES); // R1 reply
     if (cmdResp.idleState != 1)
       break;
 
@@ -420,7 +421,7 @@ boolean SDCard_initDisk(void)
     do
     {
       cmdResp = SDCard_sendCommand(SEND_OP_COND_SDC, 0x40000000, SD_MAX_WAIT_RESP_BYTES);
-    } while ((cmdResp.idleState) && (trys++ < SD_MAX_WAIT_INIT_BYTES)); // Issue command until card is no longer idle
+    } while ((cmdResp.idleState) && (trys++ < SD_MAX_WAIT_INIT_BYTES)); // Continue until non-idle
     if ((cmdResp.idleState != 0) || (trys >= SD_MAX_WAIT_INIT_BYTES))
       break;
 
@@ -440,16 +441,16 @@ boolean SDCard_initDisk(void)
   DESELECT_CHIP_SD();
 
   SDCard_setup(FALSE); // Turn off the SPI and control pins
-  SDCard_setState((success == TRUE) ? SDCARD_READY : SDCARD_IDLE); // Set the state and voltage
+  SDCard_setState((success == TRUE) ? SDCARD_STATE_READY : SDCARD_STATE_IDLE); // Set state + volts
   return success;
 }
 
-/**********************************************************************************************************************\
+/**************************************************************************************************\
 * FUNCTION    SDCard_getDataBlock
 * DESCRIPTION Upon receiving the specified token, reads a block into static memory
 * PARAMETERS  token - response token to look for
 * RETURNS     SDCARD_RESPONSE_OK if the read succeeds, various SDCommandResults otherwise
-\**********************************************************************************************************************/
+\**************************************************************************************************/
 static SDCommandResult SDCard_getDataBlock(const uint8 token)
 {
   SDDataErrorToken errorToken;
@@ -490,12 +491,12 @@ static SDCommandResult SDCard_getDataBlock(const uint8 token)
   }
 }
 
-/**********************************************************************************************************************\
+/**************************************************************************************************\
 * FUNCTION    SDCard_readBlock
 * DESCRIPTION Reads a block out of the SDCard
 * PARAMETERS  block - The SDCard block to read into local memory
 * RETURNS     nothing
-\**********************************************************************************************************************/
+\**************************************************************************************************/
 static SDCommandResult SDCard_readBlock(uint32 block)
 {
   SDCommandResult readResult;
@@ -504,21 +505,21 @@ static SDCommandResult SDCard_readBlock(uint32 block)
 
   SELECT_CHIP_SD();
   sSDCard.preReadWaitClocks = SDCard_waitReady(0xFF, 65535);
-  SDCard_sendCommand(READ_SINGLE_BLOCK, block, 0); // Result should == 0, waiting occurs in getDataBlock
+  SDCard_sendCommand(READ_SINGLE_BLOCK, block, 0); // Result should == 0, waits in getDataBlock
   readResult = SDCard_getDataBlock(START_SINGLE_BLOCK_TOKEN);
   sSDCard.postReadWaitClocks = SDCard_waitReady(0xFF, 65535);;
   DESELECT_CHIP_SD();
   return readResult;
 }
 
-/**********************************************************************************************************************\
+/**************************************************************************************************\
 * FUNCTION    SDCard_read
 * DESCRIPTION Reads from the SDCard into the specified destination buffer
 * PARAMETERS  pSrc  - pointer to source in SDCardMap
 *             pDest - pointer to destination in SDCard
 *             length - number of bytes to write
 * RETURNS     true if the write succeeds
-\**********************************************************************************************************************/
+\**************************************************************************************************/
 boolean SDCard_read(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
   uint32 block, offset;
@@ -526,28 +527,28 @@ boolean SDCard_read(uint8 *pSrc, uint8 *pDest, uint16 length)
 
   if (length > 512)  // Currently can't handle multi-block reads
     return FALSE;
-  if (sSDCard.state != SDCARD_READY) // Card must be initialized first
+  if (sSDCard.state != SDCARD_STATE_READY) // Card must be initialized first
     return FALSE;
 
   block = (uint32)pSrc >> 9;
   offset = (uint32)pSrc & 0x0000001FF;
 
   SDCard_setup(TRUE); // Turn on the SPI and control pins
-  SDCard_setState(SDCARD_READING); // Set the state and voltage
+  SDCard_setState(SDCARD_STATE_READING); // Set the state and voltage
   readResult = SDCard_readBlock(block);
   SDCard_setup(FALSE); // Turn off the SPI and control pins
-  SDCard_setState(SDCARD_READY); // Set the state and voltage
+  SDCard_setState(SDCARD_STATE_READY); // Set the state and voltage
   Util_copyMemory((uint8*)&sSDCard.respBlock + offset, pDest, length);
 
   return readResult == SDCARD_RESPONSE_OK;
 }
 
-/**********************************************************************************************************************\
+/**************************************************************************************************\
 * FUNCTION    SDCard_sendDataBlock
 * DESCRIPTION Writes a buffer to the SDCard
 * PARAMETERS  token - The token preceding the write
 * RETURNS     SDCARD_RESPONSE_OK if the write succeeds, various SDCommandResults otherwise
-\**********************************************************************************************************************/
+\**************************************************************************************************/
 static SDCommandResult SDCard_sendDataBlock(uint8 token)
 {
   uint8  resp;
@@ -568,12 +569,12 @@ static SDCommandResult SDCard_sendDataBlock(uint8 token)
     return SDCARD_ERROR;
 }
 
-/**********************************************************************************************************************\
+/**************************************************************************************************\
 * FUNCTION    SDCard_writeBlock
 * DESCRIPTION Writes a block from local memory into the SDCard
 * PARAMETERS  block - The block number to write
 * RETURNS     SDCARD_RESPONSE_OK if the write succeeds, various SDCommandResults otherwise
-\**********************************************************************************************************************/
+\**************************************************************************************************/
 static SDCommandResult SDCard_writeBlock(uint32 block)
 {
   SDCommandResponseR1 cardStatusRespR1, writeBlockRespR1;
@@ -584,9 +585,9 @@ static SDCommandResult SDCard_writeBlock(uint32 block)
 
   SELECT_CHIP_SD();
   sSDCard.preWriteWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_BUS_BYTES);
-  writeBlockRespR1 = SDCard_sendCommand(WRITE_BLOCK, block, SD_MAX_WAIT_RESP_BYTES); // Result should == 0
+  writeBlockRespR1 = SDCard_sendCommand(WRITE_BLOCK, block, SD_MAX_WAIT_RESP_BYTES); // Result == 0
   dataResp = SDCard_sendDataBlock(START_SINGLE_BLOCK_TOKEN);
-  sSDCard.writeWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_WRITE_BYTES); // Wait for the card to release the bus
+  sSDCard.writeWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_WRITE_BYTES); // Wait for bus release
   cardStatusRespR1 = SDCard_sendCommand(CARD_STATUS, 0x00000000, SD_MAX_WAIT_RESP_BYTES);
   SPI_read((uint8 *)&cardStatusRespR2, sizeof(cardStatusRespR2));
   sSDCard.postWriteWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_BUS_BYTES);
@@ -600,14 +601,14 @@ static SDCommandResult SDCard_writeBlock(uint32 block)
     return dataResp;
 }
 
-/**********************************************************************************************************************\
+/**************************************************************************************************\
 * FUNCTION    SDCard_write
 * DESCRIPTION Writes a buffer to the the SDCard
 * PARAMETERS   pSrc  - pointer to source RAM buffer
 *              pDest - pointer to destination in SDCard
 *             length - number of bytes to write
 * RETURNS     TRUE if the write succeeds, FALSE otherwise
-\**********************************************************************************************************************/
+\**************************************************************************************************/
 boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
   uint8 verify;
@@ -616,14 +617,14 @@ boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 
   if (length > 512)  // Currently can't handle multi-block writes
     return FALSE;
-  if (sSDCard.state != SDCARD_READY) // Card must be initialized first
+  if (sSDCard.state != SDCARD_STATE_READY) // Card must be initialized first
     return FALSE;
 
   // Read in the block that contains the data which will be overwritten
   block = (uint32)pDest >> 9;
 
   SDCard_setup(TRUE); // Turn on the SPI and control pins
-  SDCard_setState(SDCARD_READING); // Set the state and voltage
+  SDCard_setState(SDCARD_STATE_READING); // Set the state and voltage
   readResult = SDCard_readBlock(block);
 
   // Copy the incoming data overtop of whatever currently resides there
@@ -631,16 +632,16 @@ boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
   Util_copyMemory(pSrc, (uint8 *)&sSDCard.respBlock + offset, length);
 
   // Write the new contents of the block to the SDCard
-  SDCard_setState(SDCARD_WRITING); // Set the state and voltage
+  SDCard_setState(SDCARD_STATE_WRITING); // Set the state and voltage
   writeResult = SDCard_writeBlock(block);
 
   // Verify that the source data now resides in the block
-  SDCard_setState(SDCARD_VERIFYING); // Set the state and voltage
+  SDCard_setState(SDCARD_STATE_VERIFYING); // Set the state and voltage
   verifyResult = SDCard_readBlock(block);
   verify = Util_compareMemory(pSrc, (uint8 *)&sSDCard.respBlock + offset, length);
 
   SDCard_setup(FALSE); // Turn off the SPI and control pins
-  SDCard_setState(SDCARD_READY); // Set the state and voltage
+  SDCard_setState(SDCARD_STATE_READY); // Set the state and voltage
 
   return ((readResult   == SDCARD_RESPONSE_OK) && (writeResult == SDCARD_RESPONSE_OK) &&
           (verifyResult == SDCARD_RESPONSE_OK) && (verify == 0));
@@ -663,7 +664,7 @@ static SDCommandResult SDCard_getStatusSDC(void)
   SDCommandResult readResult;
 
   SELECT_CHIP_SD();
-  resp = SDCard_sendCommand(SD_STATUS_SDC, 0x00000000, SD_MAX_WAIT_RESP_BYTES); // Result should == 0
+  resp = SDCard_sendCommand(SD_STATUS_SDC, 0x00000000, SD_MAX_WAIT_RESP_BYTES); // Result == 0
   readResult = SDCard_getDataBlock(sSDCard.respBlock.arg.reference, START_SINGLE_BLOCK_TOKEN);
   DESELECT_CHIP_SD();
 
@@ -674,12 +675,12 @@ static SDCommandResult SDCard_getStatusSDC(void)
 }
 */
 
-/**********************************************************************************************************************\
+/**************************************************************************************************\
 * FUNCTION    SDCard_test
 * DESCRIPTION Executes reads and writes to SDCard to test the code
 * PARAMETERS  none
 * RETURNS     nothing
-\**********************************************************************************************************************/
+\**************************************************************************************************/
 void SDCard_test(void)
 {
   uint8 buffer[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -712,8 +713,8 @@ void SDCard_test(void)
     else
     {
       Util_fillMemory((uint8 *)&sSDCard.respBlock.arg.reference[0], sSDCard.blockLen, 0xFF);
-      crcNorm = CRC_calcCRC16(CRC16_CCITT_POLY, &sSDCard.respBlock.arg.reference[0], sSDCard.blockLen);
-      crcRev = CRC_calcCRC16(CRC16_IEEE_POLY, &sSDCard.respBlock.arg.reference[0], sSDCard.blockLen);
+      crcNorm = CRC_calcCRC16(CRC16_CCITT_POLY, sSDCard.respBlock.arg.reference, sSDCard.blockLen);
+      crcRev = CRC_calcCRC16(CRC16_IEEE_POLY, sSDCard.respBlock.arg.reference, sSDCard.blockLen);
       Util_fillMemory((uint8 *)&sSDCard.respBlock.arg.reference[0], sSDCard.blockLen, 0xFF);
     }
   }

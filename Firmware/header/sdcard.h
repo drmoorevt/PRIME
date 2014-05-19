@@ -12,13 +12,13 @@ typedef struct
 
 typedef enum
 {
-  SDCARD_IDLE       = 0,
-  SDCARD_SETUP      = 1,
-  SDCARD_READY      = 2,
-  SDCARD_READING    = 3,
-  SDCARD_WRITING    = 4,
-  SDCARD_VERIFYING  = 5,
-  SDCARD_NUM_STATES = 6
+  SDCARD_STATE_IDLE       = 0,
+  SDCARD_STATE_SETUP      = 1,
+  SDCARD_STATE_READY      = 2,
+  SDCARD_STATE_READING    = 3,
+  SDCARD_STATE_WRITING    = 4,
+  SDCARD_STATE_VERIFYING  = 5,
+  SDCARD_STATE_MAX        = 6
 } SDCardState;
 
 void    SDCard_init(void);
