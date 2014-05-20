@@ -1177,7 +1177,7 @@ uint16 Tests_test15(void)
     humidity     = (int16)(HIH613X_getHumidity()    * 100);
 
     i = 0;
-    if (sensorStatus != HIH_NORMAL)
+    if (sensorStatus != HIH_STATUS_NORMAL)
       sTests.comms.txBuffer[i++] = '*';
     sTests.comms.txBuffer[i++] = 'T';
     sTests.comms.txBuffer[i++] = ':';

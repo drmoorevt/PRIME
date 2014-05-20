@@ -9,7 +9,7 @@
 * RETURNS      Nothing
 * NOTES        None
 \**************************************************************************************************/
-void Util_spinWait(uint32 spinVal)
+void Util_spinWait(volatile uint32 spinVal)
 {
   while (spinVal-- > 0);
 } // Util_spinWait

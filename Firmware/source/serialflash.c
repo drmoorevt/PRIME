@@ -79,7 +79,7 @@ static struct
   double           vDomain[SERIAL_FLASH_STATE_MAX]; // The vDomain for each state
   SerialFlashState state;
   FlashSubSector   subSector;
-  FlashPage        testPage;
+  FlashSubSector   testSubSector;
   boolean          isInitialized;
 } sSerialFlash;
 
@@ -292,19 +292,29 @@ boolean SerialFlash_read(uint8 *pSrc, uint8 *pDest, uint16 length)
 \**************************************************************************************************/
 static boolean SerialFlash_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
-  uint32 writeCommand = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_WRITE_PAGE << 24);
-  Util_swap32(&writeCommand);
+  uint32 bytesToWrite, writeCommand;
 
-  SerialFlash_setState(SERIAL_FLASH_STATE_WRITING);
   SerialFlash_setup(TRUE);
-  SerialFlash_sendWriteEnable();
+  while (length > 0)
+  {
+    bytesToWrite = (length > SERIAL_FLASH_SIZE_PAGE) ? SERIAL_FLASH_SIZE_PAGE : length;
+    writeCommand = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_WRITE_PAGE << 24);
+    Util_swap32(&writeCommand);
 
-  SELECT_CHIP_SF();
-  SPI_write((uint8 *)&writeCommand, sizeof(writeCommand));
-  SPI_write(pSrc, length);
-  DESELECT_CHIP_SF();
+    SerialFlash_setState(SERIAL_FLASH_STATE_WRITING);
+    SerialFlash_sendWriteEnable();
+    SELECT_CHIP_SF();
+    SPI_write((uint8 *)&writeCommand, sizeof(writeCommand));
+    SPI_write(pSrc, bytesToWrite);
+    DESELECT_CHIP_SF();
+    SerialFlash_waitForWriteComplete(FALSE, PAGE_WRITE_TIME * 10);
 
-  return SerialFlash_waitForWriteComplete(FALSE, PAGE_WRITE_TIME);
+    length -= bytesToWrite;
+    pDest  += bytesToWrite;
+    pSrc   += bytesToWrite;
+  }
+
+  return TRUE;
 }
 
 /*****************************************************************************\
@@ -317,7 +327,8 @@ static boolean SerialFlash_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
 \*****************************************************************************/
 boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
-  uint8  *pCache = (uint8 *)&sSerialFlash.subSector.byte[0];
+  uint8  *pCache   = (uint8 *)&sSerialFlash.subSector.byte[0];
+  uint8  *pTestSub = (uint8 *)&sSerialFlash.testSubSector.byte[0];
   uint8  *pSubSector, *pCacheDest;
   uint8   retries;
   boolean result = TRUE;
@@ -340,16 +351,20 @@ boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
       SerialFlash_read(pSubSector, pCache, SERIAL_FLASH_SIZE_SUBSECTOR);
       // Erase sub sector, it is now in local cache
       SerialFlash_erase(pSubSector, SERIAL_FLASH_SIZE_SUBSECTOR);
+
+      // Test code, ensure that the subsector was completely erased.
+      SerialFlash_read(pSubSector, pTestSub, SERIAL_FLASH_SIZE_SUBSECTOR);
+
       // Overwrite local cache with the source data at the specified destination
       Util_copyMemory(pSrc, pCacheDest, numToWrite);
       // Write the whole sub-sector back to flash
       SerialFlash_directWrite(pCache, pSubSector, SERIAL_FLASH_SIZE_SUBSECTOR);
       // Compare memory to determine if the write was successful
-      SerialFlash_read(pDest, sSerialFlash.testPage.byte, numToWrite);
-      if (0 == Util_compareMemory(pSrc, sSerialFlash.testPage.byte, numToWrite))
+      SerialFlash_read(pSubSector, pTestSub, SERIAL_FLASH_SIZE_SUBSECTOR);
+      if (0 == Util_compareMemory(pCache, pTestSub, SERIAL_FLASH_SIZE_SUBSECTOR))
         break;
       else
-        Util_fillMemory(sSerialFlash.testPage.byte, numToWrite, 0xBA); // test code, remove
+        Util_fillMemory(pTestSub, SERIAL_FLASH_SIZE_SUBSECTOR, 0xBA); // test code, remove
     }
     pSrc   += numToWrite; // update source pointer
     pDest  += numToWrite; // update destination pointer
