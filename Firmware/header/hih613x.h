@@ -21,11 +21,22 @@ typedef enum
   HIH_STATUS_DIAG    = 0x03
 } HIHStatus;
 
+typedef enum
+{
+  HIH_PROFILE_STANDARD    = 0,
+  HIH_PROFILE_LP_WAIT     = 1,
+  HIH_PROFILE_LP_ALL      = 2,
+  HIH_PROFILE_XLP_WAIT    = 3,
+  HIH_PROFILE_LP_XLP_WAIT = 4,
+  HIH_PROFILE_MAX         = 5
+} HIHPowerProfile;
+
 void HIH613X_init(void);
 boolean HIH613X_setup(boolean state);
 HIHState HIH613X_getState(void);
 void HIH613X_readTempHumidSPI(void);
 void HIH613X_notifyVoltageChange(double newVoltage);
+boolean HIH613X_setPowerProfile(HIHPowerProfile profile);
 boolean HIH613X_setPowerState(HIHState state, double vDomain);
 HIHStatus HIH613X_readTempHumidI2CBB(boolean measure, boolean read, boolean convert);
 

@@ -219,6 +219,16 @@ typedef struct
   } arg;
 } SDResponseBlock;
 
+// Power profile voltage definitions, in SDCardPowerProfile / SDCardState order
+static const double SDCARD_POWER_PROFILES[SDCARD_PROFILE_MAX][SDCARD_STATE_MAX] =
+{
+  {3.3, 3.3, 3.3, 3.3},  // Standard profile
+  {3.3, 3.3, 3.3, 1.8},  // Low power wait profile
+  {1.8, 1.8, 1.8, 1.8},  // Low power all profile
+  {3.3, 3.3, 3.3, 1.3},  // Extreme low power wait profile
+  {1.8, 1.8, 1.8, 1.3}   // Low power all, extreme low power wait profile
+};
+
 static struct
 {
   SDCardState     state;
@@ -242,13 +252,11 @@ static struct
 \**************************************************************************************************/
 void SDCard_init(void)
 {
-  uint32 i;
   Util_fillMemory((uint8*)&sSDCard, sizeof(sSDCard), 0x00);
   sSDCard.blockLen = DEFAULT_BLOCK_LENGTH;
-  for (i = 0; i < SDCARD_STATE_MAX; i++)
-    sSDCard.vDomain[i] = 3.3;  // Initialize the default of all states to operate at 3.3v
-  sSDCard.state = SDCARD_STATE_IDLE;
+  SDCard_setPowerProfile(SDCARD_PROFILE_STANDARD);  // Set all states to 3.3v
   SDCard_setup(FALSE);
+  sSDCard.state = SDCARD_STATE_IDLE;
   sSDCard.isInitialized = TRUE;
 }
 
@@ -312,6 +320,22 @@ boolean SDCard_setPowerState(SDCardState state, double vDomain)
     return FALSE;
   else
     sSDCard.vDomain[state] = vDomain;
+  return TRUE;
+}
+
+/**************************************************************************************************\
+* FUNCTION    SDCard_setPowerProfile
+* DESCRIPTION Sets all power states of the SDCard to the specified profile
+* PARAMETERS  None
+* RETURNS     TRUE if the voltage can be set for the state, false otherwise
+\**************************************************************************************************/
+boolean SDCard_setPowerProfile(SDCardPowerProfile profile)
+{
+  uint32 state;
+  if (profile >= SDCARD_PROFILE_MAX)
+    return FALSE;  // Invalid profile, inform the caller
+  for (state = 0; state < SDCARD_STATE_MAX; state++)
+    sSDCard.vDomain[state] = SDCARD_POWER_PROFILES[profile][state];
   return TRUE;
 }
 

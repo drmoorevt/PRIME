@@ -27,6 +27,16 @@ typedef struct
   uint32  status      : 2;
 } HIH613XData;
 
+// Power profile voltage definitions, in HIHPowerProfile / HIHState order
+static const double HIH_POWER_PROFILES[HIH_PROFILE_MAX][HIH_STATE_MAX] =
+{
+  {3.3, 3.3, 3.3, 3.3},  // Standard profile
+  {3.3, 3.3, 3.3, 1.8},  // Low power wait profile
+  {1.8, 1.8, 1.8, 1.8},  // Low power all profile
+  {3.3, 3.3, 3.3, 1.3},  // Extreme low power wait profile
+  {1.8, 1.8, 1.8, 1.3}   // Low power all, extreme low power wait profile
+};
+
 static struct
 {
   boolean     isInitialized;
@@ -45,10 +55,8 @@ static struct
 \**************************************************************************************************/
 void HIH613X_init(void)
 {
-  uint32 i;
   Util_fillMemory(&sHIH613X, sizeof(sHIH613X), 0x00);
-  for (i = 0; i < HIH_STATE_MAX; i++)
-    sHIH613X.vDomain[i] = 3.3;  // Initialize the default of all states to operate at 3.3v
+  HIH613X_setPowerProfile(HIH_PROFILE_STANDARD);  // Set all states to 3.3v
   sHIH613X.state = HIH_STATE_IDLE;
   HIH613X_setup(FALSE);
   sHIH613X.isInitialized = TRUE;
@@ -112,6 +120,22 @@ boolean HIH613X_setPowerState(HIHState state, double vDomain)
     return FALSE;
   else
     sHIH613X.vDomain[state] = vDomain;
+  return TRUE;
+}
+
+/**************************************************************************************************\
+* FUNCTION    HIH613X_setPowerProfile
+* DESCRIPTION Sets all power states of the temperature/humidity sensor to the specified profile
+* PARAMETERS  None
+* RETURNS     TRUE if the voltage can be set for the state, false otherwise
+\**************************************************************************************************/
+boolean HIH613X_setPowerProfile(HIHPowerProfile profile)
+{
+  uint32 state;
+  if (profile >= HIH_PROFILE_MAX)
+    return FALSE;  // Invalid profile, inform the caller
+  for (state = 0; state < HIH_STATE_MAX; state++)
+    sHIH613X.vDomain[state] = HIH_POWER_PROFILES[profile][state];
   return TRUE;
 }
 

@@ -21,6 +21,16 @@ typedef enum
   SDCARD_STATE_MAX        = 6
 } SDCardState;
 
+typedef enum
+{
+  SDCARD_PROFILE_STANDARD    = 0,
+  SDCARD_PROFILE_LP_WAIT     = 1,
+  SDCARD_PROFILE_LP_ALL      = 2,
+  SDCARD_PROFILE_XLP_WAIT    = 3,
+  SDCARD_PROFILE_LP_XLP_WAIT = 4,
+  SDCARD_PROFILE_MAX         = 5
+} SDCardPowerProfile;
+
 void    SDCard_init(void);
 boolean SDCard_setup(boolean state);
 boolean SDCard_initDisk(void);
@@ -28,6 +38,7 @@ void SDCard_notifyVoltageChange(double newVoltage);
 boolean SDCard_read(uint8 *pSrc, uint8 *pDest, uint16 length);
 boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length);
 boolean SDCard_setPowerState(SDCardState state, double vDomain);
+boolean SDCard_setPowerProfile(SDCardPowerProfile profile);
 SDCardState SDCard_getState(void);
 void    SDCard_test(void);
 
