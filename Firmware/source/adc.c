@@ -440,6 +440,7 @@ boolean ADC_startSampleTimer(HardTimer timer, uint16 reloadVal)
       break;
     case TIME_HARD_TIMER_TIMER2:
       Time_initTimer2(reloadVal);
+      break;
     case TIME_HARD_TIMER_TIMER8:  // Timer8 not configured for ADCs yet
     default:      // Cannot use any other timer for gating ADCs
       return ERROR;

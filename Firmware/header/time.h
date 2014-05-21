@@ -20,11 +20,11 @@ typedef enum
 typedef enum
 {
   TIME_HARD_TIMER_TIMER0  = 0,
-  TIME_HARD_TIMER_TIMER1  = 1,  // Used for fine delays
+  TIME_HARD_TIMER_TIMER1  = 1,
   TIME_HARD_TIMER_TIMER2  = 2,
   TIME_HARD_TIMER_TIMER3  = 3,  // Triggers analog sampling
   TIME_HARD_TIMER_TIMER4  = 4,
-  TIME_HARD_TIMER_TIMER5  = 5,
+  TIME_HARD_TIMER_TIMER5  = 5,  // Used for fine delays
   TIME_HARD_TIMER_TIMER6  = 6,
   TIME_HARD_TIMER_TIMER7  = 7,
   TIME_HARD_TIMER_TIMER8  = 8,
@@ -38,17 +38,22 @@ typedef enum
 } HardTimer;
 
 void Time_init(void);
+
 void Time_stopTimer(HardTimer timer);
 void Time_initTimer2(uint16 reloadValue);
 void Time_initTimer3(uint16 reloadValue);
+
+
 void Time_startSoftTimer(SoftTimer timer, uint32 milliSeconds);
-void Time_fineDelay(uint32 microSeconds);
-void Time_coarseDelay(uint32 numSubTicks);
 uint16 Time_getTimerValue(SoftTimer timer);
+
+void Time_fineDelay(uint32 microSeconds);
+void Time_coarseDelay(uint32 milliSeconds);
+
+void Time_incrementSystemTime(void);
+boolean Time_isSecondBoundary(void);
 uint32 Time_getSystemTime(void);
 uint32 Time_getTimeOfday(void);
 void Time_handleSubTick(void);
-void Time_incrementSystemTime(void);
-boolean Time_isSecondBoundary(void);
 
 #endif //TIME_H

@@ -5,8 +5,10 @@
 
 #define FILE_ID TIME_C
 
-#define SECONDS_PER_DAY 86400
-#define SUB_TICKS_PER_SECOND 128
+#define MILLISECONDS_PER_SECOND (1000)
+#define MILLISECONDS_PER_MINUTE (MILLISECONDS_PER_SECOND * 60)
+#define MILLISECONDS_PER_HOUR   (MILLISECONDS_PER_MINUTE * 60)
+#define MILLISECONDS_PER_DAY    (MILLISECONDS_PER_HOUR   * 24)
 
 #define ENABLE_HARDTIMER_INTERRUPT()  do {TIM1->DIER |=  TIM_DIER_UIE;} while(0)
 #define DISABLE_HARDTIMER_INTERRUPT() do {TIM1->DIER &= ~TIM_DIER_UIE;} while(0)
@@ -17,18 +19,12 @@
 struct
 {
   uint32 softTimers[TIME_SOFT_TIMER_MAX];
-  uint32 hardTimers[TIME_HARD_TIMER_MAX];
-  uint32 systemTime;
-  uint32 subTicks;
+  uint64 systemTime;                      // milliseconds since the epoch
   boolean isSecondBoundary;
-  uint8 subTicksPerSecond;
-  uint16 adjustCyclesRemaining;
 } sTime;
 
-void Time_initTimer1(void);
 void Time_initSysTick(void);
 void Time_decrementSoftTimers(void);
-void Time_decrementHardTimers(void);
 
 /**************************************************************************************************\
 * FUNCTION      Time_init
@@ -40,7 +36,6 @@ void Time_init(void)
 {
   Util_fillMemory((uint8*)&sTime, sizeof(sTime), 0x00);  // Clear all of the software timers
   Time_initSysTick();
-  Time_initTimer1();
 }
 
 /**************************************************************************************************\
@@ -90,7 +85,6 @@ void Time_initTimer1(void)
 void TIM1_UP_TIM10_IRQHandler(void)
 {
   CLEAR_BIT(TIM2->SR, TIM_SR_UIF); // Clear the update interrupt flag
-  Time_decrementHardTimers();
 }
 
 /**************************************************************************************************\
@@ -126,7 +120,6 @@ void TIM2_IRQHandler(void)
 * PARAMETERS    reloadValue: The automatic reload value, when reached an IRQ is triggered
 * RETURN        none
 \**************************************************************************************************/
-#define TIM_TRGOSource_Update              ((uint16_t)0x0020)
 void Time_initTimer3(uint16 reloadValue)
 {
   RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Turn on Timer3 clocks (60 MHz)
@@ -179,51 +172,49 @@ void Time_coarseDelay(uint32 milliSeconds)
 }
 
 /**************************************************************************************************\
-* FUNCTION      Time_startHardTimer
-* DESCRIPTION   Initializes timers
-* PARAMETERS    timer - index of timer
-*               microSeconds - number of microSeconds to run timer
-* RETURN        none
-\**************************************************************************************************/
-void Time_startHardTimer(HardTimer timer, uint32 microSeconds)
-{
-  DISABLE_HARDTIMER_INTERRUPT();
-  sTime.hardTimers[timer] = microSeconds;
-  ENABLE_HARDTIMER_INTERRUPT();
-}
-
-/**************************************************************************************************\
 * FUNCTION      Time_fineDelay
 * DESCRIPTION   Blocking delay
 * PARAMETERS    numTicks - number of ticks to delay
 * RETURN        none
+* NOTES         Timer5 is connected to APB1 which is operating at 60MHz
 \**************************************************************************************************/
 void Time_fineDelay(uint32 microSeconds)
 {
-  Time_startHardTimer(TIME_HARD_TIMER_TIMER1, microSeconds);
-  while (Time_getTimerValue(TIME_SOFT_TIMER_DELAY));
+  RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;  // Turn on Timer5 clocks (60 MHz)
+  TIM5->CR1     = (0x0000);            // Turn off the counter entirely
+  TIM5->PSC     = (60);                // Set prescalar to 60. Timer operates at 60MHz.
+  TIM5->CNT     = (microSeconds);      // Set up the counter to count down
+  TIM5->ARR     = (microSeconds);      // Set up the counter to count down
+  TIM5->SR      = (0x0000);            // Clear all status (and interrupt) bits
+  TIM5->DIER    = (0x0000);            // Turn off the timer (update) interrupt
+  TIM5->CR2     = (0x0000) | (TIM_TRGOSource_Update); // Update event is the trigger output
+  TIM5->CR1     = (0x0000) | (TIM_CR1_CEN   | // Turn on the timer
+                              TIM_CR1_DIR   | // Make the timer count down
+                              TIM_CR1_URS   | // Only overflow/underflow generates an update IRQ
+                              TIM_CR1_UDIS  | // Disable update event generation
+                              TIM_CR1_ARPE  | // ARR register is buffered
+                              TIM_CR1_OPM);   // One pulse mode, disable after count hits zero
+  while (TIM5->CNT);                          // Wait until timer count hits zero
 }
 
 /**************************************************************************************************\
 * FUNCTION      Time_getTimerValue
 * DESCRIPTION   Blocking delay
 * PARAMETERS    timer - index of timer
-* RETURN        uint16 - number of subticks left on the timer
+* RETURN        uint32 - number of subticks left on the timer
 \**************************************************************************************************/
-uint16 Time_getTimerValue(SoftTimer timer)
+uint32 Time_getTimerValue(SoftTimer timer)
 {
-  uint16 value;
-
+  uint32 value;
   DISABLE_SYSTICK_INTERRUPT();
   value = sTime.softTimers[timer];
   ENABLE_SYSTICK_INTERRUPT();
-
   return value;
 }
 
 /**************************************************************************************************\
 * FUNCTION      Time_getSystemTime
-* DESCRIPTION    Gets system time as a 32 bit UTC since Jan. 1, 1970 value (secs)
+* DESCRIPTION   Gets system time as a 32 bit UTC since Jan. 1, 1970 value (secs)
 * PARAMETERS    none
 * RETURN        uint32 - systemTime
 \**************************************************************************************************/
@@ -239,62 +230,29 @@ uint32 Time_getSystemTime(void)
 }
 /**************************************************************************************************\
 * FUNCTION      Time_getTimeOfday
-* DESCRIPTION   Gets the time within the day
+* DESCRIPTION   Gets the milliseconds time within the day
 * PARAMETERS    none
 * RETURN        uint32 - time
 \**************************************************************************************************/
 uint32 Time_getTimeOfday(void)
 {
-  uint32 timeOfDay; 
-  
+  uint32 timeOfDay;
   DISABLE_SYSTICK_INTERRUPT();
-  timeOfDay = sTime.systemTime % SECONDS_PER_DAY;
+  timeOfDay = sTime.systemTime % MILLISECONDS_PER_DAY;
   ENABLE_SYSTICK_INTERRUPT();
-
   return timeOfDay;
 }
 
 /**************************************************************************************************\
-* FUNCTION      Time_handleSubTick
-*  DESCRIPTION    Called in interrupt to decrement timers
-* PARAMETERS    none
-* RETURN        none
-\**************************************************************************************************/
-void Time_handleSubTick(void)
-{
-
-  sTime.subTicks++;
-
-  if (sTime.subTicks >= sTime.subTicksPerSecond)
-  {
-    sTime.subTicks = 0;
-    sTime.systemTime++;
-    sTime.isSecondBoundary = TRUE;
-
-    if (sTime.adjustCyclesRemaining)
-      sTime.adjustCyclesRemaining--;  
-    else
-      sTime.subTicksPerSecond = SUB_TICKS_PER_SECOND;
-  }
-
-  Time_decrementSoftTimers();
-}
-
-/**************************************************************************************************\
 * FUNCTION      Time_isSecondBoundary
-* DESCRIPTION   Checks to see if we have crossed a second boundary.  This clears
-*               the boundary flag
+* DESCRIPTION   Checks to see if we have crossed a second boundary.  This clears the boundary flag
 * PARAMETERS    none
 * RETURN        none
 \**************************************************************************************************/
 boolean Time_isSecondBoundary(void)
 {
-  boolean isSecondBoundary;
-
-  isSecondBoundary = sTime.isSecondBoundary;
-
-  sTime.isSecondBoundary = FALSE;
-
+  boolean isSecondBoundary = sTime.isSecondBoundary;
+  sTime.isSecondBoundary   = FALSE;
   return isSecondBoundary;
 }
 
@@ -318,23 +276,7 @@ void Time_incrementSystemTime(void)
 void Time_decrementSoftTimers(void)
 {
   uint8 i;
-  for(i=0; i<TIME_SOFT_TIMER_MAX; i++)
-  {
-    if(sTime.softTimers[i] > 0)
-      sTime.softTimers[i]--;
-  }
-}
-
-/**************************************************************************************************\
-* FUNCTION      Time_decrementHardTimers
-* DESCRIPTION  Decrements all timers that aren't already 0
-* PARAMETERS    none
-* RETURN        none
-\**************************************************************************************************/
-void Time_decrementHardTimers(void)
-{
-  uint8 i;
-  for(i=0; i<TIME_SOFT_TIMER_MAX; i++)
+  for (i = 0; i < TIME_SOFT_TIMER_MAX; i++)
   {
     if(sTime.softTimers[i] > 0)
       sTime.softTimers[i]--;
@@ -346,11 +288,13 @@ void Time_decrementHardTimers(void)
 * DESCRIPTION   Interrupt that fires on the 1ms system tick
 * PARAMETERS    none
 * RETURN        none
-* NOTES         These
+* NOTES         Called in interrupt to decrement timers, handle time/date functionality
 \**************************************************************************************************/
 void SysTick_Handler(void)
 {
-  Time_decrementSoftTimers(); // No need to disable interrupts, this one is high priority
+  if (0 == ((sTime.systemTime++) % MILLISECONDS_PER_SECOND))
+    sTime.isSecondBoundary = TRUE;
+  Time_decrementSoftTimers();
 }
 
 /**************************************************************************************************\
@@ -362,5 +306,5 @@ void SysTick_Handler(void)
 \**************************************************************************************************/
 static void Time_initSysTick(void)
 {
-  SysTick_Config(SystemCoreClock / 1000); // div 1000 = 1ms tick
+  SysTick_Config(SystemCoreClock / MILLISECONDS_PER_SECOND); // div 1000 = 1ms tick
 }
