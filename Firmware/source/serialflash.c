@@ -252,9 +252,9 @@ static boolean SerialFlash_waitForWriteComplete(boolean pollChip, uint32 timeout
   SerialFlash_setup(pollChip);
   if (pollChip)
   {
-    Time_startTimer(TIMER_SERIAL_MEM, timeout);
-    while (SerialFlash_readStatusRegister().writeInProgress && Time_getTimerValue(TIMER_SERIAL_MEM));
-    return (Time_getTimerValue(TIMER_SERIAL_MEM) > 0);
+    Time_startSoftTimer(TIME_SOFT_TIMER_SERIAL_MEM, timeout);
+    while (SerialFlash_readStatusRegister().writeInProgress && Time_getTimerValue(TIME_SOFT_TIMER_SERIAL_MEM));
+    return (Time_getTimerValue(TIME_SOFT_TIMER_SERIAL_MEM) > 0);
   }
   else
   {
@@ -307,7 +307,7 @@ static boolean SerialFlash_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
     SPI_write((uint8 *)&writeCommand, sizeof(writeCommand));
     SPI_write(pSrc, bytesToWrite);
     DESELECT_CHIP_SF();
-    SerialFlash_waitForWriteComplete(FALSE, PAGE_WRITE_TIME * 10);
+    SerialFlash_waitForWriteComplete(FALSE, PAGE_WRITE_TIME);
 
     length -= bytesToWrite;
     pDest  += bytesToWrite;
@@ -347,18 +347,25 @@ boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 
     for (retries = 3, result = TRUE; retries > 0; retries--)
     {
+      // Test code, remove
+      Util_fillMemory(pCache, SERIAL_FLASH_SIZE_SUBSECTOR, 0xDA); // test
+
       // Read the sub sector to be written into local cache
       SerialFlash_read(pSubSector, pCache, SERIAL_FLASH_SIZE_SUBSECTOR);
       // Erase sub sector, it is now in local cache
       SerialFlash_erase(pSubSector, SERIAL_FLASH_SIZE_SUBSECTOR);
 
       // Test code, ensure that the subsector was completely erased.
-      SerialFlash_read(pSubSector, pTestSub, SERIAL_FLASH_SIZE_SUBSECTOR);
+      SerialFlash_read(pSubSector, pTestSub, SERIAL_FLASH_SIZE_SUBSECTOR); //test
 
       // Overwrite local cache with the source data at the specified destination
       Util_copyMemory(pSrc, pCacheDest, numToWrite);
       // Write the whole sub-sector back to flash
       SerialFlash_directWrite(pCache, pSubSector, SERIAL_FLASH_SIZE_SUBSECTOR);
+
+      // Test code, remove
+      Util_fillMemory(pTestSub, SERIAL_FLASH_SIZE_SUBSECTOR, 0xCC); // test
+
       // Compare memory to determine if the write was successful
       SerialFlash_read(pSubSector, pTestSub, SERIAL_FLASH_SIZE_SUBSECTOR);
       if (0 == Util_compareMemory(pCache, pTestSub, SERIAL_FLASH_SIZE_SUBSECTOR))
@@ -436,7 +443,7 @@ void SerialFlash_test(void)
   Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_delay(1000); // Wait 1000ms for domains to settle
+  Time_coarseDelay(1000); // Wait 1000ms for domains to settle
 
   while(1)
   {

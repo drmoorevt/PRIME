@@ -252,7 +252,7 @@ const uint8 resetMessage[6] = {'R','e','s','e','t','\n'};
 
 void Tests_run(void)
 {
-//  Tests_test3();
+  Tests_test14();
   switch (sTests.state)
   {
     case TEST_IDLE:            // Clear test data and setup listening for commands on the comm port
@@ -466,7 +466,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 reloadVal)
   sTests.adc1.isSampling = TRUE;
   sTests.adc2.isSampling = TRUE;
   sTests.adc3.isSampling = TRUE;
-  ADC_startSampleTimer(TIMER3, reloadVal);     // Start timer3 triggered ADCs at xyz sample rate
+  ADC_startSampleTimer(TIME_HARD_TIMER_TIMER3, reloadVal);     // Start timer3 triggered ADCs at xyz sample rate
 }
 
 /**************************************************************************************************\
@@ -478,7 +478,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 reloadVal)
 \**************************************************************************************************/
 static void Tests_teardownSPITests(void)
 {
-  ADC_stopSampleTimer(TIMER3);
+  ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
 
   // Return domains to initial state
   Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
@@ -511,9 +511,9 @@ uint16 Tests_test0(void)
 
   while(1)
   {
-    Time_delay(1000);
+    Time_coarseDelay(1000);
     Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);
-    Time_delay(1000);
+    Time_coarseDelay(1000);
     Analog_setDomain(ENERGY_DOMAIN, TRUE, 3.3);
   }
 }
@@ -608,7 +608,7 @@ uint16 Tests_test4(void)
   Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_delay(1000); // Wait 1000ms for domains to settle
+  Time_coarseDelay(1000); // Wait 1000ms for domains to settle
 
   Util_fillMemory(testBuffer, 128, 0xA5);
   while(1)
@@ -639,7 +639,7 @@ uint16 Tests_test5(void)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
 
-  Time_delay(1000); // Wait 1000ms for domains to settle
+  Time_coarseDelay(1000); // Wait 1000ms for domains to settle
 
   while(1)
   {
@@ -673,7 +673,7 @@ uint16 Tests_test6(void)
   Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_delay(1000); // Wait 1000ms for domains to settle
+  Time_coarseDelay(1000); // Wait 1000ms for domains to settle
 
   SDCard_initDisk();
 
@@ -823,7 +823,7 @@ uint16 Tests_test9(void)
   ADC_getSamples(ADC_PORT1, TESTS_MAX_SAMPLES); // Notify App when sample buffer is full
   ADC_getSamples(ADC_PORT2, TESTS_MAX_SAMPLES);
   ADC_getSamples(ADC_PORT3, TESTS_MAX_SAMPLES);
-  ADC_startSampleTimer(TIMER3, 6000);     // Start timer3 triggered ADCs at 100us sample rate
+  ADC_startSampleTimer(TIME_HARD_TIMER_TIMER3, 6000);     // Start timer3 triggered ADCs at 100us sample rate
 
   // Complete the samples
   while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
@@ -879,7 +879,7 @@ uint16 Tests_test10(void)
   Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_delay(100); // Wait 100ms for domains to settle
+  Time_coarseDelay(100); // Wait 100ms for domains to settle
 
   ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
   ADC_openPort(ADC_PORT2, adc2Config);
@@ -890,7 +890,7 @@ uint16 Tests_test10(void)
   sTests.adc1.isSampling = TRUE;
   sTests.adc2.isSampling = TRUE;
   sTests.adc3.isSampling = TRUE;
-  ADC_startSampleTimer(TIMER3, 300);     // Start timer3 triggered ADCs at 5us sample rate
+  ADC_startSampleTimer(TIME_HARD_TIMER_TIMER3, 300);     // Start timer3 triggered ADCs at 5us sample rate
 
   Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0xFF);
   EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)0, 128);
@@ -906,7 +906,7 @@ uint16 Tests_test10(void)
 
   // Complete the samples
   while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-  ADC_stopSampleTimer(TIMER3);
+  ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
 
   // HACK: let EEPROM state be channel 22
   sTests.periphState.channel = 22;
@@ -933,7 +933,7 @@ uint16 Tests_test10(void)
   Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Set domain voltage to nominal (3.25V)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_delay(10); // Wait 10ms for domains to settle
+  Time_coarseDelay(10); // Wait 10ms for domains to settle
 
   return SUCCESS;
 }
@@ -957,10 +957,10 @@ uint16 Tests_test11(void)
 
   Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900); // 15us sample rate
 
-  Time_delay(5);
+  Time_coarseDelay(5);
   EEPROM_setPowerState(EEPROM_STATE_WAITING, 3.3);
   EEPROM_write(aBuf, (uint8*)0, 128);
-  Time_delay(5);
+  Time_coarseDelay(5);
   EEPROM_setPowerState(EEPROM_STATE_WAITING, 1.8);
   EEPROM_write(bBuf, (uint8*)128, 128);
   // Complete the samples
@@ -993,16 +993,16 @@ uint16 Tests_test12(void)
     Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900);  // 15us sample rate
 
     // write one page in each regular and low power mode
-    Util_spinWait(30000 * 4); // Can't use Time_delay due to non-determinism
+    Util_spinWait(30000 * 4); // Can't use Time_coarseDelay due to non-determinism
     EEPROM_setPowerState(EEPROM_STATE_WAITING, 3.3);
     EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
-    Util_spinWait(30000 * 4); // Can't use Time_delay due to non-determinism
+    Util_spinWait(30000 * 4); // Can't use Time_coarseDelay due to non-determinism
     EEPROM_setPowerState(EEPROM_STATE_WAITING, 1.8);
     EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
 
     // Complete the samples
     while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-    ADC_stopSampleTimer(TIMER3);  // Turn off sampling after each test iteration
+    ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);  // Turn off sampling after each test iteration
 
     // Aggregate the results into the voltage and current averages
     for (j = 0; j < TESTS_MAX_SAMPLES; j++)
@@ -1063,7 +1063,7 @@ uint16 Tests_test13(void)
 
     // Complete the samples
     while(sTests.adc1.isSampling || sTests.adc3.isSampling);
-    ADC_stopSampleTimer(TIMER3);
+    ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
 
     // Aggregate the results into the voltage and current averages
     for (j = 0; j < TESTS_MAX_SAMPLES; j++)
@@ -1104,7 +1104,7 @@ uint16 Tests_test14(void)
   Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
 
 
-//  while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
+  while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
 
   for (i = 1; i < numSweeps; i++)
   {
@@ -1123,7 +1123,7 @@ uint16 Tests_test14(void)
 
     // Complete the samples
     while(sTests.adc1.isSampling || sTests.adc3.isSampling);
-    ADC_stopSampleTimer(TIMER3);
+    ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
 
     // Aggregate the results into the voltage and current averages
     for (j = 0; j < TESTS_MAX_SAMPLES; j++)
@@ -1168,7 +1168,7 @@ uint16 Tests_test15(void)
   Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_delay(1000); // Wait 1000ms for domains to settle
+  Time_coarseDelay(1000); // Wait 1000ms for domains to settle
 
   while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000))
   {
@@ -1208,7 +1208,7 @@ uint16 Tests_test15(void)
     Tests_sendData(i);
     while(sTests.comms.transmitting);
 
-    Time_delay(100); // Wait 250ms for next sample
+    Time_coarseDelay(100); // Wait 250ms for next sample
   }
 
   return SUCCESS;

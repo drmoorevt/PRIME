@@ -212,7 +212,7 @@ HIHStatus HIH613X_readTempHumidI2CBB(boolean measure, boolean read, boolean conv
 
   if (measure && read)
   {
-    Time_delay(40); // tMeasure ~= 36.65ms, but 40ms for reliability
+    Time_coarseDelay(40); // tMeasure ~= 36.65ms, but 40ms for reliability
     HIH613X_setState(HIH_STATE_DATA_READY);
   }
 
