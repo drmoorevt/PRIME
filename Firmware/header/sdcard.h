@@ -33,9 +33,11 @@ typedef enum
 
 typedef enum
 {
-  SDCARD_RESULT_OK           = 0,
-  SDCARD_RESULT_NEEDED_RETRY = 1,
-  SDCARD_RESULT_ERROR        = 2
+  SDCARD_RESULT_OK            = 0,
+  SDCARD_RESULT_READ_FAILED   = 1,
+  SDCARD_RESULT_WRITE_FAILED  = 2,
+  SDCARD_RESULT_VERIFY_FAILED = 3,
+  SDCARD_RESULT_MAX
 } SDCardResult;
 
 void    SDCard_init(void);
