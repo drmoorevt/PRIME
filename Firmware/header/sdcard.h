@@ -31,6 +31,13 @@ typedef enum
   SDCARD_PROFILE_MAX         = 5
 } SDCardPowerProfile;
 
+typedef enum
+{
+  SDCARD_RESULT_OK           = 0,
+  SDCARD_RESULT_NEEDED_RETRY = 1,
+  SDCARD_RESULT_ERROR        = 2
+} SDCardResult;
+
 void    SDCard_init(void);
 boolean SDCard_setup(boolean state);
 boolean SDCard_initDisk(void);

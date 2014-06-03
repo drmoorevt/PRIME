@@ -30,11 +30,11 @@ typedef struct
 // Power profile voltage definitions, in HIHPowerProfile / HIHState order
 static const double HIH_POWER_PROFILES[HIH_PROFILE_MAX][HIH_STATE_MAX] =
 {
-  {3.3, 3.3, 3.3, 3.3},  // Standard profile
-  {3.3, 3.3, 3.3, 1.8},  // Low power wait profile
-  {1.8, 1.8, 1.8, 1.8},  // Low power all profile
-  {3.3, 3.3, 3.3, 1.3},  // Extreme low power wait profile
-  {1.8, 1.8, 1.8, 1.3}   // Low power all, extreme low power wait profile
+  {3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile
+  {2.3, 3.3, 3.3, 3.3, 3.3},  // Low power idle profile
+  {2.3, 2.3, 3.3, 3.3, 3.3},  // Low power idle/ready profile
+  {2.3, 2.3, 3.3, 2.3, 3.3},  // Low power idle/ready/wait profile
+  {2.3, 2.3, 2.3, 2.3, 2.3}   // Low power all, (may have comm errors)
 };
 
 static struct
