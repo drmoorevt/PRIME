@@ -5,7 +5,7 @@
 
 typedef enum
 {
-  TIME_SOFT_TIMER_DELAY               = 0, // Time_coarseDelay timer
+  TIME_SOFT_TIMER_DELAY               = 0, // Used for 1ms resolution, non-blocking delays
   TIME_SOFT_TIMER_UART                = 1, // used for protocol timeouts
   TIME_SOFT_TIMER_SERIAL_MEM          = 2, // eeprom/flash timer
   TIME_SOFT_TIMER_UART_INTERCHAR      = 3, // interchar uart timeout
@@ -38,22 +38,19 @@ typedef enum
 } HardTimer;
 
 void Time_init(void);
+void Time_delay(uint32 microSeconds);
 
 void Time_stopTimer(HardTimer timer);
 void Time_initTimer2(uint16 reloadValue);
 void Time_initTimer3(uint16 reloadValue);
 
 
-void Time_startSoftTimer(SoftTimer timer, uint32 milliSeconds);
-uint16 Time_getTimerValue(SoftTimer timer);
+void Time_startTimer(SoftTimer timer, uint32 milliSeconds);
+uint32 Time_getTimerValue(SoftTimer timer);
 
-void Time_fineDelay(uint32 microSeconds);
-void Time_coarseDelay(uint32 milliSeconds);
 
-void Time_incrementSystemTime(void);
-boolean Time_isSecondBoundary(void);
-uint32 Time_getSystemTime(void);
 uint32 Time_getTimeOfday(void);
-void Time_handleSubTick(void);
+uint32 Time_getSystemTime(void);
+boolean Time_isSecondBoundary(void);
 
 #endif //TIME_H

@@ -718,7 +718,7 @@ void SDCard_test(void)
   Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_coarseDelay(1000); // Wait 1000ms for domains to settle
+  Time_delay(1000000); // Wait 1000ms for domains to settle
 
   SDCard_initDisk();
 

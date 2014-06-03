@@ -252,7 +252,6 @@ const uint8 resetMessage[6] = {'R','e','s','e','t','\n'};
 
 void Tests_run(void)
 {
-  Tests_test14();
   switch (sTests.state)
   {
     case TEST_IDLE:            // Clear test data and setup listening for commands on the comm port
@@ -511,9 +510,9 @@ uint16 Tests_test0(void)
 
   while(1)
   {
-    Time_coarseDelay(1000);
+    Time_delay(1000000);
     Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);
-    Time_coarseDelay(1000);
+    Time_delay(1000000);
     Analog_setDomain(ENERGY_DOMAIN, TRUE, 3.3);
   }
 }
@@ -608,7 +607,7 @@ uint16 Tests_test4(void)
   Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_coarseDelay(1000); // Wait 1000ms for domains to settle
+  Time_delay(1000000); // Wait 1000ms for domains to settle
 
   Util_fillMemory(testBuffer, 128, 0xA5);
   while(1)
@@ -639,7 +638,7 @@ uint16 Tests_test5(void)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
 
-  Time_coarseDelay(1000); // Wait 1000ms for domains to settle
+  Time_delay(1000000); // Wait 1000ms for domains to settle
 
   while(1)
   {
@@ -673,7 +672,7 @@ uint16 Tests_test6(void)
   Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_coarseDelay(1000); // Wait 1000ms for domains to settle
+  Time_delay(1000000); // Wait 1000ms for domains to settle
 
   SDCard_initDisk();
 
@@ -879,7 +878,7 @@ uint16 Tests_test10(void)
   Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_coarseDelay(100); // Wait 100ms for domains to settle
+  Time_delay(100000); // Wait 100ms for domains to settle
 
   ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
   ADC_openPort(ADC_PORT2, adc2Config);
@@ -933,7 +932,7 @@ uint16 Tests_test10(void)
   Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Set domain voltage to nominal (3.25V)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_coarseDelay(10); // Wait 10ms for domains to settle
+  Time_delay(10000); // Wait 10ms for domains to settle
 
   return SUCCESS;
 }
@@ -957,10 +956,10 @@ uint16 Tests_test11(void)
 
   Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900); // 15us sample rate
 
-  Time_coarseDelay(5);
+  Time_delay(5000);
   EEPROM_setPowerState(EEPROM_STATE_WAITING, 3.3);
   EEPROM_write(aBuf, (uint8*)0, 128);
-  Time_coarseDelay(5);
+  Time_delay(5000);
   EEPROM_setPowerState(EEPROM_STATE_WAITING, 1.8);
   EEPROM_write(bBuf, (uint8*)128, 128);
   // Complete the samples
@@ -993,10 +992,10 @@ uint16 Tests_test12(void)
     Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900);  // 15us sample rate
 
     // write one page in each regular and low power mode
-    Util_spinWait(30000 * 4); // Can't use Time_coarseDelay due to non-determinism
+    Util_spinWait(30000 * 4); // Can't use Time_delay due to non-determinism
     EEPROM_setPowerState(EEPROM_STATE_WAITING, 3.3);
     EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
-    Util_spinWait(30000 * 4); // Can't use Time_coarseDelay due to non-determinism
+    Util_spinWait(30000 * 4); // Can't use Time_delay due to non-determinism
     EEPROM_setPowerState(EEPROM_STATE_WAITING, 1.8);
     EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
 
@@ -1042,7 +1041,6 @@ uint16 Tests_test13(void)
   Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
   Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
 
-
   for (i = 0; i < 512; i++)
   {
     // Using a variety of write bytes (i)
@@ -1050,12 +1048,12 @@ uint16 Tests_test13(void)
     Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900); // 15us sample rate
 
     // write one page in each regular and low power mode
-    Util_spinWait(30000 * 4);
+    Util_spinWait(30000);
     EEPROM_setPowerState(EEPROM_STATE_WRITING, 3.3);
     EEPROM_setPowerState(EEPROM_STATE_WAITING, 3.3);
     EEPROM_setPowerState(EEPROM_STATE_READING, 3.3);
     EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
-    Util_spinWait(30000 * 4);
+    Util_spinWait(30000);
     EEPROM_setPowerState(EEPROM_STATE_WRITING, 1.8);
     EEPROM_setPowerState(EEPROM_STATE_WAITING, 1.8);
     EEPROM_setPowerState(EEPROM_STATE_READING, 1.8);
@@ -1095,7 +1093,8 @@ uint16 Tests_test13(void)
 \**************************************************************************************************/
 uint16 Tests_test14(void)
 {
-  uint16 i, j, numSweeps = 2;
+  SerialFlashResult writeResult;
+  uint32 i, j, numSweeps = 10;
 
   Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
   Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
@@ -1103,23 +1102,33 @@ uint16 Tests_test14(void)
   Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
   Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
 
+//  GPIOC->MODER |= 0x00050000;
+//  while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000))
+//  {
+//    Time_delay(250);
+//    GPIOC->ODR |= 0x00000100;
+//    Time_delay(250);
+//    GPIOC->ODR &= ~0x00000100;
+//  }
 
-  while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
-
-  for (i = 1; i < numSweeps; i++)
+  for (i = 0; i < numSweeps; i++)
   {
-    Tests_setupSPITests(SF_CHANNEL_OVERLOAD, 24000); // 400us sample rate
-
-    // Using a variety of write bytes (i)
-    Util_fillMemory(&sTests.comms.rxBuffer[0], 128, i);
+    Tests_setupSPITests(SF_CHANNEL_OVERLOAD, 30000); // 500us sample rate
 
     // write one page in each regular and low power mode
-    Util_spinWait(120 * 25000); // ~25000us
+    Time_delay(45000);
+    Util_fillMemory(&sTests.comms.rxBuffer[0], 128, ((i * 2) + 0));
     SerialFlash_setPowerProfile(SERIAL_FLASH_PROFILE_STANDARD);
-    SerialFlash_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
-    Util_spinWait(120 * 28000); // ~28000us
+    writeResult = SerialFlash_write(sTests.comms.rxBuffer, (uint8 *)(128 * ((i * 2) + 0)), 128);
+    if (writeResult != SERIAL_FLASH_RESULT_OK)
+      break;
+    
+    Time_delay(45000);
+    Util_fillMemory(&sTests.comms.rxBuffer[0], 128, ((i * 2) + 1));
     SerialFlash_setPowerProfile(SERIAL_FLASH_PROFILE_STANDARD);
-    SerialFlash_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * (i + 1)), 128);
+    writeResult = SerialFlash_write(sTests.comms.rxBuffer, (uint8 *)(128 * ((i * 2) + 1)), 128);
+    if (writeResult != SERIAL_FLASH_RESULT_OK)
+      break;
 
     // Complete the samples
     while(sTests.adc1.isSampling || sTests.adc3.isSampling);
@@ -1135,15 +1144,19 @@ uint16 Tests_test14(void)
   }
   Tests_teardownSPITests();  // Only turn the domain off at the very end of iterations
 
-  // Sample / Accumulate complete, divide by the number of samples
-  for (i = 0; i < TESTS_MAX_SAMPLES; i++)
+  if (i == numSweeps)
   {
-    sTests.adc1.adcBuffer[i]    = (uint16)(sTests.vAvg[i] / numSweeps);
-    sTests.adc3.adcBuffer[i]    = (uint16)(sTests.iAvg[i] / numSweeps);
-    sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / numSweeps);
+    // Sample / Accumulate complete, divide by the number of samples
+    for (i = 0; i < TESTS_MAX_SAMPLES; i++)
+    {
+      sTests.adc1.adcBuffer[i]    = (uint16)(sTests.vAvg[i] / numSweeps);
+      sTests.adc3.adcBuffer[i]    = (uint16)(sTests.iAvg[i] / numSweeps);
+      sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / numSweeps);
+    }
+    return SUCCESS;
   }
-
-  return SUCCESS;
+  else
+    return ERROR;
 }
 
 /**************************************************************************************************\
@@ -1168,7 +1181,7 @@ uint16 Tests_test15(void)
   Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_coarseDelay(1000); // Wait 1000ms for domains to settle
+  Time_delay(1000000); // Wait 1000ms for domains to settle
 
   while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000))
   {
@@ -1208,7 +1221,7 @@ uint16 Tests_test15(void)
     Tests_sendData(i);
     while(sTests.comms.transmitting);
 
-    Time_coarseDelay(100); // Wait 250ms for next sample
+    Time_delay(100000); // Wait 250ms for next sample
   }
 
   return SUCCESS;

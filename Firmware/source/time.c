@@ -10,11 +10,10 @@
 #define MILLISECONDS_PER_HOUR   (MILLISECONDS_PER_MINUTE * 60)
 #define MILLISECONDS_PER_DAY    (MILLISECONDS_PER_HOUR   * 24)
 
-#define ENABLE_HARDTIMER_INTERRUPT()  do {TIM1->DIER |=  TIM_DIER_UIE;} while(0)
-#define DISABLE_HARDTIMER_INTERRUPT() do {TIM1->DIER &= ~TIM_DIER_UIE;} while(0)
+#define ENABLE_SYSTICK_INTERRUPT()  do {NVIC_EnableIRQ(SysTick_IRQn);} while(0)
+#define DISABLE_SYSTICK_INTERRUPT() do {NVIC_DisableIRQ(SysTick_IRQn);} while(0)
 
-#define ENABLE_SYSTICK_INTERRUPT()  do {SysTick->CTRL |=  SysTick_CTRL_TICKINT_Msk;} while(0)
-#define DISABLE_SYSTICK_INTERRUPT() do {SysTick->CTRL &= ~SysTick_CTRL_TICKINT_Msk;} while(0)
+#define TIM_TRGOSource_Update              ((uint16_t)0x0020)
 
 struct
 {
@@ -23,8 +22,8 @@ struct
   boolean isSecondBoundary;
 } sTime;
 
-void Time_initSysTick(void);
-void Time_decrementSoftTimers(void);
+static void Time_initSysTick(void);
+static void Time_decrementSoftTimers(void);
 
 /**************************************************************************************************\
 * FUNCTION      Time_init
@@ -128,7 +127,6 @@ void Time_initTimer3(uint16 reloadValue)
   TIM3->CR2    &= (~TIM_CR2_MMS);
   TIM3->CR2    |= (TIM_TRGOSource_Update);
   TIM3->DIER   |= TIM_DIER_UIE; // Turn on the timer (update) interrupt
-//  TIM3->SR      = 0;
   NVIC_EnableIRQ(TIM3_IRQn);
 }
 
@@ -146,13 +144,13 @@ void TIM3_IRQHandler(void)
 }
 
 /**************************************************************************************************\
-* FUNCTION      Time_startSoftTimer
+* FUNCTION      Time_startTimer
 * DESCRIPTION   Initializes timers
 * PARAMETERS    timer - index of timer
 *               milliSeconds - number of milliseconds to run timer
 * RETURN        none
 \**************************************************************************************************/
-void Time_startSoftTimer(SoftTimer timer, uint32 milliSeconds)
+void Time_startTimer(SoftTimer timer, uint32 milliSeconds)
 {
   DISABLE_SYSTICK_INTERRUPT(); 
   sTime.softTimers[timer] = milliSeconds;
@@ -160,41 +158,25 @@ void Time_startSoftTimer(SoftTimer timer, uint32 milliSeconds)
 }
 
 /**************************************************************************************************\
-* FUNCTION      Time_coarseDelay
+* FUNCTION      Time_delay
 * DESCRIPTION   Blocking delay
-* PARAMETERS    numSubTicks - number of subticks to delay
-* RETURN        none
-\**************************************************************************************************/
-void Time_coarseDelay(uint32 milliSeconds)
-{
-  Time_startSoftTimer(TIME_SOFT_TIMER_DELAY, milliSeconds);
-  while (Time_getTimerValue(TIME_SOFT_TIMER_DELAY));
-}
-
-/**************************************************************************************************\
-* FUNCTION      Time_fineDelay
-* DESCRIPTION   Blocking delay
-* PARAMETERS    numTicks - number of ticks to delay
+* PARAMETERS    microSeconds - number of microSeconds to delay
 * RETURN        none
 * NOTES         Timer5 is connected to APB1 which is operating at 60MHz
 \**************************************************************************************************/
-void Time_fineDelay(uint32 microSeconds)
+void Time_delay(uint32 microSeconds)
 {
   RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;  // Turn on Timer5 clocks (60 MHz)
   TIM5->CR1     = (0x0000);            // Turn off the counter entirely
   TIM5->PSC     = (60);                // Set prescalar to 60. Timer operates at 60MHz.
-  TIM5->CNT     = (microSeconds);      // Set up the counter to count down
   TIM5->ARR     = (microSeconds);      // Set up the counter to count down
   TIM5->SR      = (0x0000);            // Clear all status (and interrupt) bits
   TIM5->DIER    = (0x0000);            // Turn off the timer (update) interrupt
-  TIM5->CR2     = (0x0000) | (TIM_TRGOSource_Update); // Update event is the trigger output
+  TIM5->CR2     = (0x0000);            // Ensure CR2 is at default settings
   TIM5->CR1     = (0x0000) | (TIM_CR1_CEN   | // Turn on the timer
-                              TIM_CR1_DIR   | // Make the timer count down
                               TIM_CR1_URS   | // Only overflow/underflow generates an update IRQ
-                              TIM_CR1_UDIS  | // Disable update event generation
-                              TIM_CR1_ARPE  | // ARR register is buffered
                               TIM_CR1_OPM);   // One pulse mode, disable after count hits zero
-  while (TIM5->CNT);                          // Wait until timer count hits zero
+  while (!(TIM5->SR & TIM_SR_UIF));           // Wait until timer hits the ARR value
 }
 
 /**************************************************************************************************\
@@ -257,23 +239,12 @@ boolean Time_isSecondBoundary(void)
 }
 
 /**************************************************************************************************\
-* FUNCTION      Time_incrementSystemTime
-*  DESCRIPTION    Adds 1 second to the system time
-* PARAMETERS    none
-* RETURN        none
-\**************************************************************************************************/
-void Time_incrementSystemTime(void)
-{
-  sTime.systemTime++;
-}
-
-/**************************************************************************************************\
 * FUNCTION      Time_decrementSoftTimers
-*  DESCRIPTION    Decrements all timers that aren't already 0
+* DESCRIPTION   Decrements all timers that aren't already 0
 * PARAMETERS    none
 * RETURN        none
 \**************************************************************************************************/
-void Time_decrementSoftTimers(void)
+static void Time_decrementSoftTimers(void)
 {
   uint8 i;
   for (i = 0; i < TIME_SOFT_TIMER_MAX; i++)

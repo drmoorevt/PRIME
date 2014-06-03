@@ -30,8 +30,15 @@ typedef enum
   SERIAL_FLASH_SIZE_PAGE      = 0x000100,
   SERIAL_FLASH_SIZE_SUBSECTOR = 0x001000,
   SERIAL_FLASH_SIZE_SECTOR    = 0x010000,
-  SERIAL_FLASH_SIZE_CHIP      = 0x200000,
+  SERIAL_FLASH_SIZE_CHIP      = 0x200000
 } SerialFlashSize;
+
+typedef enum
+{
+  SERIAL_FLASH_RESULT_OK           = 0,
+  SERIAL_FLASH_RESULT_NEEDED_RETRY = 1,
+  SERIAL_FLASH_RESULT_ERROR        = 2
+} SerialFlashResult;
 
 #define SF_SECTORS_PER_CHIP      (SERIAL_FLASH_SIZE_CHIP      / SERIAL_FLASH_SIZE_SECTOR)
 #define SF_SUBSECTORS_PER_CHIP   (SERIAL_FLASH_SIZE_CHIP      / SERIAL_FLASH_SIZE_SUBSECTOR)
@@ -92,14 +99,14 @@ typedef struct
   uint8  uniqueId[16];
 } FlashID;
 
+void    SerialFlash_test(void);
 void    SerialFlash_init(void);
+FlashID SerialFlash_readFlashID(void);
 boolean SerialFlash_setup(boolean state);
-boolean SerialFlash_read(uint8 *pSrc, uint8 *pDest, uint16 length);
-boolean SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length);
+SerialFlashState SerialFlash_getState(void);
 boolean SerialFlash_setPowerProfile(SerialFlashPowerProfile profile);
 boolean SerialFlash_setPowerState(SerialFlashState state, double vDomain);
-SerialFlashState SerialFlash_getState(void);
-FlashID SerialFlash_readFlashID(void);
-void    SerialFlash_test(void);
+SerialFlashResult SerialFlash_read(uint8 *pSrc, uint8 *pDest, uint16 length);
+SerialFlashResult SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length);
 
 #endif
