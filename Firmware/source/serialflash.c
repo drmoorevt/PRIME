@@ -65,10 +65,13 @@ typedef struct
 } FlashStatusRegister;
 
 // Power profile voltage definitions, in SerialFlashPowerProfile / SerialFlashState order
+// SPI operation at 25(rd)/50(wr/all)MHz for 2.3 > Vcc > 3.6, 33(rd)/75(wr/all)MHz for 2.7 > Vcc > 3.6
 static const double SERIAL_FLASH_POWER_PROFILES[SERIAL_FLASH_PROFILE_MAX][SERIAL_FLASH_STATE_MAX] =
 {
   {3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile
   {3.3, 3.3, 3.3, 3.3, 2.3},  // Low power wait profile
+  {2.3, 3.3, 2.3, 2.3, 2.3},  // High Speed Read, Low all other states
+  {2.3, 3.3, 3.3, 3.3, 2.3},  // High Speed Read/Write, Low all other states
   {2.3, 2.3, 2.3, 2.3, 2.3},  // Low power all profile
   {3.3, 3.3, 3.3, 3.3, 1.8},  // Extreme low power wait profile
   {2.3, 2.3, 2.3, 2.3, 2.3}   // Low power all, extreme low power wait profile
@@ -124,7 +127,15 @@ boolean SerialFlash_setup(boolean state)
   GPIO_setPortClock(GPIOB, TRUE);
   DESELECT_CHIP_SF();
   DESELECT_SF_HOLD();
-  SPI_setup(state);
+
+  // Set up the SPI transaction with respect to domain voltage
+  if (sSerialFlash.vDomain[sSerialFlash.state] > EE_HIGH_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_15000000);
+  else if (sSerialFlash.vDomain[sSerialFlash.state] > EE_MID_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_3250000);
+  else
+    SPI_setup(state, SPI_CLOCK_RATE_812500);
+
   return TRUE;
 }
 

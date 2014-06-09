@@ -277,7 +277,7 @@ boolean SDCard_setup(boolean state)
   GPIO_configurePins(GPIOB, &sdCtrlPortB);
   GPIO_setPortClock(GPIOB, TRUE);
   DESELECT_CHIP_SD();
-  SPI_setup(state);
+  SPI_setup(state, SPI_CLOCK_RATE_1625000);
   return TRUE;
 }
 

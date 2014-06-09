@@ -256,6 +256,10 @@ const uint8 resetMessage[6] = {'R','e','s','e','t','\n'};
 
 void Tests_run(void)
 {
+  while(1)
+  {
+    EEPROM_readEE(0, sTests.comms.rxBuffer, 128);
+  }
   switch (sTests.state)
   {
     case TEST_IDLE:            // Clear test data and setup listening for commands on the comm port
@@ -1129,7 +1133,7 @@ uint16 Tests_test14(void)
     
     Time_delay(45000);
     Util_fillMemory(&sTests.comms.rxBuffer[0], 128, ((i * 2) + 1));
-    SerialFlash_setPowerProfile(SERIAL_FLASH_PROFILE_STANDARD);
+    SerialFlash_setPowerProfile(SERIAL_FLASH_PROFILE_LP_ALL);
     writeResult = SerialFlash_write(sTests.comms.rxBuffer, (uint8 *)(128 * ((i * 2) + 1)), 128);
     if (writeResult != SERIAL_FLASH_RESULT_OK)
       break;

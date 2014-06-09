@@ -22,6 +22,10 @@
 #define EE_NUM_RETRIES   (3)
 #define ADDRBYTES_EE     (2)
 
+#define EE_HIGH_SPEED_VMIN (4.5)
+#define EE_MID_SPEED_VMIN  (2.5)
+#define EE_LOW_SPEED_VMIN  (1.8)
+
 typedef enum
 {
   OP_WRITE_ENABLE = 0x06,
@@ -32,6 +36,7 @@ typedef enum
 } EEPROMCommand;
 
 // Power profile voltage definitions, in SerialFlashPowerProfile / SerialFlashState order
+// SPI operation at 20MHz for 4.5 < Vcc < 5.5, 10MHz for 2.5 < Vcc < 5.5, 2MHz for 1.8 < Vcc < 2.5
 static const double EEPROM_POWER_PROFILES[EEPROM_PROFILE_MAX][EEPROM_STATE_MAX] =
 {
   {3.3, 3.3, 3.3, 3.3},  // Standard profile
@@ -82,7 +87,15 @@ boolean EEPROM_setup(boolean state)
   GPIO_setPortClock(GPIOB, TRUE);
   DESELECT_CHIP_EE0();
   DESELECT_EE_HOLD();
-  SPI_setup(state);
+
+  // Set up the SPI transaction with respect to domain voltage
+  if (sEEPROM.vDomain[sEEPROM.state] > EE_HIGH_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_15000000);
+  else if (sEEPROM.vDomain[sEEPROM.state] > EE_MID_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_3250000);
+  else
+    SPI_setup(state, SPI_CLOCK_RATE_812500);
+
   return TRUE;
 }
 
