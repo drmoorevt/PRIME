@@ -24,6 +24,9 @@
 #define SECTOR_ERASE_TIME    ((uint32)3000000)
 #define BULK_ERASE_TIME      ((uint32)80000000)
 
+#define SF_HIGH_SPEED_VMIN (2.7)
+#define SF_LOW_SPEED_VMIN  (2.3)
+
 typedef enum
 {
   SF_UNPROTECT_GLOBAL = 0x00,
@@ -122,6 +125,7 @@ boolean SerialFlash_setup(boolean state)
 //  GPIO_InitTypeDef sfCtrlPortB = {(SERIAL_FLASH_PIN_HOLD | SERIAL_FLASH_PIN_SELECT), GPIO_Mode_OUT,
 //                                   GPIO_Speed_25MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL,
 //                                   GPIO_AF_SYSTEM };
+
   sfCtrlPortB.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
   GPIO_configurePins(GPIOB, &sfCtrlPortB);
   GPIO_setPortClock(GPIOB, TRUE);
@@ -129,12 +133,15 @@ boolean SerialFlash_setup(boolean state)
   DESELECT_SF_HOLD();
 
   // Set up the SPI transaction with respect to domain voltage
-  if (sSerialFlash.vDomain[sSerialFlash.state] > EE_HIGH_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_15000000);
-  else if (sSerialFlash.vDomain[sSerialFlash.state] > EE_MID_SPEED_VMIN)
+  if (sSerialFlash.vDomain[sSerialFlash.state] >= SF_HIGH_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_7500000);
+  else if (sSerialFlash.vDomain[sSerialFlash.state] >= SF_LOW_SPEED_VMIN)
     SPI_setup(state, SPI_CLOCK_RATE_3250000);
   else
-    SPI_setup(state, SPI_CLOCK_RATE_812500);
+  {
+    SPI_setup(state, SPI_CLOCK_RATE_1625000);
+    return FALSE; // Domain voltage is too low for serial flash operation, attempt anyway
+  }
 
   return TRUE;
 }
