@@ -268,6 +268,12 @@ uint32 Tests_getTestToRun(void)
 
 void Tests_run(void)
 {
+  /*
+  while(1)
+  {
+    EEPROM_readEE(0, sTests.comms.rxBuffer, 128);
+  }
+  */
   switch (sTests.state)
   {
     case TEST_IDLE:  // Clear test data and setup listening for commands on the comm port
@@ -1048,7 +1054,7 @@ uint16 Tests_test12(void)
 \**************************************************************************************************/
 uint16 Tests_test13(uint32 argv, void *argc)
 {
-  uint16 i, j;
+  uint32 i, j, numSweeps = 10;
 
   Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
   Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
@@ -1056,23 +1062,42 @@ uint16 Tests_test13(uint32 argv, void *argc)
   Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
   Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
 
-  for (i = 0; i < 512; i++)
+  for (i = 0; i < numSweeps; i++)
   {
     // Using a variety of write bytes (i)
     Util_fillMemory(&sTests.comms.rxBuffer[0], 128, i);
-    Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900); // 15us sample rate
+    sTests.comms.rxBuffer[1] = 1;
+    sTests.comms.rxBuffer[2] = 2;
+    sTests.comms.rxBuffer[3] = 3;
+    sTests.comms.rxBuffer[4] = 4;
+    //Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900); // 15us sample rate
+    Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 480); // 8us sample rate
 
     // write one page in each regular and low power mode
-    Util_spinWait(30000);
-    EEPROM_setPowerState(EEPROM_STATE_WRITING, 3.3);
-    EEPROM_setPowerState(EEPROM_STATE_WAITING, 3.3);
-    EEPROM_setPowerState(EEPROM_STATE_READING, 3.3);
-    EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
-    Util_spinWait(30000);
-    EEPROM_setPowerState(EEPROM_STATE_WRITING, 1.8);
-    EEPROM_setPowerState(EEPROM_STATE_WAITING, 1.8);
-    EEPROM_setPowerState(EEPROM_STATE_READING, 1.8);
-    EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
+    Time_delay(30);
+    EEPROM_setPowerProfile(EEPROM_PROFILE_STANDARD);
+    if (EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128) != TRUE)
+      break;
+
+    Time_delay(30);
+    EEPROM_setPowerProfile(EEPROM_PROFILE_LP_IDLE_WAIT);
+    if (EEPROM_write(&sTests.comms.rxBuffer[1], (uint8*)(128 * i), 128) != TRUE)
+      break;
+
+    Time_delay(30);
+    EEPROM_setPowerProfile(EEPROM_PROFILE_MP_RW_LP_IW);
+    if (EEPROM_write(&sTests.comms.rxBuffer[2], (uint8*)(128 * i), 128) != TRUE)
+      break;
+
+    Time_delay(30);
+    EEPROM_setPowerProfile(EEPROM_PROFILE_LP_ALL);
+    if (EEPROM_write(&sTests.comms.rxBuffer[3], (uint8*)(128 * i), 128) != TRUE)
+      break;
+
+    Time_delay(30);
+    EEPROM_setPowerProfile(EEPROM_PROFILE_LPI_XLP_WAIT);
+    if (EEPROM_write(&sTests.comms.rxBuffer[4], (uint8*)(128 * i), 128) != TRUE)
+      break;
 
     // Complete the samples
     while(sTests.adc1.isSampling || sTests.adc3.isSampling);
@@ -1088,15 +1113,19 @@ uint16 Tests_test13(uint32 argv, void *argc)
   }
   Tests_teardownSPITests();  // Only turn the domain off at the very end of iterations
 
-  // Sample / Accumulate complete, divide by the number of samples
-  for (i = 0; i < TESTS_MAX_SAMPLES; i++)
+  if (i == numSweeps)
   {
-    sTests.adc1.adcBuffer[i]    = (uint16)(sTests.vAvg[i] / 512);
-    sTests.adc3.adcBuffer[i]    = (uint16)(sTests.iAvg[i] / 512);
-    sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / 512);
+    // Sample / Accumulate complete, divide by the number of samples
+    for (i = 0; i < TESTS_MAX_SAMPLES; i++)
+    {
+      sTests.adc1.adcBuffer[i]    = (uint16)(sTests.vAvg[i] / numSweeps);
+      sTests.adc3.adcBuffer[i]    = (uint16)(sTests.iAvg[i] / numSweeps);
+      sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / numSweeps);
+    }
+    return SUCCESS;
   }
-
-  return SUCCESS;
+  else
+    return ERROR;
 }
 
 /**************************************************************************************************\
@@ -1140,7 +1169,7 @@ uint16 Tests_test14(void)
     
     Time_delay(45000);
     Util_fillMemory(&sTests.comms.rxBuffer[0], 128, ((i * 2) + 1));
-    SerialFlash_setPowerProfile(SERIAL_FLASH_PROFILE_STANDARD);
+    SerialFlash_setPowerProfile(SERIAL_FLASH_PROFILE_LP_ALL);
     writeResult = SerialFlash_write(sTests.comms.rxBuffer, (uint8 *)(128 * ((i * 2) + 1)), 128);
     if (writeResult != SERIAL_FLASH_RESULT_OK)
       break;

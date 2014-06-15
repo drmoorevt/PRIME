@@ -18,21 +18,7 @@
 \**************************************************************************************************/
 void SPI_init(void)
 {
-  SPI_setup(FALSE);
-
-  RCC->APB2RSTR |=  (RCC_APB1RSTR_SPI2RST);  // Reset the SPI peripheral
-  RCC->APB2RSTR &=  (~RCC_APB1RSTR_SPI2RST); // Release the SPI peripheral from reset
-
-  RCC->APB1ENR  |= (RCC_APB1ENR_SPI2EN); // Enable SPI peripheral clocks
-
-  // Using 2MHz for baud rate until we start modulating voltage 30MHz / 2Mhz = 15
-//  SPI2->CR1 |= (SPI_CR1_SPE | SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_BR);
-
-//  SPI2->CR1 |= (SPI_CR1_SPE | SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_BR_2); // 1MHz
-
-  SPI2->CR1 |= (SPI_CR1_SPE | SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI | SPI_CR1_BR); // 125kHz
-
-  SPI2->CR2 = (0x00000000);
+  SPI_setup(FALSE, SPI_CLOCK_RATE_1625000);
 }
 
 /**************************************************************************************************\
@@ -41,12 +27,22 @@ void SPI_init(void)
 * PARAMETERS   none
 * RETURNS      TRUE
 \**************************************************************************************************/
-boolean SPI_setup(boolean state)
+boolean SPI_setup(boolean state, SPIClockRate rate)
 {
+//  GPIO_InitTypeDef spiPortB  = {(SPI_MSCK_PIN | SPI_MISO_PIN | SPI_MOSI_PIN), GPIO_Mode_AF,
+//                                GPIO_Speed_25MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM};
+
   GPIO_InitTypeDef spiPortB  = {(SPI_MSCK_PIN | SPI_MISO_PIN | SPI_MOSI_PIN), GPIO_Mode_AF,
-                                GPIO_Speed_25MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM};
+                                GPIO_Speed_100MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM};
   spiPortB.GPIO_Mode    = (state == TRUE) ? GPIO_Mode_AF   : GPIO_Mode_IN;
   spiPortB.GPIO_AltFunc = (state == TRUE) ? GPIO_AF_SPI1_2 : GPIO_AF_SYSTEM;
+
+  RCC->APB2RSTR |=  (RCC_APB1RSTR_SPI2RST);  // Reset the SPI peripheral
+  RCC->APB2RSTR &=  (~RCC_APB1RSTR_SPI2RST); // Release the SPI peripheral from reset
+  RCC->APB1ENR  |= (RCC_APB1ENR_SPI2EN);     // Enable SPI peripheral clocks
+  SPI2->CR1  = (SPI_CR1_SPE | SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI | (rate << 3));
+  SPI2->CR2 = (0x00000000);
+
   GPIO_configurePins(GPIOB, &spiPortB);
   return TRUE;
 }

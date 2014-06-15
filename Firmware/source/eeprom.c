@@ -22,6 +22,10 @@
 #define EE_NUM_RETRIES   (3)
 #define ADDRBYTES_EE     (2)
 
+#define EE_HIGH_SPEED_VMIN (4.5)
+#define EE_MID_SPEED_VMIN  (2.5)
+#define EE_LOW_SPEED_VMIN  (1.8)
+
 typedef enum
 {
   OP_WRITE_ENABLE = 0x06,
@@ -32,13 +36,14 @@ typedef enum
 } EEPROMCommand;
 
 // Power profile voltage definitions, in SerialFlashPowerProfile / SerialFlashState order
+// SPI operation at 20MHz for 4.5 < Vcc < 5.5, 10MHz for 2.5 < Vcc < 5.5, 2MHz for 1.8 < Vcc < 2.5
 static const double EEPROM_POWER_PROFILES[EEPROM_PROFILE_MAX][EEPROM_STATE_MAX] =
 {
-  {3.3, 3.3, 3.3, 3.3},  // Standard profile
-  {3.3, 3.3, 3.3, 1.8},  // Low power wait profile
+  {3.3, 3.3, 3.3, 3.3},  // Standard profile, high speed high voltage
+  {1.8, 3.3, 3.3, 1.8},  // Low power wait/idle profile
+  {1.8, 2.5, 2.5, 1.8},  // Low power wait/idle, mid r/w profile
   {1.8, 1.8, 1.8, 1.8},  // Low power all profile
-  {3.3, 3.3, 3.3, 1.3},  // Extreme low power wait profile
-  {1.8, 1.8, 1.8, 1.3}   // Low power all, extreme low power wait profile
+  {1.8, 3.3, 3.3, 1.4},  // Extreme low power wait profile
 };
 
 static struct
@@ -82,7 +87,20 @@ boolean EEPROM_setup(boolean state)
   GPIO_setPortClock(GPIOB, TRUE);
   DESELECT_CHIP_EE0();
   DESELECT_EE_HOLD();
-  SPI_setup(state);
+
+  // Set up the SPI transaction with respect to domain voltage
+  if (sEEPROM.vDomain[sEEPROM.state] >= EE_HIGH_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_7500000);
+  else if (sEEPROM.vDomain[sEEPROM.state] >= EE_MID_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_3250000);
+  else if (sEEPROM.vDomain[sEEPROM.state] >= EE_LOW_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_1625000);
+  else
+  {
+    SPI_setup(state, SPI_CLOCK_RATE_406250);
+    return FALSE; // Domain voltage is too low for EEPROM operation, attempt very low speed
+  }
+
   return TRUE;
 }
 
@@ -219,9 +237,9 @@ boolean EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
       SPI_write(pSrc, numBytes);
       DESELECT_CHIP_EE0();
 
-      EEPROM_setup(FALSE);    // Disable the EEPROM control and SPI pins while waiting
+      EEPROM_setup(FALSE);  // Disable the EEPROM control and SPI pins while waiting
       EEPROM_setState(EEPROM_STATE_WAITING); // For monitoring and voltage control purposes
-      Util_spinDelay(10000);  // == ~10ms
+      Time_delay(5000); // EE_PAGE_WRITE_TIME
 
       EEPROM_readEE(pDest, readBuf, numBytes); // Verify the write, re-enables then disables EEPROM
 

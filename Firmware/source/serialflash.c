@@ -24,6 +24,9 @@
 #define SECTOR_ERASE_TIME    ((uint32)3000000)
 #define BULK_ERASE_TIME      ((uint32)80000000)
 
+#define SF_HIGH_SPEED_VMIN (2.7)
+#define SF_LOW_SPEED_VMIN  (2.3)
+
 typedef enum
 {
   SF_UNPROTECT_GLOBAL = 0x00,
@@ -65,10 +68,13 @@ typedef struct
 } FlashStatusRegister;
 
 // Power profile voltage definitions, in SerialFlashPowerProfile / SerialFlashState order
+// SPI operation at 25(rd)/50(wr/all)MHz for 2.3 > Vcc > 3.6, 33(rd)/75(wr/all)MHz for 2.7 > Vcc > 3.6
 static const double SERIAL_FLASH_POWER_PROFILES[SERIAL_FLASH_PROFILE_MAX][SERIAL_FLASH_STATE_MAX] =
 {
   {3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile
   {3.3, 3.3, 3.3, 3.3, 2.3},  // Low power wait profile
+  {2.3, 3.3, 2.3, 2.3, 2.3},  // High Speed Read, Low all other states
+  {2.3, 3.3, 3.3, 3.3, 2.3},  // High Speed Read/Write, Low all other states
   {2.3, 2.3, 2.3, 2.3, 2.3},  // Low power all profile
   {3.3, 3.3, 3.3, 3.3, 1.8},  // Extreme low power wait profile
   {2.3, 2.3, 2.3, 2.3, 2.3}   // Low power all, extreme low power wait profile
@@ -119,12 +125,24 @@ boolean SerialFlash_setup(boolean state)
 //  GPIO_InitTypeDef sfCtrlPortB = {(SERIAL_FLASH_PIN_HOLD | SERIAL_FLASH_PIN_SELECT), GPIO_Mode_OUT,
 //                                   GPIO_Speed_25MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL,
 //                                   GPIO_AF_SYSTEM };
+
   sfCtrlPortB.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
   GPIO_configurePins(GPIOB, &sfCtrlPortB);
   GPIO_setPortClock(GPIOB, TRUE);
   DESELECT_CHIP_SF();
   DESELECT_SF_HOLD();
-  SPI_setup(state);
+
+  // Set up the SPI transaction with respect to domain voltage
+  if (sSerialFlash.vDomain[sSerialFlash.state] >= SF_HIGH_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_7500000);
+  else if (sSerialFlash.vDomain[sSerialFlash.state] >= SF_LOW_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_3250000);
+  else
+  {
+    SPI_setup(state, SPI_CLOCK_RATE_1625000);
+    return FALSE; // Domain voltage is too low for serial flash operation, attempt anyway
+  }
+
   return TRUE;
 }
 
