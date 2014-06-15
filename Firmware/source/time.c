@@ -253,9 +253,9 @@ static void Time_decrementSoftTimers(void)
       if (1 == sTime.softTimers[i].value--)
       { // Timer just expired? Notify the app if configured.
         if (NULL != sTime.softTimers[i].appNotifyTimerExpired)
-          sTime.softTimers[i].appNotifyTimerExpired(i);
+          sTime.softTimers[i].appNotifyTimerExpired((SoftTimer)i);
         // Reload the timer if configured for auto-reload
-        sTime.softTimers[i].value = reload;
+        sTime.softTimers[i].value = sTime.softTimers[i].reload;
       }
     }
   }

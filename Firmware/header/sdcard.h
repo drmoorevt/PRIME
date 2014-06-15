@@ -33,19 +33,21 @@ typedef enum
 
 typedef enum
 {
-  SDCARD_RESULT_OK            = 0,
-  SDCARD_RESULT_READ_FAILED   = 1,
-  SDCARD_RESULT_WRITE_FAILED  = 2,
-  SDCARD_RESULT_VERIFY_FAILED = 3,
+  SD_WRITE_RESULT_OK            = 0,
+  SD_WRITE_RESULT_READ_FAILED   = 1,
+  SD_WRITE_RESULT_WRITE_FAILED  = 2,
+  SD_WRITE_RESULT_VERIFY_FAILED = 3,
+  SD_WRITE_RESULT_BAD_COMMAND   = 4,
+  SD_WRITE_RESULT_NOT_READY     = 5,
   SDCARD_RESULT_MAX
-} SDCardResult;
+} SDWriteResult;
 
 void    SDCard_init(void);
 boolean SDCard_setup(boolean state);
 boolean SDCard_initDisk(void);
 void SDCard_notifyVoltageChange(double newVoltage);
 boolean SDCard_read(uint8 *pSrc, uint8 *pDest, uint16 length);
-boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length);
+SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length);
 boolean SDCard_setPowerState(SDCardState state, double vDomain);
 boolean SDCard_setPowerProfile(SDCardPowerProfile profile);
 SDCardState SDCard_getState(void);

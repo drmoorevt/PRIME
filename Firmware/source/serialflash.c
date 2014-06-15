@@ -284,10 +284,12 @@ static void SerialFlash_clearStatusRegister(void)
 \**************************************************************************************************/
 static boolean SerialFlash_waitForWriteComplete(boolean pollChip, uint32 timeout)
 {
+  SoftTimerConfig sfTimeout = {TIME_SOFT_TIMER_SERIAL_MEM, 0, 0, NULL};
   SerialFlash_setState(SERIAL_FLASH_STATE_WAITING);
   if (pollChip)
   {
-    Time_startTimer(TIME_SOFT_TIMER_SERIAL_MEM, timeout);
+    sfTimeout.value = timeout;
+    Time_startTimer(sfTimeout);
     while (SerialFlash_readStatusRegister().writeInProgress && Time_getTimerValue(TIME_SOFT_TIMER_SERIAL_MEM));
     return (Time_getTimerValue(TIME_SOFT_TIMER_SERIAL_MEM) > 0);
   }
@@ -478,6 +480,7 @@ void SerialFlash_test(void)
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
   Time_delay(1000000); // Wait 1000ms for domains to settle
 
+  SerialFlash_clearStatusRegister();
   while(1)
   {
     // basic read test

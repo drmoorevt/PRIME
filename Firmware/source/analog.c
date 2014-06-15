@@ -263,7 +263,7 @@ static double Analog_getFeedbackVoltage(VoltageDomain domain, double vDomain)
 * RETURNS     The ideal output voltage corresponding to vFeedback on the desired domain
 * NOTES       None
 \*************************************************************************************************/
-double Analog_getOutputVoltage(VoltageDomain domain, double vFeedback)
+static double Analog_getOutputVoltage(VoltageDomain domain, double vFeedback)
 {
   double r1 = sAnalog.domainConfig[domain].r1,
          r2 = sAnalog.domainConfig[domain].r2,
@@ -281,6 +281,7 @@ double Analog_getOutputVoltage(VoltageDomain domain, double vFeedback)
 \*************************************************************************************************/
 void Analog_testAnalog(void)
 {
+  volatile double domainVoltage = Analog_getOutputVoltage(COMMS_DOMAIN, 0.65);
   /*
   uint8 bytesToSend = 0;
   uint16_t i, adcResult[5];

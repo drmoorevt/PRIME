@@ -1,5 +1,6 @@
-#include "stm32f2xx.h"
-#include "gpio.h"
+#include "stm32f2xx.h" // Used for manipulating base UART registers
+#include "gpio.h"      // Used for setting up the pins as UART
+#include "time.h"      // Used for timeout functionality
 #include "util.h"
 #include "uart.h"
 
@@ -372,11 +373,13 @@ void UART_notifyTimeout(SoftTimer timer)
 \**************************************************************************************************/
 void UART_stopReceive(UARTPort port)
 {
-  SoftTimerConfig nullTimer = {sUART.port[port].timer, 0, 0, 0};
+  SoftTimerConfig nullTimer = {TIME_SOFT_TIMER_USART1, 0, 0, 0};
+  nullTimer.timer = sUART.port[port].timer;
+  Time_startTimer(nullTimer); // Clear the UART timeout timer by 'starting' it zeroed out
+
+  sUART.port[port].pUART->CR1 &=  (~USART_CR1_RXNEIE); // Turn off the rx interrupt
   sUART.port[port].commStatus.bytesToReceive = 0;
   sUART.port[port].commStatus.bytesReceived  = 0;
-  sUART.port[port].pUART->CR1 &=  (~USART_CR1_RXNEIE);
-  Time_stopTimer(nullTimer); // Clear the UART timeout timer
 }
 
 /**************************************************************************************************\
@@ -389,7 +392,10 @@ void UART_stopReceive(UARTPort port)
 \**************************************************************************************************/
 boolean UART_receiveData(UARTPort port, uint32 numBytes, uint32 timeout)
 {
-  SoftTimerConfig timer = {sUART.port[port].timer, timeout, 0, &UART_notifyTimeout};
+  SoftTimerConfig timer = {TIME_SOFT_TIMER_USART1, 0, 0, &UART_notifyTimeout};
+  timer.timer = sUART.port[port].timer;
+  timer.value = timeout;
+
   if (sUART.port[port].commStatus.bytesReceived == 0)
   { // Receiver is idle
     sUART.port[port].commStatus.bytesToReceive  = numBytes;

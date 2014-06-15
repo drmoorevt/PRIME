@@ -633,16 +633,16 @@ static SDCommandResult SDCard_writeBlock(uint32 block)
 *             length - number of bytes to write
 * RETURNS     TRUE if the write succeeds, FALSE otherwise
 \**************************************************************************************************/
-boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
+SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
   uint8 verify;
   uint32 block, offset;
   SDCommandResult readResult, writeResult, verifyResult;
 
   if (length > 512)  // Currently can't handle multi-block writes
-    return FALSE;
+    return SD_WRITE_RESULT_BAD_COMMAND;
   if (sSDCard.state != SDCARD_STATE_READY) // Card must be initialized first
-    return FALSE;
+    return SD_WRITE_RESULT_NOT_READY;
 
   // Read in the block that contains the data which will be overwritten
   block = (uint32)pDest >> 9;
@@ -651,7 +651,7 @@ boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
   SDCard_setState(SDCARD_STATE_READING); // Set the state and voltage
   readResult = SDCard_readBlock(block);
 
-  // Copy the incoming data overtop of whatever currently resides there
+  // Copy the incoming data over top of whatever currently resides there
   offset = (uint32)pDest & 0x0000001FF;
   Util_copyMemory(pSrc, (uint8 *)&sSDCard.respBlock + offset, length);
 
@@ -667,8 +667,14 @@ boolean SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
   SDCard_setup(FALSE); // Turn off the SPI and control pins
   SDCard_setState(SDCARD_STATE_READY); // Set the state and voltage
 
-  return ((readResult   == SDCARD_RESPONSE_OK) && (writeResult == SDCARD_RESPONSE_OK) &&
-          (verifyResult == SDCARD_RESPONSE_OK) && (verify == 0));
+  if (readResult != SDCARD_RESPONSE_OK)
+    return SD_WRITE_RESULT_READ_FAILED;
+  else if (writeResult != SDCARD_RESPONSE_OK)
+    return SD_WRITE_RESULT_WRITE_FAILED;
+  else if ((verifyResult != SDCARD_RESPONSE_OK) && (verify != 0))
+    return SD_WRITE_RESULT_VERIFY_FAILED;
+  else
+    return SD_WRITE_RESULT_OK;
 }
 
 /**************************************************************************************************\

@@ -47,7 +47,7 @@ typedef struct
   SoftTimer timer;  // One of the defined SoftTimers
   uint32    value;  // Initial timer value in milliseconds
   uint32    reload; // One shot if reload is zero
-  void      (*appNotifyTimerExpired); // Can be null
+  void      (*appNotifyTimerExpired)(SoftTimer timer); // Can be null
 } SoftTimerConfig;
 
 void Time_init(void);
@@ -57,7 +57,7 @@ void Time_stopTimer(HardTimer timer);
 void Time_initTimer2(uint16 reloadValue);
 void Time_initTimer3(uint16 reloadValue);
 
-void Time_createTimer(SoftTimerConfig timerConfig);
+void Time_startTimer(SoftTimerConfig timerConfig);
 uint32 Time_getTimerValue(SoftTimer timer);
 
 uint32 Time_getTimeOfday(void);
