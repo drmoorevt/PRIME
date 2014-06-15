@@ -5,16 +5,21 @@
 
 typedef enum
 {
-  TIME_SOFT_TIMER_DELAY               = 0, // Used for 1ms resolution, non-blocking delays
-  TIME_SOFT_TIMER_UART                = 1, // used for protocol timeouts
-  TIME_SOFT_TIMER_SERIAL_MEM          = 2, // eeprom/flash timer
-  TIME_SOFT_TIMER_UART_INTERCHAR      = 3, // interchar uart timeout
-  TIME_SOFT_TIMER_XBEE_UART_INTERCHAR = 4, // xbee interchar uart timeout
-  TIME_SOFT_TIMER_ANALOG              = 5, // reserving timer for analog module
-  TIME_SOFT_TIMER_XBEE                = 6, // generic xbee timer
-  TIME_SOFT_TIMER_XBEE_READ           = 7, // xbee read timeout
-  TIME_SOFT_TIMER_ONE_SECOND          = 8, // One second timer
-  TIME_SOFT_TIMER_MAX                 = 9
+  TIME_SOFT_TIMER_DELAY               =  0, // Used for 1ms resolution, non-blocking delays
+  TIME_SOFT_TIMER_USART1              =  1, // USART1 protocol timeouts
+  TIME_SOFT_TIMER_USART2              =  2, // USART2 protocol timeouts
+  TIME_SOFT_TIMER_USART3              =  3, // USART3 protocol timeouts
+  TIME_SOFT_TIMER_UART4               =  4, // UART4 protocol timeouts
+  TIME_SOFT_TIMER_UART5               =  5, // UART5 protocol timeouts
+  TIME_SOFT_TIMER_USART6              =  6, // USART6 protocol timeouts
+  TIME_SOFT_TIMER_SERIAL_MEM          =  7, // eeprom/flash timer
+  TIME_SOFT_TIMER_UART_INTERCHAR      =  8, // interchar uart timeout
+  TIME_SOFT_TIMER_XBEE_UART_INTERCHAR =  9, // xbee interchar uart timeout
+  TIME_SOFT_TIMER_ANALOG              = 10, // reserving timer for analog module
+  TIME_SOFT_TIMER_XBEE                = 11, // generic xbee timer
+  TIME_SOFT_TIMER_XBEE_READ           = 12, // xbee read timeout
+  TIME_SOFT_TIMER_ONE_SECOND          = 13, // One second timer
+  TIME_SOFT_TIMER_MAX                 = 14
 } SoftTimer;
 
 typedef enum
@@ -37,6 +42,14 @@ typedef enum
   TIME_HARD_TIMER_MAX = 15
 } HardTimer;
 
+typedef struct
+{
+  SoftTimer timer;  // One of the defined SoftTimers
+  uint32    value;  // Initial timer value in milliseconds
+  uint32    reload; // One shot if reload is zero
+  void      (*appNotifyTimerExpired); // Can be null
+} SoftTimerConfig;
+
 void Time_init(void);
 void Time_delay(uint32 microSeconds);
 
@@ -44,10 +57,8 @@ void Time_stopTimer(HardTimer timer);
 void Time_initTimer2(uint16 reloadValue);
 void Time_initTimer3(uint16 reloadValue);
 
-
-void Time_startTimer(SoftTimer timer, uint32 milliSeconds);
+void Time_createTimer(SoftTimerConfig timerConfig);
 uint32 Time_getTimerValue(SoftTimer timer);
-
 
 uint32 Time_getTimeOfday(void);
 uint32 Time_getSystemTime(void);

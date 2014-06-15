@@ -42,13 +42,16 @@ typedef struct
   USART_TypeDef *pUART;       // The base register for hardware UART interaction
   AppCommConfig appConfig;    // Buffers and callbacks set by the appLayer
   CommStatus    commStatus;   // State information for sending and receiving
+  SoftTimer     timer;        // The soft timer to be used with this port
 } CommPort;
 
 static struct
 {
-  CommPort port[UART_NUM_PORTS];
+  CommPort port[UART_PORT_MAX];
 } sUART;
 
+static UARTPort UART_getPortHandle(SoftTimer timer);
+static SoftTimer UART_getTimerHandle(UARTPort port);
 static uint16 Uart_calcBaudRateRegister(BaudRate baud);
 
 /*************************************************************************************************\
@@ -74,7 +77,7 @@ static boolean UART_getPortInfo(UARTPort port, PortInfo *portInfo)
 {
   switch (port)
   {
-    case UART_PORT1:
+    case USART_PORT1:
       portInfo->periph.pUART              = USART1;
       portInfo->periph.pClockReg          = &RCC->APB2ENR;
       portInfo->periph.clockEnableBit     = RCC_APB2ENR_USART1EN;
@@ -86,7 +89,7 @@ static boolean UART_getPortInfo(UARTPort port, PortInfo *portInfo)
       portInfo->txPinPort = GPIOB;
       GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_6, port);
       break;
-    case UART_PORT3:
+    case USART_PORT3:
       portInfo->periph.pUART              = USART3;
       portInfo->periph.pClockReg          = &RCC->APB1ENR;
       portInfo->periph.clockEnableBit     = RCC_APB1ENR_USART3EN;
@@ -122,7 +125,7 @@ static boolean UART_getPortInfo(UARTPort port, PortInfo *portInfo)
       portInfo->txPinPort = GPIOC;
       GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_12, port);
       break;
-    case UART_PORT6:
+    case USART_PORT6:
       portInfo->periph.pUART              = USART6;
       portInfo->periph.pClockReg          = &RCC->APB2ENR;
       portInfo->periph.clockEnableBit     = RCC_APB2ENR_USART6EN;
@@ -183,12 +186,55 @@ boolean UART_openPort(UARTPort port, AppCommConfig config)
   /***** Enable Interrupts *****/
   NVIC_EnableIRQ(pi.periph.irqNumber);
 
-  /***** Set the App layer buffers, callbacks and configured *****/
+  /***** Set the App layer buffers, callbacks, timer and configured *****/
   Util_copyMemory((uint8*)&config, (uint8*)&sUART.port[portToOpen].appConfig, sizeof(config));
+  sUART.port[portToOpen].timer = UART_getTimerHandle(portToOpen);
   sUART.port[portToOpen].pUART = pi.periph.pUART;
   sUART.port[portToOpen].isConfigured = TRUE;
 
   return SUCCESS;
+}
+
+/*****************************************************************************\
+* FUNCTION    UART_getTimerHandle
+* DESCRIPTION Grabs the timer associated with the supplied UART
+* PARAMETERS  port: The port for which to grab to timer handle
+* RETURNS     The timeout timer associated with the port
+* NOTES       None
+\*****************************************************************************/
+static SoftTimer UART_getTimerHandle(UARTPort port)
+{
+  switch (port)
+  {
+    case USART_PORT1: return TIME_SOFT_TIMER_USART1;
+    case USART_PORT2: return TIME_SOFT_TIMER_USART2;
+    case USART_PORT3: return TIME_SOFT_TIMER_USART3;
+    case UART_PORT4:  return TIME_SOFT_TIMER_UART4;
+    case UART_PORT5:  return TIME_SOFT_TIMER_UART5;
+    case USART_PORT6: return TIME_SOFT_TIMER_USART6;
+    default:          return TIME_SOFT_TIMER_MAX; // Error condition
+  }
+}
+
+/*****************************************************************************\
+* FUNCTION    UART_getPortHandle
+* DESCRIPTION Grabs the UART associated with a provided timer
+* PARAMETERS  timer: the timer for which to grab the port
+* RETURNS     The port on which the timer is associated
+* NOTES       None
+\*****************************************************************************/
+static UARTPort UART_getPortHandle(SoftTimer timer)
+{
+  switch (timer)
+  {
+    case TIME_SOFT_TIMER_USART1: return USART_PORT1;
+    case TIME_SOFT_TIMER_USART2: return USART_PORT2;
+    case TIME_SOFT_TIMER_USART3: return USART_PORT3;
+    case TIME_SOFT_TIMER_UART4:  return UART_PORT4;
+    case TIME_SOFT_TIMER_UART5:  return UART_PORT5;
+    case TIME_SOFT_TIMER_USART6: return USART_PORT6;
+    default:                     return UART_PORT_MAX; // Error condition
+  }
 }
 
 /*****************************************************************************\
@@ -249,24 +295,22 @@ void UART_handleInterrupt(UARTPort port)
 /*****************************************************************************\
 * FUNCTION    UARTx_IRQHandler
 * DESCRIPTION Writes character to the indicated serial port
-* PARAMETERS    port: The port over which to transmit
-              txByte: The byte to transmit
+* PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       None
 \*****************************************************************************/
-void UART1_IRQHandler(void)
+void USART1_IRQHandler(void)
 {
-  UART_handleInterrupt(UART_PORT1);
+  UART_handleInterrupt(USART_PORT1);
 }
 
-void UART2_IRQHandler(void)
+void USART2_IRQHandler(void)
 {
-  UART_handleInterrupt(UART_PORT2);
+  UART_handleInterrupt(USART_PORT2);
 }
 
-void UART3_IRQHandler(void)
+void USART3_IRQHandler(void)
 {
-  UART_handleInterrupt(UART_PORT3);
+  UART_handleInterrupt(USART_PORT3);
 }
 
 void UART4_IRQHandler(void)
@@ -279,9 +323,9 @@ void UART5_IRQHandler(void)
   UART_handleInterrupt(UART_PORT5);
 }
 
-void UART6_IRQHandler(void)
+void USART6_IRQHandler(void)
 {
-  UART_handleInterrupt(UART_PORT6);
+  UART_handleInterrupt(USART_PORT6);
 }
 
 /**************************************************************************************************\
@@ -307,6 +351,35 @@ boolean UART_sendData(UARTPort port, uint16 numBytes)
 }
 
 /**************************************************************************************************\
+* FUNCTION    UART_notifyTimeout
+* DESCRIPTION The timer module will inform us in interrupt context of timeouts
+*             Will turn off reception on the appropriate port
+* PARAMETERS  port: The port which has timed out
+* RETURNS     Nothing
+* NOTES       None
+\**************************************************************************************************/
+void UART_notifyTimeout(SoftTimer timer)
+{
+  UART_stopReceive(UART_getPortHandle(timer));
+}
+
+/**************************************************************************************************\
+* FUNCTION    UART_stopReceive
+* DESCRIPTION Allows the applayer to abort a reception operation
+* PARAMETERS  port: The port to stop receiving on
+* RETURNS     Nothing
+* NOTES       None
+\**************************************************************************************************/
+void UART_stopReceive(UARTPort port)
+{
+  SoftTimerConfig nullTimer = {sUART.port[port].timer, 0, 0, 0};
+  sUART.port[port].commStatus.bytesToReceive = 0;
+  sUART.port[port].commStatus.bytesReceived  = 0;
+  sUART.port[port].pUART->CR1 &=  (~USART_CR1_RXNEIE);
+  Time_stopTimer(nullTimer); // Clear the UART timeout timer
+}
+
+/**************************************************************************************************\
 * FUNCTION    UART_receiveData
 * DESCRIPTION Reads characters from the indicated serial port
 * PARAMETERS  port: The port over which to receive
@@ -314,13 +387,15 @@ boolean UART_sendData(UARTPort port, uint16 numBytes)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-boolean UART_receiveData(UARTPort port, uint16 numBytes)
+boolean UART_receiveData(UARTPort port, uint32 numBytes, uint32 timeout)
 {
+  SoftTimerConfig timer = {sUART.port[port].timer, timeout, 0, &UART_notifyTimeout};
   if (sUART.port[port].commStatus.bytesReceived == 0)
   { // Receiver is idle
     sUART.port[port].commStatus.bytesToReceive  = numBytes;
-    sUART.port[port].commStatus.bytesReceived = 0;
+    sUART.port[port].commStatus.bytesReceived   = 0;
     sUART.port[port].pUART->CR1 |=  USART_CR1_RXNEIE;  // Enable the rx data reg not empty int
+    Time_startTimer(timer);
     return SUCCESS;
   }
   return ERROR; // UART is currently receiving

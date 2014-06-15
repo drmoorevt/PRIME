@@ -12,13 +12,13 @@
 
 typedef enum
 {
-  UART_PORT1     = 0,
-  UART_PORT2     = 1,
-  UART_PORT3     = 2,
+  USART_PORT1    = 0,
+  USART_PORT2    = 1,
+  USART_PORT3    = 2,
   UART_PORT4     = 3,
   UART_PORT5     = 4,
-  UART_PORT6     = 5,
-  UART_NUM_PORTS = 6
+  USART_PORT6    = 5,
+  UART_PORT_MAX  = 6
 } UARTPort;
 
 typedef enum
@@ -53,15 +53,17 @@ typedef struct
   UARTConfig UARTConfig;
   void *appReceiveBuffer;
   void (*appNotifyReceiveComplete)(uint32);
-  void *appTransmitBuffer;
+  void (*appTransmitBuffer);
   void (*appNotifyTransmitComplete)(uint32);
   void (*appNotifyUnexpectedReceive)(uint8);
+  void (*appNotifyOperationTimeout)(uint32);
 } AppCommConfig;
 
 void UART_init(void);
+void UART_stopReceive(UARTPort port);
 boolean UART_openPort(UARTPort port, AppCommConfig config);
 boolean UART_closePort(UARTPort port);
 boolean UART_sendData(UARTPort port, uint16 numBytes);
-boolean UART_receiveData(UARTPort port, uint16 numBytes);
+boolean UART_receiveData(UARTPort port, uint32 numBytes, uint32 timeout);
 
 #endif // UART_H

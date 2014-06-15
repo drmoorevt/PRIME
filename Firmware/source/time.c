@@ -17,8 +17,8 @@
 
 struct
 {
-  uint32 softTimers[TIME_SOFT_TIMER_MAX];
-  uint64 systemTime;                      // milliseconds since the epoch
+  SoftTimerConfig softTimers[TIME_SOFT_TIMER_MAX];
+  uint64 systemTime;  // milliseconds since the epoch
   boolean isSecondBoundary;
 } sTime;
 
@@ -145,15 +145,14 @@ void TIM3_IRQHandler(void)
 
 /**************************************************************************************************\
 * FUNCTION      Time_startTimer
-* DESCRIPTION   Initializes timers
-* PARAMETERS    timer - index of timer
-*               milliSeconds - number of milliseconds to run timer
-* RETURN        none
+* DESCRIPTION   Creates a timer from the supplied configuration
+* PARAMETERS    timerConfig - the configuration for the timer to use
+* RETURN        None -- (uses the configured callback if supplied)
 \**************************************************************************************************/
-void Time_startTimer(SoftTimer timer, uint32 milliSeconds)
+void Time_startTimer(SoftTimerConfig timerConfig)
 {
-  DISABLE_SYSTICK_INTERRUPT(); 
-  sTime.softTimers[timer] = milliSeconds;
+  DISABLE_SYSTICK_INTERRUPT();
+  sTime.softTimers[timerConfig.timer] = timerConfig;
   ENABLE_SYSTICK_INTERRUPT();
 }
 
@@ -189,7 +188,7 @@ uint32 Time_getTimerValue(SoftTimer timer)
 {
   uint32 value;
   DISABLE_SYSTICK_INTERRUPT();
-  value = sTime.softTimers[timer];
+  value = sTime.softTimers[timer].value;
   ENABLE_SYSTICK_INTERRUPT();
   return value;
 }
@@ -249,8 +248,16 @@ static void Time_decrementSoftTimers(void)
   uint8 i;
   for (i = 0; i < TIME_SOFT_TIMER_MAX; i++)
   {
-    if(sTime.softTimers[i] > 0)
-      sTime.softTimers[i]--;
+    if (sTime.softTimers[i].value > 0)
+    {
+      if (1 == sTime.softTimers[i].value--)
+      { // Timer just expired? Notify the app if configured.
+        if (NULL != sTime.softTimers[i].appNotifyTimerExpired)
+          sTime.softTimers[i].appNotifyTimerExpired(i);
+        // Reload the timer if configured for auto-reload
+        sTime.softTimers[i].value = reload;
+      }
+    }
   }
 }
 
