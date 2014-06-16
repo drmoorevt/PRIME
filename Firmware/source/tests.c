@@ -63,7 +63,7 @@ typedef struct
 typedef struct
 {
   uint8  chanNum;
-  char   title[15]; // Padding this to a word length...
+  char   title[31];
   double bitRes;
 } ChanHeader;
 
@@ -1147,14 +1147,18 @@ uint16 Tests_test13(uint32 argv, void *argc)
     }
   }
   Tests_teardownSPITests();  // Only turn the domain off at the very end of iterations
+  sprintf(sTests.chanHeader[0].title, "Domain Voltage (V)");
+  sprintf(sTests.chanHeader[1].title, "Domain Input Current (mA)");
+  sprintf(sTests.chanHeader[2].title, "Domain Output Current (mA)");
+  sprintf(sTests.chanHeader[3].title, "EEPROM State");
 
   if (i == numSweeps)
   {
     // Sample / Accumulate complete, divide by the number of samples
     for (i = 0; i < TESTS_MAX_SAMPLES; i++)
     {
-      sTests.adc1.adcBuffer[i]    = (uint16)(sTests.vAvg[i] / numSweeps);
-      sTests.adc3.adcBuffer[i]    = (uint16)(sTests.iAvg[i] / numSweeps);
+      sTests.adc1.adcBuffer[i]        = (uint16)(sTests.vAvg[i] / numSweeps);
+      sTests.adc3.adcBuffer[i]        = (uint16)(sTests.iAvg[i] / numSweeps);
       sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / numSweeps);
     }
     return SUCCESS;
