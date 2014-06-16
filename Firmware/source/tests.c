@@ -1,6 +1,7 @@
 #include "stm32f2xx.h"
 #include "adc.h"
 #include "analog.h"
+#include "crc.h"
 #include "dac.h"
 #include "eeprom.h"
 #include "gpio.h"
@@ -66,11 +67,22 @@ typedef struct
   double bitRes;
 } ChanHeader;
 
+typedef union
+{
+  struct
+  {
+    uint8 a,b,c;
+  } Test1Args;
+  uint8 asBytes[256];
+} TestArgs;
+
 static struct
 {
   TestHeader testHeader;
   ChanHeader chanHeader[4];
   uint8  testToRun;
+  uint8  argCount;
+  TestArgs testArgs;
   TestState state;
   Samples adc1;
   Samples adc2;
@@ -83,6 +95,7 @@ static struct
   {
     boolean portOpen;
     boolean receiving;
+    boolean rxTimeout;
     boolean transmitting;
     __attribute__((aligned)) uint8 rxBuffer[256];
     __attribute__((aligned)) uint8 txBuffer[256];
@@ -169,12 +182,15 @@ void Tests_notifyUnexpectedReceive(uint8 byte)
 
 void Tests_notifyReceiveTimedOut(uint32 arg)
 {
+  sTests.comms.receiving = FALSE;
+  sTests.comms.rxTimeout = TRUE;
   return;
 }
 
 void Tests_receiveData(uint32 numBytes, uint32 timeout)
 {
   sTests.comms.receiving = TRUE;
+  sTests.comms.rxTimeout = FALSE;
   UART_receiveData(UART_PORT5, numBytes, timeout);
 }
 
@@ -184,6 +200,55 @@ void Tests_sendData(uint16 numBytes)
   UART_sendData(UART_PORT5, numBytes);
 }
 
+/**************************************************************************************************\
+* FUNCTION    Tests_getTestToRun
+* DESCRIPTION Function returns only when a valid packet initiating a test has been received
+* PARAMETERS  None
+* RETURNS     Nothing
+\**************************************************************************************************/
+uint8 Tests_getTestToRun(void)
+{
+  uint16 crcCalc = 0x0000, packetCRC = 0x0000;
+  boolean hasValidPacket = FALSE;
+  uint8 testToRun, argCount;
+
+  do
+  {
+    Tests_receiveData(6, 1000);     // Look for "Test" bytes with a 1s timeout
+    while (sTests.comms.receiving); // Wait for the packet, will either rxTimeout or txComplete
+    if (sTests.comms.rxTimeout || (sTests.comms.rxBuffer[0] != 'T' &&
+                                   sTests.comms.rxBuffer[1] != 'e' &&
+                                   sTests.comms.rxBuffer[2] != 's' &&
+                                   sTests.comms.rxBuffer[3] != 't'))
+      continue;
+    crcCalc = CRC_calcCRC16(crcCalc, CRC16_CCITT_POLY, sTests.comms.rxBuffer, 6);
+    testToRun = sTests.comms.rxBuffer[4];
+    argCount  = sTests.comms.rxBuffer[5];
+
+    Tests_receiveData(argCount + 2, 1000);  // Grab the arguments and CRC
+    while (sTests.comms.receiving); // Wait for the packet, will either rxTimeout or txComplete
+    if (sTests.comms.rxTimeout)
+      continue;
+    crcCalc = CRC_calcCRC16(crcCalc, CRC16_CCITT_POLY, sTests.comms.rxBuffer, argCount + 2);
+    packetCRC = (sTests.comms.rxBuffer[argCount + 1] << 8) +
+                (sTests.comms.rxBuffer[argCount + 2] << 0);
+
+    //hasValidPacket = packetCRC == crcCalc;
+    hasValidPacket = TRUE;  // If we have made it here then we have all we need
+
+  } while (!hasValidPacket);
+
+  Util_copyMemory(sTests.comms.rxBuffer, sTests.testArgs.asBytes, argCount);
+  sTests.argCount = argCount;
+  return testToRun;
+}
+
+/**************************************************************************************************\
+* FUNCTION    Tests_notifySampleTrigger
+* DESCRIPTION Function is called upon interrupt indicating that sample trigger (TMR3) has occurred
+* PARAMETERS  None
+* RETURNS     Nothing
+\**************************************************************************************************/
 void Tests_notifySampleTrigger(void)
 {
   if (FALSE == sTests.periphState.isSampling)
@@ -210,10 +275,9 @@ void Tests_notifySampleTrigger(void)
 
 /**************************************************************************************************\
 * FUNCTION    Tests_notifyConversionComplete
-* DESCRIPTION
+* DESCRIPTION This function is called upon interrupt indicating that numSamples have been taken
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       This function is called upon interrupt indicating that numSamples have been taken
 \**************************************************************************************************/
 void Tests_notifyConversionComplete(uint8 chan, uint16 numSamples)
 {
@@ -260,32 +324,17 @@ const uint8 resetMessage[6] = {'R','e','s','e','t','\n'};
  *       Note: NAK is generated when offset+numBytes exceeds numBytesAvailable
  * User sends request to reset
  *   Ex: Request: 'Reset\n(crc16)' Response: '(ack)(crc16)'
- */
-uint32 Tests_getTestToRun(void)
-{
-  Tests_receiveData(8, 10);
-  return sTests.comms.rxBuffer[0];
-}
-
+ \*************************************************************************************************/
 void Tests_run(void)
 {
-  /*
-  while(1)
-  {
-    EEPROM_readEE(0, sTests.comms.rxBuffer, 128);
-  }
-  */
   switch (sTests.state)
   {
     case TEST_IDLE:  // Clear test data and setup listening for commands on the comm port
-      sTests.testToRun = Tests_getTestToRun(); // Will change state if successful
+      sTests.testToRun = Tests_getTestToRun();
+      sTests.state = TEST_WAITING;
       break;
-    case TEST_WAITING:         // Waiting to receive 8 bytes on the comm port
-      if (!sTests.comms.receiving)
-      { // Received 8 bytes on the comm port, begin parsing and get the rest of the message
-        sTests.testToRun = Tests_parseTestCommand();
-        sTests.state = (sTests.testToRun > 0) ? TEST_RUNNING : TEST_IDLE;
-      }
+    case TEST_WAITING:
+      sTests.state = TEST_RUNNING; // No need to wait
       break;
     case TEST_RUNNING:
       testFunctions[sTests.testToRun](0, NULL);
@@ -305,19 +354,6 @@ void Tests_run(void)
     default:
       break; // Error condition...
   }
-}
-
-uint8 Tests_parseTestCommand(void)
-{
-  if (sTests.comms.rxBuffer[0] == 'T' &&
-      sTests.comms.rxBuffer[1] == 'e' &&
-      sTests.comms.rxBuffer[2] == 's' &&
-      sTests.comms.rxBuffer[3] == 't')
-  {
-    return sTests.comms.rxBuffer[4];
-  }
-  else
-    return 0xFF;
 }
 
 void Tests_sendHeaderInfo(void)
@@ -1137,7 +1173,7 @@ uint16 Tests_test13(uint32 argv, void *argc)
 uint16 Tests_test14(uint32 argv, void *argc)
 {
   SerialFlashResult writeResult;
-  uint32 i, j, numSweeps = 10;
+  uint32 i, j, numSweeps = 5;
 
   Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
   Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);

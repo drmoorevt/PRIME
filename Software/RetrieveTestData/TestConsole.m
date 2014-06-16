@@ -16,9 +16,9 @@ function [success, chans, data, time] = TestConsole(CommPort)
         return;
     end
  
-    % Bypassing test selection here to speed up debugging, going to 12
+    % Bypassing test selection here to speed up debugging, going to 11
     try
-        [chans,data,time] = rtd(s, 13);
+        [chans,data,time] = rtd(s, 14, 'ok!');
     catch ME
         ME
     end
@@ -29,7 +29,7 @@ function [success, chans, data, time] = TestConsole(CommPort)
     legend(chans)
     xlabel('Time (ms)');
     ylabel('Voltage (V)');
-    title('Test 13');
+    title('SERIAL FLASH PROFILE LP WAIT');
     success = 1;
     
     % determine the demarcations between states of the two writes

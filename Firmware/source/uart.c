@@ -268,13 +268,10 @@ void UART_handleInterrupt(UARTPort port)
     if (pStatus->bytesReceived < pStatus->bytesToReceive)
     { // App is waiting on bytes, fill up its buffer
       *(((uint8*)pComm->appConfig.appReceiveBuffer) + pStatus->bytesReceived++) = pUART->DR;
-
       if (pStatus->bytesReceived >= pStatus->bytesToReceive)
       { // finished now? -- last expected byte is in the data register
+        UART_stopReceive(port);
         sUART.port[port].appConfig.appNotifyReceiveComplete(pStatus->bytesReceived);
-        pStatus->bytesToReceive = 0;
-        pStatus->bytesReceived = 0;
-        CLEAR_BIT(pUART->CR1, USART_CR1_RXNEIE); // Disable the rx data reg not empty int
       }
     }
     else
@@ -361,7 +358,9 @@ boolean UART_sendData(UARTPort port, uint16 numBytes)
 \**************************************************************************************************/
 void UART_notifyTimeout(SoftTimer timer)
 {
-  UART_stopReceive(UART_getPortHandle(timer));
+  UARTPort port = UART_getPortHandle(timer);
+  UART_stopReceive(port);
+  sUART.port[port].appConfig.appNotifyOperationTimeout(0);
 }
 
 /**************************************************************************************************\

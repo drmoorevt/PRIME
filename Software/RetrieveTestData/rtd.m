@@ -1,15 +1,18 @@
-function [channels,results,time] = rtd(s, test)
-    testCommand = ['T','e','s','t','0'];
+function [channels,results,time] = rtd(s, test, arg)
+    argC = uint8(length(arg));
+    testCommand = ['T','e','s','t','0','0'];
     testCommand(5) = test;
-    crc = crc16(testCommand, 'FFFF', 'A001');
-    testCommand(6) = uint8(bitshift(crc,-8));
-    testCommand(7) = uint8(crc);
+    testCommand(6) = argC;
+    testCommandWithArgs = strcat(testCommand, arg);
+    crc = crc16(testCommandWithArgs, '0000', 'A001');
+    testCommandWithArgs(7 + argC) = uint8(bitshift(crc,-8));
+    testCommandWithArgs(8 + argC) = uint8(crc);
 
-    fprintf(s,'%s',testCommand); % Execute test
+    fprintf(s,'%s',testCommandWithArgs); % Execute test
     
-    % wait for the size of the header, timeout after 20 seconds
+    % wait for the size of the header, timeout after 30 seconds
     i = 0;
-    while((s.BytesAvailable < 2) && (i < 200))
+    while((s.BytesAvailable < 2) && (i < 30))
         i = i + 1;
         pause(0.1);
     end;

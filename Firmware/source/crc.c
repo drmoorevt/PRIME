@@ -94,16 +94,16 @@ static uint16 CRC_rawCrc16(uint16 initialCRC, const uint8 *pData, uint32 numByte
 *              numBytes -- the length of the data
 * RETURNS      the CRC of the data
 \*********************************************************************/
-uint16 CRC_calcCRC16(CRC16Polynomial crcType, const uint8 *pData, uint32 numBytes)
+uint16 CRC_calcCRC16(uint16 initial, CRC16Polynomial crcType, const uint8 *pData, uint32 numBytes)
 {
   uint16 crc;
   switch (crcType)
   {
     case CRC16_CCITT_POLY:
-      crc = crc_itu_t(0x0000, pData, numBytes);
+      crc = crc_itu_t(initial, pData, numBytes);
       break;
     case CRC16_IEEE_POLY:
-      crc = CRC_rawCrc16(0x0000, pData, numBytes, ANSI_CRC_POLYNOMIAL);
+      crc = CRC_rawCrc16(initial, pData, numBytes, ANSI_REV_POLYNOMIAL);
       break;
   }
   Util_swap16(&crc);
