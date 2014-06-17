@@ -1,4 +1,4 @@
-function [channels,results,time] = rtd(s, test, arg)
+function [title,channels,results,time] = rtd(s, test, arg)
     argC = uint8(length(arg));
     testCommand = ['T','e','s','t','0','0'];
     testCommand(5) = test;
@@ -12,7 +12,7 @@ function [channels,results,time] = rtd(s, test, arg)
     
     % wait for the size of the header, timeout after 30 seconds
     i = 0;
-    while((s.BytesAvailable < 2) && (i < 30))
+    while((s.BytesAvailable < 2) && (i < 150))
         i = i + 1;
         pause(0.1);
     end;
@@ -32,6 +32,9 @@ function [channels,results,time] = rtd(s, test, arg)
     if (s.BytesAvailable < (sizeofHeader  - 2))
         return % Not enough bytes for a header from DUT, bail out
     else       % got the rest of the header, parse it
+        title = {};
+        titleRead = fread(s, 62, 'char');
+        title = [title, sprintf('%s',titleRead(:,1))];
         timeScaleMicroSec = fread(s, 1, 'uint16');
         bytesPerChannel   = fread(s, 1, 'uint16');
         numChannels       = fread(s, 1, 'uint16');
@@ -40,11 +43,11 @@ function [channels,results,time] = rtd(s, test, arg)
         fprintf('Bytes per channel: %d\n', bytesPerChannel);
         fprintf('Number of channels: %d\n', numChannels);
         fprintf('Parsing channel headers\n');
-        chanNum = {};
+        channels = {};
         for i = 1:numChannels
-            inChan = fread(s, 1, 'uint8');
-            chanNum = [chanNum, sprintf('Channel# %u',inChan)];
-            title(:,i) = fread(s, 15, 'uint8');
+            chanNum = fread(s, 1, 'uint8');
+            legend(:,i) = fread(s, 31, 'char');
+            channels = [channels, sprintf('%s',legend(:,i))];
             bitRes(:,i) = fread(s, 1, 'double');
         end
     end
@@ -70,7 +73,6 @@ function [channels,results,time] = rtd(s, test, arg)
             inRead = inRead * bitRes(i);
             data(:,i) = inRead;
         end
-        channels = chanNum;
         results  = data;
         time = (1:1:bytesPerChannel/2) * (timeScaleMicroSec / 1000.0);
         return

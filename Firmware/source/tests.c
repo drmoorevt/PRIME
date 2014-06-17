@@ -19,6 +19,7 @@
 #define FILE_ID TESTS_C
 
 #define TESTS_MAX_SAMPLES (4096)
+#define TESTS_MAX_SWEEPS  (16)
 
 typedef enum
 {
@@ -55,6 +56,7 @@ typedef struct
 typedef struct
 {
   uint16 headerBytes;  // The size of this struct
+  char   title[62];    // Title of this test
   uint16 timeScale;    // Time between samples in micro seconds
   uint16 bytesPerChan; // Number of bytes to expect per channel
   uint16 numChannels;  // Total number of channels
@@ -88,9 +90,10 @@ static struct
   Samples adc2;
   Samples adc3;
   Samples periphState;
-  uint32  vAvg[TESTS_MAX_SAMPLES];
-  uint32  iAvg[TESTS_MAX_SAMPLES];
-  uint32  sAvg[TESTS_MAX_SAMPLES];
+  uint16  vAvg[TESTS_MAX_SAMPLES];
+  uint16  iAvg[TESTS_MAX_SAMPLES];
+  uint16  oAvg[TESTS_MAX_SAMPLES];
+  uint16  sAvg[TESTS_MAX_SAMPLES];
   struct
   {
     boolean portOpen;
@@ -502,7 +505,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 reloadVal)
   sTests.testHeader.numChannels = 4;
   sTests.testHeader.bytesPerChan = TESTS_MAX_SAMPLES * 2;
   sTests.chanHeader[0].chanNum  = adc1Config.adcConfig.chan[0].chanNum;
-  sTests.chanHeader[0].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[0].bitRes   = (3.3 / 4096.0) * 2; // Voltage measurements are div2
   sTests.chanHeader[1].chanNum  = adc2Config.adcConfig.chan[0].chanNum;
   sTests.chanHeader[1].bitRes   = (3.3 / 4096.0);
   sTests.chanHeader[2].chanNum  = adc3Config.adcConfig.chan[0].chanNum;
@@ -545,6 +548,13 @@ static void Tests_teardownSPITests(void)
   Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Set domain voltage to nominal (3.25V)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
+
+
+
+  sprintf(sTests.chanHeader[0].title, "Domain Voltage (V)");
+  sprintf(sTests.chanHeader[1].title, "Domain Input Current (mA)");
+  sprintf(sTests.chanHeader[2].title, "Domain Output Current (mA)");
+  sprintf(sTests.chanHeader[3].title, "EEPROM State");
 }
 
 /**************************************************************************************************\
@@ -1042,7 +1052,7 @@ uint16 Tests_test12(uint32 argv, void *argc)
   Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
   Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
 
-  for (i = 0; i < 512; i++)
+  for (i = 0; i < TESTS_MAX_SWEEPS; i++)
   {
     Util_fillMemory(&sTests.comms.rxBuffer[0], 128, i);  // Using a variety of write bytes (i)
     Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900);  // 15us sample rate
@@ -1063,7 +1073,8 @@ uint16 Tests_test12(uint32 argv, void *argc)
     for (j = 0; j < TESTS_MAX_SAMPLES; j++)
     {
       sTests.vAvg[j] += sTests.adc1.adcBuffer[j];
-      sTests.iAvg[j] += sTests.adc3.adcBuffer[j];
+      sTests.iAvg[j] += sTests.adc2.adcBuffer[j];
+      sTests.oAvg[j] += sTests.adc3.adcBuffer[j];
       sTests.sAvg[j] += sTests.periphState.adcBuffer[j];
     }
   }
@@ -1072,9 +1083,10 @@ uint16 Tests_test12(uint32 argv, void *argc)
   // Sample / Accumulate complete, divide by the number of samples
   for (i = 0; i < TESTS_MAX_SAMPLES; i++)
   {
-    sTests.adc1.adcBuffer[i]        = (uint16)(sTests.vAvg[i] / 512);
-    sTests.adc3.adcBuffer[i]        = (uint16)(sTests.iAvg[i] / 512);
-    sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / 512);
+    sTests.adc1.adcBuffer[i]        = (uint16)(sTests.vAvg[i] / TESTS_MAX_SWEEPS);
+    sTests.adc2.adcBuffer[i]        = (uint16)(sTests.iAvg[i] / TESTS_MAX_SWEEPS);
+    sTests.adc3.adcBuffer[i]        = (uint16)(sTests.oAvg[i] / TESTS_MAX_SWEEPS);
+    sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / TESTS_MAX_SWEEPS);
   }
 
   return SUCCESS;
@@ -1089,7 +1101,7 @@ uint16 Tests_test12(uint32 argv, void *argc)
 \**************************************************************************************************/
 uint16 Tests_test13(uint32 argv, void *argc)
 {
-  uint32 i, j, numSweeps = 10;
+  uint32 i, j;
 
   Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
   Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
@@ -1097,7 +1109,7 @@ uint16 Tests_test13(uint32 argv, void *argc)
   Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
   Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
 
-  for (i = 0; i < numSweeps; i++)
+  for (i = 0; i < TESTS_MAX_SWEEPS; i++)
   {
     // Using a variety of write bytes (i)
     Util_fillMemory(&sTests.comms.rxBuffer[0], 128, i);
@@ -1106,7 +1118,7 @@ uint16 Tests_test13(uint32 argv, void *argc)
     sTests.comms.rxBuffer[3] = 3;
     sTests.comms.rxBuffer[4] = 4;
     //Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900); // 15us sample rate
-    Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 480); // 8us sample rate
+    Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 600); // 10us sample rate
 
     // write one page in each regular and low power mode
     Time_delay(30);
@@ -1135,36 +1147,38 @@ uint16 Tests_test13(uint32 argv, void *argc)
       break;
 
     // Complete the samples
-    while(sTests.adc1.isSampling || sTests.adc3.isSampling);
+    while(sTests.adc1.isSampling || sTests.adc2.isSampling|| sTests.adc3.isSampling);
     ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
 
     // Aggregate the results into the voltage and current averages
     for (j = 0; j < TESTS_MAX_SAMPLES; j++)
     {
       sTests.vAvg[j] += sTests.adc1.adcBuffer[j];
-      sTests.iAvg[j] += sTests.adc3.adcBuffer[j];
+      sTests.iAvg[j] += sTests.adc2.adcBuffer[j];
+      sTests.oAvg[j] += sTests.adc3.adcBuffer[j];
       sTests.sAvg[j] += sTests.periphState.adcBuffer[j];
     }
   }
   Tests_teardownSPITests();  // Only turn the domain off at the very end of iterations
-  sprintf(sTests.chanHeader[0].title, "Domain Voltage (V)");
-  sprintf(sTests.chanHeader[1].title, "Domain Input Current (mA)");
-  sprintf(sTests.chanHeader[2].title, "Domain Output Current (mA)");
-  sprintf(sTests.chanHeader[3].title, "EEPROM State");
 
-  if (i == numSweeps)
+  if (i == TESTS_MAX_SWEEPS) // Only normalize the data if the test didn't break early (all passed)
   {
+    sprintf(sTests.testHeader.title, "All EEPROM Profiles");
     // Sample / Accumulate complete, divide by the number of samples
     for (i = 0; i < TESTS_MAX_SAMPLES; i++)
     {
-      sTests.adc1.adcBuffer[i]        = (uint16)(sTests.vAvg[i] / numSweeps);
-      sTests.adc3.adcBuffer[i]        = (uint16)(sTests.iAvg[i] / numSweeps);
-      sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / numSweeps);
+      sTests.adc1.adcBuffer[i]        = (uint16)(sTests.vAvg[i] / TESTS_MAX_SWEEPS);
+      sTests.adc2.adcBuffer[i]        = (uint16)(sTests.iAvg[i] / TESTS_MAX_SWEEPS);
+      sTests.adc3.adcBuffer[i]        = (uint16)(sTests.oAvg[i] / TESTS_MAX_SWEEPS);
+      sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / TESTS_MAX_SWEEPS);
     }
     return SUCCESS;
   }
   else
+  {
+    sprintf(sTests.testHeader.title, "TEST FAILED");
     return ERROR;
+  }
 }
 
 /**************************************************************************************************\
@@ -1177,7 +1191,7 @@ uint16 Tests_test13(uint32 argv, void *argc)
 uint16 Tests_test14(uint32 argv, void *argc)
 {
   SerialFlashResult writeResult;
-  uint32 i, j, numSweeps = 5;
+  uint32 i, j;
 
   Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
   Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
@@ -1185,16 +1199,7 @@ uint16 Tests_test14(uint32 argv, void *argc)
   Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
   Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
 
-//  GPIOC->MODER |= 0x00050000;
-//  while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000))
-//  {
-//    Time_delay(250);
-//    GPIOC->ODR |= 0x00000100;
-//    Time_delay(250);
-//    GPIOC->ODR &= ~0x00000100;
-//  }
-
-  for (i = 0; i < numSweeps; i++)
+  for (i = 0; i < TESTS_MAX_SWEEPS; i++)
   {
     Tests_setupSPITests(SF_CHANNEL_OVERLOAD, 30000); // 500us sample rate
 
@@ -1214,27 +1219,29 @@ uint16 Tests_test14(uint32 argv, void *argc)
       break;
 
     // Complete the samples
-    while(sTests.adc1.isSampling || sTests.adc3.isSampling);
+    while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
     ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
 
     // Aggregate the results into the voltage and current averages
     for (j = 0; j < TESTS_MAX_SAMPLES; j++)
     {
       sTests.vAvg[j] += sTests.adc1.adcBuffer[j];
-      sTests.iAvg[j] += sTests.adc3.adcBuffer[j];
+      sTests.iAvg[j] += sTests.adc2.adcBuffer[j];
+      sTests.oAvg[j] += sTests.adc3.adcBuffer[j];
       sTests.sAvg[j] += sTests.periphState.adcBuffer[j];
     }
   }
   Tests_teardownSPITests();  // Only turn the domain off at the very end of iterations
 
-  if (i == numSweeps)
+  if (i == TESTS_MAX_SWEEPS)
   {
     // Sample / Accumulate complete, divide by the number of samples
     for (i = 0; i < TESTS_MAX_SAMPLES; i++)
     {
-      sTests.adc1.adcBuffer[i]    = (uint16)(sTests.vAvg[i] / numSweeps);
-      sTests.adc3.adcBuffer[i]    = (uint16)(sTests.iAvg[i] / numSweeps);
-      sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / numSweeps);
+      sTests.adc1.adcBuffer[i]        = (uint16)(sTests.vAvg[i] / TESTS_MAX_SWEEPS);
+      sTests.adc2.adcBuffer[i]        = (uint16)(sTests.iAvg[i] / TESTS_MAX_SWEEPS);
+      sTests.adc3.adcBuffer[i]        = (uint16)(sTests.oAvg[i] / TESTS_MAX_SWEEPS);
+      sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / TESTS_MAX_SWEEPS);
     }
     return SUCCESS;
   }
@@ -1251,14 +1258,14 @@ uint16 Tests_test14(uint32 argv, void *argc)
 \**************************************************************************************************/
 uint16 Tests_test15(uint32 argv, void *argc)
 {
-  uint32 i, j, numSweeps = 10;
+  uint32 i, j;
 
   Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
   Util_fillMemory(&sTests.iAvg, sizeof(sTests.iAvg), 0x00);
   Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
   Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
 
-  for (i = 0; i < numSweeps; i++)
+  for (i = 0; i < TESTS_MAX_SWEEPS; i++)
   {
     Tests_setupSPITests(SF_CHANNEL_OVERLOAD, 2400); // 40us sample rate
 
@@ -1273,27 +1280,29 @@ uint16 Tests_test15(uint32 argv, void *argc)
       break;
 
     // Complete the samples
-    while(sTests.adc1.isSampling || sTests.adc3.isSampling);
+    while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
     ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
 
     // Aggregate the results into the voltage and current averages
     for (j = 0; j < TESTS_MAX_SAMPLES; j++)
     {
       sTests.vAvg[j] += sTests.adc1.adcBuffer[j];
-      sTests.iAvg[j] += sTests.adc3.adcBuffer[j];
+      sTests.iAvg[j] += sTests.adc2.adcBuffer[j];
+      sTests.oAvg[j] += sTests.adc3.adcBuffer[j];
       sTests.sAvg[j] += sTests.periphState.adcBuffer[j];
     }
   }
   Tests_teardownSPITests();  // Only turn the domain off at the very end of iterations
 
-  if (i == numSweeps)
+  if (i == TESTS_MAX_SWEEPS)
   {
     // Sample / Accumulate complete, divide by the number of samples
     for (i = 0; i < TESTS_MAX_SAMPLES; i++)
     {
-      sTests.adc1.adcBuffer[i]    = (uint16)(sTests.vAvg[i] / numSweeps);
-      sTests.adc3.adcBuffer[i]    = (uint16)(sTests.iAvg[i] / numSweeps);
-      sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / numSweeps);
+      sTests.adc1.adcBuffer[i]        = (uint16)(sTests.vAvg[i] / TESTS_MAX_SWEEPS);
+      sTests.adc2.adcBuffer[i]        = (uint16)(sTests.iAvg[i] / TESTS_MAX_SWEEPS);
+      sTests.adc3.adcBuffer[i]        = (uint16)(sTests.oAvg[i] / TESTS_MAX_SWEEPS);
+      sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / TESTS_MAX_SWEEPS);
     }
     return SUCCESS;
   }
@@ -1311,7 +1320,7 @@ uint16 Tests_test15(uint32 argv, void *argc)
 uint16 Tests_test16(uint32 argv, void *argc)
 {
   SDWriteResult writeResult;
-  uint32 i, j, numSweeps = 10;
+  uint32 i, j;
 
   Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
   Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
@@ -1319,7 +1328,7 @@ uint16 Tests_test16(uint32 argv, void *argc)
   Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
   Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
 
-  for (i = 0; i < numSweeps; i++)
+  for (i = 0; i < TESTS_MAX_SWEEPS; i++)
   {
     Tests_setupSPITests(SF_CHANNEL_OVERLOAD, 30000); // 500us sample rate
 
@@ -1339,27 +1348,29 @@ uint16 Tests_test16(uint32 argv, void *argc)
       break;
 
     // Complete the samples
-    while(sTests.adc1.isSampling || sTests.adc3.isSampling);
+    while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
     ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
 
     // Aggregate the results into the voltage and current averages
     for (j = 0; j < TESTS_MAX_SAMPLES; j++)
     {
       sTests.vAvg[j] += sTests.adc1.adcBuffer[j];
-      sTests.iAvg[j] += sTests.adc3.adcBuffer[j];
+      sTests.iAvg[j] += sTests.adc2.adcBuffer[j];
+      sTests.oAvg[j] += sTests.adc3.adcBuffer[j];
       sTests.sAvg[j] += sTests.periphState.adcBuffer[j];
     }
   }
   Tests_teardownSPITests();  // Only turn the domain off at the very end of iterations
 
-  if (i == numSweeps)
+  if (i == TESTS_MAX_SWEEPS)
   {
     // Sample / Accumulate complete, divide by the number of samples
     for (i = 0; i < TESTS_MAX_SAMPLES; i++)
     {
-      sTests.adc1.adcBuffer[i]    = (uint16)(sTests.vAvg[i] / numSweeps);
-      sTests.adc3.adcBuffer[i]    = (uint16)(sTests.iAvg[i] / numSweeps);
-      sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / numSweeps);
+      sTests.adc1.adcBuffer[i]        = (uint16)(sTests.vAvg[i] / TESTS_MAX_SWEEPS);
+      sTests.adc2.adcBuffer[i]        = (uint16)(sTests.iAvg[i] / TESTS_MAX_SWEEPS);
+      sTests.adc3.adcBuffer[i]        = (uint16)(sTests.oAvg[i] / TESTS_MAX_SWEEPS);
+      sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / TESTS_MAX_SWEEPS);
     }
     return SUCCESS;
   }

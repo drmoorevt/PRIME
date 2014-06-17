@@ -1,4 +1,4 @@
-function [success, chans, data, time] = TestConsole(CommPort)
+function [success, name, chans, data, time] = TestConsole(CommPort)
     % Attempt to open the PEGMA comm port
     try
         s = serial(CommPort);
@@ -16,20 +16,28 @@ function [success, chans, data, time] = TestConsole(CommPort)
         return;
     end
  
+    for i = 1:3
+    
     % Bypassing test selection here to speed up debugging, going to 11
     try
-        [chans,data,time] = rtd(s, 14, 'ok!');
+        fprintf('\nExecution #%d/3\n',i);
+        [name, chans, data(:,:,i), time] = rtd(s, 13, 'ok!');
+        pause(0.5);
     catch ME
         ME
     end
+    
+    end
+    
     fclose(s);
     delete(s);
     clear s;
-    plot(time,data)
+    %plot(time,data)
+    stem3(time,chans,data)
     legend(chans)
     xlabel('Time (ms)');
     ylabel('Voltage (V)');
-    title('SERIAL FLASH PROFILE LP WAIT');
+    title(name);
     success = 1;
     
     % determine the demarcations between states of the two writes
