@@ -56,35 +56,61 @@ uint16 crc_itu_t(uint16 crc, const uint8 *buffer, uint32 len)
   return crc;
 }
 
-/*********************************************************************\
-* FUNCTION     CRC_rawCrc16
-* DESCRIPTION  Computes the partial crc of the data, it must be swapped
-* PARAMETERS   pData -- the data
-*              numBytes -- the length of the data
-*              polynom  -- polynomial used for crc calculation
-* RETURNS      the CRC of the data
-\*********************************************************************/
-static uint16 CRC_rawCrc16(uint16 initialCRC, const uint8 *pData, uint32 numBytes, uint16 polynom)
+/**************************************************************************************************\
+* FUNCTION     CRC_calCRC16
+* DESCRIPTION  Computes the 16bit CRC of pData
+* PARAMETERS   crc      - initial CRC value
+*              pData    - pointer to data
+*              numBytes - length of the data
+*              poly     - the polynomial to work with
+*              invert   - used if data is coming in LSB first, MUST USE CORRESPONDING REVERSE POLY
+* RETURNS      The CRC of pData
+* NOTES        When inverted, the data is reflected (MSb first to LSb first), then for each bit,
+*              if the LSB is set, we shift to the right and XOR with the polynomial. If not, we
+*              simply shift to the right. Finally, the entire CRC is reflected back LSb->MSb
+*              When not inverted, we shift to the left and check the MSB for polynomial XORing
+\**************************************************************************************************/
+static uint16 CRC_calCRC16(uint16 crc, const uint8 *pData, uint32 len, uint16 poly, boolean invert)
 {
-  uint8 i, byte, temp;
-  uint16 crc;
-
-  if (numBytes == 0)
-    return 0; //need to return something
-
-  crc = initialCRC;
-  do
+  uint32 bitPos;
+  if (invert)
   {
-    for (i = 0, byte = *pData++; i < 8; i++, byte >>= 1)
+    while (len--)
     {
-      temp = (uint8) ((uint8) crc & (uint8) 0x01);
-      crc >>= 1;
-      if (temp ^ (byte & 0x01))
-        crc ^= polynom;
+      crc ^= reflect(*pData++, 8);                            // Move new reflected data into LSb
+      for (bitPos = 0; bitPos < 8; bitPos++)                  // Loop over each bit
+        crc = (crc & 0x0001) ? (crc >> 1) ^ poly : crc >> 1;  // Checking LSb when reflected
     }
-  } while (--numBytes);
+    return reflect(crc, 16);                                  // Return CRC reflection
+  }
+  else
+  {
+    while (len--)
+    {
+      crc ^= (*pData++) << 8;                                 // Move new data into the MSB
+      for (bitPos = 0; bitPos < 8; bitPos++)                  // Loop over each bit
+        crc = (crc & 0x8000) ? (crc << 1) ^ poly : crc << 1;  // Checking MSb normally
+    }
+    return crc;
+  }
+}
 
-  return crc;
+#define BITMASK(X) (1L << (X))
+/* Returns the value v with the bottom b [0,32] bits reflected. */
+/* Example: reflect(0x3e23L,3) == 0x3e26                        */
+static uint32 reflect(uint32 v, uint32 b)
+{
+ uint32 i;
+ uint32 t = v;
+ for (i=0; i<b; i++)
+   {
+    if (t & 1L)
+       v|=  BITMASK((b-1)-i);
+    else
+       v&= ~BITMASK((b-1)-i);
+    t>>=1;
+   }
+ return v;
 }
 
 /*********************************************************************\
@@ -94,16 +120,16 @@ static uint16 CRC_rawCrc16(uint16 initialCRC, const uint8 *pData, uint32 numByte
 *              numBytes -- the length of the data
 * RETURNS      the CRC of the data
 \*********************************************************************/
-uint16 CRC_calcCRC16(uint16 initial, CRC16Polynomial crcType, const uint8 *pData, uint32 numBytes)
+uint16 CRC_crc16(uint16 initial, CRC16Polynomial crcType, const uint8 *pData, uint32 numBytes)
 {
   uint16 crc;
   switch (crcType)
   {
-    case CRC16_CCITT_POLY:
+    case CRC16_POLY_CCITT_STD:
       crc = crc_itu_t(initial, pData, numBytes);
       break;
-    case CRC16_IEEE_POLY:
-      crc = CRC_rawCrc16(initial, pData, numBytes, ANSI_REV_POLYNOMIAL);
+    case CRC16_POLY_ANSI_STD:
+      crc = CRC_calCRC16(initial, pData, numBytes, ANSI_REV_POLYNOMIAL, TRUE);
       break;
   }
   Util_swap16(&crc);

@@ -224,7 +224,7 @@ uint8 Tests_getTestToRun(void)
                                    sTests.comms.rxBuffer[2] != 's' &&
                                    sTests.comms.rxBuffer[3] != 't'))
       continue;
-    crcCalc = CRC_calcCRC16(crcCalc, CRC16_CCITT_POLY, sTests.comms.rxBuffer, 6);
+    crcCalc = CRC_calcCRC16(crcCalc, CRC16_POLY_CCITT_STD, sTests.comms.rxBuffer, 6);
     testToRun = sTests.comms.rxBuffer[4];
     argCount  = sTests.comms.rxBuffer[5];
 
@@ -232,7 +232,7 @@ uint8 Tests_getTestToRun(void)
     while (sTests.comms.receiving); // Wait for the packet, will either rxTimeout or txComplete
     if (sTests.comms.rxTimeout)
       continue;
-    crcCalc = CRC_calcCRC16(crcCalc, CRC16_CCITT_POLY, sTests.comms.rxBuffer, argCount + 2);
+    crcCalc = CRC_calcCRC16(crcCalc, CRC16_POLY_CCITT_STD, sTests.comms.rxBuffer, argCount + 2);
     packetCRC = (sTests.comms.rxBuffer[argCount + 1] << 8) +
                 (sTests.comms.rxBuffer[argCount + 2] << 0);
 

@@ -13,3 +13,4 @@
 13) Find smaller schotkey diode
 14) Determine necessity of pullups/downs
 15) SDCard is not 5v compatible. Remove it from SPI domain.
+16) Optically (or otherwise) isolate domains
