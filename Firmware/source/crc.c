@@ -1,12 +1,10 @@
 #include "crc.h"
 #include "util.h"
 
-#define CCITT_CRC_POLYNOMIAL    (0x1021)
+#define CCITT_STD_POLYNOMIAL    (0x1021)
 #define CCITT_REV_POLYNOMIAL    (0x8408)
-#define CCITT_REVREP_POLYNOMIAL (0x8810)
-#define ANSI_CRC_POLYNOMIAL     (0x8005)
+#define ANSI_STD_POLYNOMIAL     (0x8005)
 #define ANSI_REV_POLYNOMIAL     (0xA001)
-#define ANSI_REVREP_POLYNOMIAL  (0xC002)
 
 const uint16 crc_itu_t_table[256] =
 {
@@ -77,11 +75,11 @@ static uint16 CRC_calCRC16(uint16 crc, const uint8 *pData, uint32 len, uint16 po
   {
     while (len--)
     {
-      crc ^= reflect(*pData++, 8);                            // Move new reflected data into LSb
+      crc ^= Util_reflect(*pData++, 8);                       // Move new reflected data into LSb
       for (bitPos = 0; bitPos < 8; bitPos++)                  // Loop over each bit
         crc = (crc & 0x0001) ? (crc >> 1) ^ poly : crc >> 1;  // Checking LSb when reflected
     }
-    return reflect(crc, 16);                                  // Return CRC reflection
+    return Util_reflect(crc, 16);                             // Return CRC reflection
   }
   else
   {
@@ -93,24 +91,6 @@ static uint16 CRC_calCRC16(uint16 crc, const uint8 *pData, uint32 len, uint16 po
     }
     return crc;
   }
-}
-
-#define BITMASK(X) (1L << (X))
-/* Returns the value v with the bottom b [0,32] bits reflected. */
-/* Example: reflect(0x3e23L,3) == 0x3e26                        */
-static uint32 reflect(uint32 v, uint32 b)
-{
- uint32 i;
- uint32 t = v;
- for (i=0; i<b; i++)
-   {
-    if (t & 1L)
-       v|=  BITMASK((b-1)-i);
-    else
-       v&= ~BITMASK((b-1)-i);
-    t>>=1;
-   }
- return v;
 }
 
 /*********************************************************************\
@@ -129,10 +109,9 @@ uint16 CRC_crc16(uint16 initial, CRC16Polynomial crcType, const uint8 *pData, ui
       crc = crc_itu_t(initial, pData, numBytes);
       break;
     case CRC16_POLY_ANSI_STD:
-      crc = CRC_calCRC16(initial, pData, numBytes, ANSI_REV_POLYNOMIAL, TRUE);
+      crc = CRC_calCRC16(initial, pData, numBytes, ANSI_STD_POLYNOMIAL, TRUE);
       break;
   }
-  Util_swap16(&crc);
   return crc;
 }
 

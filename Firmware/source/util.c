@@ -2,6 +2,30 @@
 
 #define FILE_ID UTIL_C
 
+
+#define BITMASK(X) (1L << (X))
+/**************************************************************************************************\
+* FUNCTION     Util_spinWait
+* DESCRIPTION  Returns the inWord with the bottom nbrToReflect bits reflected
+* PARAMETERS   inWord: The word to reflect
+*              nbrToReflect: The number of bits in inWord (from the bottom) to reflect
+* RETURNS      Nothing
+* NOTES        Example: reflect(0x3e23L,3) == 0x3e26
+\**************************************************************************************************/
+uint32 Util_reflect(uint32 inWord, uint32 nbrToReflect)
+{
+ uint32 i, t = inWord;
+ for (i = 0; i < nbrToReflect; i++)
+   {
+    if (t & 1L)
+      inWord |=  BITMASK((nbrToReflect - 1) - i);
+    else
+      inWord &= ~BITMASK((nbrToReflect - 1) - i);
+    t >>= 1;
+   }
+ return inWord;
+}
+
 /**************************************************************************************************\
 * FUNCTION     Util_spinWait
 * DESCRIPTION  Spins in a loop the number of times provided

@@ -37,7 +37,7 @@ typedef enum
   TEST_COMPLETE = 4
 } TestState;
 
-enum
+typedef enum
 {
   TEST_RUN_COMMAND      = 0,
   TEST_STATUS_COMMAND   = 1,
@@ -69,12 +69,16 @@ typedef struct
   double bitRes;
 } ChanHeader;
 
+typedef struct
+{
+  uint8 fillVal;
+  uint8 *pDest;
+  EEPROMPowerProfile profile;
+} Test11Args;
+
 typedef union
 {
-  struct
-  {
-    uint8 a,b,c;
-  } Test1Args;
+  Test11Args test11Args;
   uint8 asBytes[256];
 } TestArgs;
 
@@ -105,26 +109,25 @@ static struct
   } comms;
 } sTests;
 
-uint16 Tests_test0(uint32 argv, void *argc);
-uint16 Tests_test1(uint32 argv, void *argc);
-uint16 Tests_test2(uint32 argv, void *argc);
-uint16 Tests_test3(uint32 argv, void *argc);
-uint16 Tests_test4(uint32 argv, void *argc);
-uint16 Tests_test5(uint32 argv, void *argc);
-uint16 Tests_test6(uint32 argv, void *argc);
-uint16 Tests_test7(uint32 argv, void *argc);
-uint16 Tests_test8(uint32 argv, void *argc);
-uint16 Tests_test9(uint32 argv, void *argc);
-uint16 Tests_test10(uint32 argv, void *argc);
-uint16 Tests_test11(uint32 argv, void *argc);
-uint16 Tests_test12(uint32 argv, void *argc);
-uint16 Tests_test13(uint32 argv, void *argc);
-uint16 Tests_test14(uint32 argv, void *argc);
-uint16 Tests_test15(uint32 argv, void *argc);
-uint16 Tests_test16(uint32 argv, void *argc);
-uint16 Tests_test17(uint32 argv, void *argc);
+uint16 Tests_test00(void *pArgs);
+uint16 Tests_test01(void *pArgs);
+uint16 Tests_test02(void *pArgs);
+uint16 Tests_test03(void *pArgs);
+uint16 Tests_test04(void *pArgs);
+uint16 Tests_test05(void *pArgs);
+uint16 Tests_test06(void *pArgs);
+uint16 Tests_test07(void *pArgs);
+uint16 Tests_test08(void *pArgs);
+uint16 Tests_test09(void *pArgs);
+uint16 Tests_test10(void *pArgs);
+uint16 Tests_test11(void *pArgs);
+uint16 Tests_test12(void *pArgs);
+uint16 Tests_test13(void *pArgs);
+uint16 Tests_test14(void *pArgs);
+uint16 Tests_test15(void *pArgs);
+uint16 Tests_test16(void *pArgs);
+uint16 Tests_test17(void *pArgs);
 
-uint8 Tests_parseTestCommand(void);
 void Tests_notifyReceiveComplete(uint32 numBytes);
 void Tests_notifyTransmitComplete(uint32 numBytes);
 void Tests_notifyUnexpectedReceive(uint8 byte);
@@ -133,18 +136,18 @@ void Tests_sendBinaryResults(Samples *adcBuffer);
 void Tests_sendHeaderInfo(void);
 
 // A test function returns the number of data bytes and takes argc/argv parameters
-typedef uint16 (*TestFunction)(uint32 argv, void *argc);
+typedef uint16 (*TestFunction)(void *pArgs);
 
-TestFunction testFunctions[] = { &Tests_test0,
-                                 &Tests_test1,
-                                 &Tests_test2,
-                                 &Tests_test3,
-                                 &Tests_test4,
-                                 &Tests_test5,
-                                 &Tests_test6,
-                                 &Tests_test7,
-                                 &Tests_test8,
-                                 &Tests_test9,
+TestFunction testFunctions[] = { &Tests_test00,
+                                 &Tests_test01,
+                                 &Tests_test02,
+                                 &Tests_test03,
+                                 &Tests_test04,
+                                 &Tests_test05,
+                                 &Tests_test06,
+                                 &Tests_test07,
+                                 &Tests_test08,
+                                 &Tests_test09,
                                  &Tests_test10,
                                  &Tests_test11,
                                  &Tests_test12,
@@ -224,21 +227,19 @@ uint8 Tests_getTestToRun(void)
                                    sTests.comms.rxBuffer[2] != 's' &&
                                    sTests.comms.rxBuffer[3] != 't'))
       continue;
-    crcCalc = CRC_calcCRC16(crcCalc, CRC16_POLY_CCITT_STD, sTests.comms.rxBuffer, 6);
     testToRun = sTests.comms.rxBuffer[4];
     argCount  = sTests.comms.rxBuffer[5];
+    crcCalc   = CRC_crc16(crcCalc, CRC16_POLY_CCITT_STD, sTests.comms.rxBuffer, 6);
 
     Tests_receiveData(argCount + 2, 1000);  // Grab the arguments and CRC
     while (sTests.comms.receiving); // Wait for the packet, will either rxTimeout or txComplete
     if (sTests.comms.rxTimeout)
       continue;
-    crcCalc = CRC_calcCRC16(crcCalc, CRC16_POLY_CCITT_STD, sTests.comms.rxBuffer, argCount + 2);
+    crcCalc   = CRC_crc16(crcCalc, CRC16_POLY_CCITT_STD, sTests.comms.rxBuffer, argCount + 2);
     packetCRC = (sTests.comms.rxBuffer[argCount + 1] << 8) +
                 (sTests.comms.rxBuffer[argCount + 2] << 0);
 
-    //hasValidPacket = packetCRC == crcCalc;
-    hasValidPacket = TRUE;  // If we have made it here then we have all we need
-
+    hasValidPacket = packetCRC == crcCalc;
   } while (!hasValidPacket);
 
   Util_copyMemory(sTests.comms.rxBuffer, sTests.testArgs.asBytes, argCount);
@@ -340,7 +341,7 @@ void Tests_run(void)
       sTests.state = TEST_RUNNING; // No need to wait
       break;
     case TEST_RUNNING:
-      testFunctions[sTests.testToRun](0, NULL);
+      testFunctions[sTests.testToRun](&sTests.testArgs);
       // Notify user that test is complete and to expect sizeofTestData bytes
       Tests_sendHeaderInfo();
       Tests_sendBinaryResults(&sTests.adc1);
@@ -564,7 +565,7 @@ static void Tests_teardownSPITests(void)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-uint16 Tests_test0(uint32 argv, void *argc)
+uint16 Tests_test00(void *pArgs)
 {
   return 0;
 }
@@ -576,7 +577,7 @@ uint16 Tests_test0(uint32 argv, void *argc)
 * RETURNS     Nothing
 * NOTES       Basic sampling test based on pushbutton switches
 \**************************************************************************************************/
-uint16 Tests_test1(uint32 argv, void *argc)
+uint16 Tests_test01(void *pArgs)
 {
   Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
   Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
@@ -606,7 +607,7 @@ uint16 Tests_test1(uint32 argv, void *argc)
 * RETURNS     Nothing
 * NOTES       Testing DAC output on port 2
 \**************************************************************************************************/
-uint16 Tests_test2(uint32 argv, void *argc)
+uint16 Tests_test02(void *pArgs)
 {
   float outVolts;
   while(1)
@@ -623,7 +624,7 @@ uint16 Tests_test2(uint32 argv, void *argc)
 * RETURNS     Number of bytes generated by the test
 * NOTES       This test attempts to
 \**************************************************************************************************/
-uint16 Tests_test3(uint32 argv, void *argc)
+uint16 Tests_test03(void *pArgs)
 {
   uint32 i;
   // All pins connected to this domain set to inputs to prevent leakage
@@ -660,7 +661,7 @@ uint16 Tests_test3(uint32 argv, void *argc)
 * RETURNS     Nothing
 * NOTES       Tests writing to EEPROM
 \**************************************************************************************************/
-uint16 Tests_test4(uint32 argv, void *argc)
+uint16 Tests_test04(void *pArgs)
 {
   uint8 testBuffer[128];
 
@@ -689,7 +690,7 @@ uint16 Tests_test4(uint32 argv, void *argc)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-uint16 Tests_test5(uint32 argv, void *argc)
+uint16 Tests_test05(void *pArgs)
 {
   uint8 txBuffer[128];
   uint8 rxBuffer[128];
@@ -724,7 +725,7 @@ uint16 Tests_test5(uint32 argv, void *argc)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-uint16 Tests_test6(uint32 argv, void *argc)
+uint16 Tests_test06(void *pArgs)
 {
   uint8 txBuffer[128];
   uint8 rxBuffer[128];
@@ -760,7 +761,7 @@ uint16 Tests_test6(uint32 argv, void *argc)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-uint16 Tests_test7(uint32 argv, void *argc)
+uint16 Tests_test07(void *pArgs)
 { 
   uint8 testBuffer[128];
   
@@ -793,7 +794,7 @@ uint16 Tests_test7(uint32 argv, void *argc)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-uint16 Tests_test8(uint32 argv, void *argc)
+uint16 Tests_test08(void *pArgs)
 {
   AppCommConfig comm5 = { {UART_BAUDRATE_115200, UART_FLOWCONTROL_NONE, TRUE, TRUE},
                            &sTests.comms.rxBuffer[0], &Tests_notifyReceiveComplete,
@@ -840,7 +841,7 @@ uint16 Tests_test8(uint32 argv, void *argc)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-uint16 Tests_test9(uint32 argv, void *argc)
+uint16 Tests_test09(void *pArgs)
 {
   AppADCConfig adc1Config = {0};
   AppADCConfig adc2Config = {0};
@@ -903,7 +904,7 @@ uint16 Tests_test9(uint32 argv, void *argc)
 * RETURNS     Number of bytes generated by the test
 * NOTES       None
 \**************************************************************************************************/
-uint16 Tests_test10(uint32 argv, void *argc)
+uint16 Tests_test10(void *pArgs)
 {
   AppADCConfig adc1Config = {0};
   AppADCConfig adc2Config = {0};
@@ -1010,27 +1011,17 @@ uint16 Tests_test10(uint32 argv, void *argc)
 * RETURNS     Number of bytes generated by the test
 * NOTES       None
 \**************************************************************************************************/
-uint16 Tests_test11(uint32 argv, void *argc)
+uint16 Tests_test11(void *pArgs)
 {
-  uint8 aBuf[128], bBuf[128];
-  Util_fillMemory(aBuf, 128, 0xAA);
-  Util_fillMemory(bBuf, 128, 0xBB);
+  Test11Args *pTestArgs = pArgs;
 
-  // Fill test locations with an erroneous value so we know success or failure
-  EEPROM_setPowerState(EEPROM_STATE_WAITING, 3.3);
-  EEPROM_fill((uint8*)0, 256, 0xCC);
+  EEPROM_setPowerProfile(pTestArgs->profile);
 
   Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900); // 15us sample rate
-
   Time_delay(5000);
-  EEPROM_setPowerState(EEPROM_STATE_WAITING, 3.3);
-  EEPROM_write(aBuf, (uint8*)0, 128);
+  EEPROM_fill(pTestArgs->pDest, 128, pTestArgs->fillVal);
   Time_delay(5000);
-  EEPROM_setPowerState(EEPROM_STATE_WAITING, 1.8);
-  EEPROM_write(bBuf, (uint8*)128, 128);
-  // Complete the samples
   while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-
   Tests_teardownSPITests();
 
   return SUCCESS;
@@ -1044,7 +1035,7 @@ uint16 Tests_test11(uint32 argv, void *argc)
 * NOTES       This test uses the same technique as test11, but performs the test iteratively and
 *             aggregates the results.
 \**************************************************************************************************/
-uint16 Tests_test12(uint32 argv, void *argc)
+uint16 Tests_test12(void *pArgs)
 {
   uint16 i, j;
   Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
@@ -1099,7 +1090,7 @@ uint16 Tests_test12(uint32 argv, void *argc)
 * RETURNS     Number of bytes generated by the test
 * NOTES       This test uses the same technique as test12, but uses the XtremeLowPower function
 \**************************************************************************************************/
-uint16 Tests_test13(uint32 argv, void *argc)
+uint16 Tests_test13(void *pArgs)
 {
   uint32 i, j;
 
@@ -1188,7 +1179,7 @@ uint16 Tests_test13(uint32 argv, void *argc)
 * RETURNS     Number of bytes generated by the test
 * NOTES       This test attempts basic operation of the SerialFlash
 \**************************************************************************************************/
-uint16 Tests_test14(uint32 argv, void *argc)
+uint16 Tests_test14(void *pArgs)
 {
   SerialFlashResult writeResult;
   uint32 i, j;
@@ -1256,7 +1247,7 @@ uint16 Tests_test14(uint32 argv, void *argc)
 * RETURNS     Number of bytes generated by the test
 * NOTES       This test attempts power profile operation of the HIH Temp/Humid module
 \**************************************************************************************************/
-uint16 Tests_test15(uint32 argv, void *argc)
+uint16 Tests_test15(void *pArgs)
 {
   uint32 i, j;
 
@@ -1317,7 +1308,7 @@ uint16 Tests_test15(uint32 argv, void *argc)
 * RETURNS     Number of bytes generated by the test
 * NOTES       This test attempts power profile operation of the SDCard
 \**************************************************************************************************/
-uint16 Tests_test16(uint32 argv, void *argc)
+uint16 Tests_test16(void *pArgs)
 {
   SDWriteResult writeResult;
   uint32 i, j;
@@ -1385,7 +1376,7 @@ uint16 Tests_test16(uint32 argv, void *argc)
 * RETURNS     Number of bytes generated by the test
 * NOTES       This test attempts basic operation of the HIH_6130_021
 \**************************************************************************************************/
-uint16 Tests_test17(uint32 argv, void *argc)
+uint16 Tests_test17(void *pArgs)
 {
   uint8  i;
   HIHStatus sensorStatus;

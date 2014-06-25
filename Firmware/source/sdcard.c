@@ -507,7 +507,8 @@ static SDCommandResult SDCard_getDataBlock(const uint8 token)
   {
     SPI_read((uint8 *)&sSDCard.respBlock, sSDCard.blockLen);
     SPI_read((uint8 *)&cardCRC, 2);
-    calcCRC = CRC_calcCRC16(0, CRC16_POLY_CCITT_STD, (uint8 *)&sSDCard.respBlock, sSDCard.blockLen);
+    Util_swap16(&cardCRC);  // Card is going to send the CRC BIG_ENDIAN
+    calcCRC = CRC_crc16(0, CRC16_POLY_CCITT_STD, (uint8 *)&sSDCard.respBlock, sSDCard.blockLen);
     if (calcCRC != cardCRC)
       return SDCARD_BAD_CRC;
     else
@@ -576,7 +577,8 @@ boolean SDCard_read(uint8 *pSrc, uint8 *pDest, uint16 length)
 static SDCommandResult SDCard_sendDataBlock(uint8 token)
 {
   uint8  resp;
-  uint16 crc = CRC_calcCRC16(0, CRC16_POLY_CCITT_STD, (uint8 *)&sSDCard.respBlock, sSDCard.blockLen);
+  uint16 crc = CRC_crc16(0, CRC16_POLY_CCITT_STD, (uint8 *)&sSDCard.respBlock, sSDCard.blockLen);
+  Util_swap16(&crc);  // Card needs to receive the CRC BIG_ENDIAN
 
   SPI_write(&token, 1);
   SPI_write((uint8 *)&sSDCard.respBlock, sSDCard.blockLen);
@@ -743,8 +745,8 @@ void SDCard_test(void)
     else
     {
       Util_fillMemory((uint8 *)&sSDCard.respBlock.arg.reference[0], sSDCard.blockLen, 0xFF);
-      crcNorm = CRC_calcCRC16(0, CRC16_POLY_CCITT_STD, sSDCard.respBlock.arg.reference, sSDCard.blockLen);
-      crcRev = CRC_calcCRC16(0, CRC16_POLY_ANSI_STD, sSDCard.respBlock.arg.reference, sSDCard.blockLen);
+      crcNorm = CRC_crc16(0, CRC16_POLY_CCITT_STD, sSDCard.respBlock.arg.reference, sSDCard.blockLen);
+      crcRev = CRC_crc16(0, CRC16_POLY_ANSI_STD, sSDCard.respBlock.arg.reference, sSDCard.blockLen);
       Util_fillMemory((uint8 *)&sSDCard.respBlock.arg.reference[0], sSDCard.blockLen, 0xFF);
     }
   }
