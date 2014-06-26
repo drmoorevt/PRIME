@@ -271,19 +271,19 @@ void UART_handleInterrupt(UARTPort port)
       if (pStatus->bytesReceived >= pStatus->bytesToReceive)
       { // finished now? -- last expected byte is in the data register
         UART_stopReceive(port);
-        sUART.port[port].appConfig.appNotifyReceiveComplete(pStatus->bytesReceived);
+        sUART.port[port].appConfig.appNotifyCommsEvent(COMMS_EVENT_RX_COMPLETE, 0);
       }
     }
     else
     { // App not ready for this reception, throw it away and disable the interrupt
-      sUART.port[port].appConfig.appNotifyUnexpectedReceive(pUART->DR);
+      sUART.port[port].appConfig.appNotifyCommsEvent(COMMS_EVENT_RX_INTERRUPT, (uint32)pUART->DR);
       CLEAR_BIT(pUART->CR1, USART_CR1_RXNEIE); // Disable the rx data reg not empty int
     }
   }
   
   if (READ_BIT(USART_STATUS, USART_SR_TC)) // Last byte shifted out of the shift reg
   {
-    sUART.port[port].appConfig.appNotifyTransmitComplete(pStatus->bytesSent);
+    sUART.port[port].appConfig.appNotifyCommsEvent(COMMS_EVENT_TX_COMPLETE, pStatus->bytesSent);
     pStatus->bytesToSend = 0;
     pStatus->bytesSent   = 0;
     pUART->SR &= (~USART_CR1_TCIE);  // Disable the transmit complete int
@@ -360,7 +360,7 @@ void UART_notifyTimeout(SoftTimer timer)
 {
   UARTPort port = UART_getPortHandle(timer);
   UART_stopReceive(port);
-  sUART.port[port].appConfig.appNotifyOperationTimeout(0);
+  sUART.port[port].appConfig.appNotifyCommsEvent(COMMS_EVENT_RX_TIMEOUT, 0);
 }
 
 /**************************************************************************************************\

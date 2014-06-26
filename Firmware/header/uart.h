@@ -48,15 +48,20 @@ typedef struct
   boolean     txEnabled;
 } UARTConfig;
 
+typedef enum
+{
+  COMMS_EVENT_RX_COMPLETE  = 0,
+  COMMS_EVENT_RX_TIMEOUT   = 1,
+  COMMS_EVENT_RX_INTERRUPT = 2,
+  COMMS_EVENT_TX_COMPLETE  = 3,
+} CommsEvent;
+
 typedef struct
 {
   UARTConfig UARTConfig;
-  void *appReceiveBuffer;
-  void (*appNotifyReceiveComplete)(uint32);
+  void (*appReceiveBuffer);
   void (*appTransmitBuffer);
-  void (*appNotifyTransmitComplete)(uint32);
-  void (*appNotifyUnexpectedReceive)(uint8);
-  void (*appNotifyOperationTimeout)(uint32);
+  void (*appNotifyCommsEvent)(CommsEvent, uint32);
 } AppCommConfig;
 
 void UART_init(void);

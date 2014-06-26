@@ -17,22 +17,20 @@ function [success, name, chans, data, time] = TestConsole(CommPort)
     end
  
     for i = 1:3
-    
-    % Bypassing test selection here to speed up debugging, going to 11
-    try
-        fprintf('\nExecution #%d/3\n',i);
-        [name, chans, data(:,:,i), time] = rtd(s, 13, 'ok!');
-        pause(0.5);
-    catch ME
-        ME
-    end
-    
+        try
+            fprintf('\nExecution #%d/3\n',i);
+            [name, chans, data(:,:,i), time] = rtd(s, 13, 'ok!');
+            pause(0.5);
+        catch ME
+            fprintf(ME);
+        end
     end
     
     fclose(s);
     delete(s);
     clear s;
     %plot(time,data)
+    %http://www.mathworks.com/help/matlab/creating_plots/plotting-with-two-y-axes.html
     stem3(time,chans,data)
     legend(chans)
     xlabel('Time (ms)');

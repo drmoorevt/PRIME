@@ -162,12 +162,29 @@ uint16 Tests_test15(void *pArgs);
 uint16 Tests_test16(void *pArgs);
 uint16 Tests_test17(void *pArgs);
 
-void Tests_notifyReceiveComplete(uint32 numBytes);
-void Tests_notifyTransmitComplete(uint32 numBytes);
-void Tests_notifyUnexpectedReceive(uint8 byte);
-void Tests_notifyReceiveTimedOut(uint32);
 void Tests_sendBinaryResults(Samples *adcBuffer);
 void Tests_sendHeaderInfo(void);
+
+void Tests_notifyCommsEvent(CommsEvent event, uint32 arg)
+{
+  switch (event)
+  {
+    case COMMS_EVENT_RX_COMPLETE:
+      sTests.comms.receiving = FALSE;
+      break;
+    case COMMS_EVENT_RX_TIMEOUT:
+      sTests.comms.receiving = FALSE;
+      sTests.comms.rxTimeout = TRUE;
+      break;
+    case COMMS_EVENT_RX_INTERRUPT:
+      break;
+    case COMMS_EVENT_TX_COMPLETE:
+      sTests.comms.transmitting = FALSE;
+      break;
+    default:
+      break;
+  }
+}
 
 // A test function returns the number of data bytes and takes argc/argv parameters
 typedef uint16 (*TestFunction)(void *pArgs);
@@ -194,37 +211,14 @@ TestFunction testFunctions[] = { &Tests_test00,
 void Tests_init(void)
 {
   AppCommConfig comm5 = { {UART_BAUDRATE_115200, UART_FLOWCONTROL_NONE, TRUE, TRUE},
-                           &sTests.comms.rxBuffer[0], &Tests_notifyReceiveComplete,
-                           &sTests.comms.txBuffer[0], &Tests_notifyTransmitComplete,
-                                                      &Tests_notifyUnexpectedReceive,
-                                                      &Tests_notifyReceiveTimedOut };
+                           &sTests.comms.rxBuffer[0],
+                           &sTests.comms.txBuffer[0],
+                           &Tests_notifyCommsEvent };
   Util_fillMemory(&sTests, sizeof(sTests), 0x00);
   Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3); // Enable analog domain
   Analog_setDomain(COMMS_DOMAIN,  TRUE, 3.3);  // Enable comms domain
   UART_openPort(UART_PORT5, comm5);
   sTests.comms.portOpen = TRUE;
-}
-
-void Tests_notifyReceiveComplete(uint32 numBytes)
-{
-  sTests.comms.receiving = FALSE;
-}
-
-void Tests_notifyTransmitComplete(uint32 numBytes)
-{
-  sTests.comms.transmitting = FALSE;
-}
-
-void Tests_notifyUnexpectedReceive(uint8 byte)
-{
-  return;
-}
-
-void Tests_notifyReceiveTimedOut(uint32 arg)
-{
-  sTests.comms.receiving = FALSE;
-  sTests.comms.rxTimeout = TRUE;
-  return;
 }
 
 /**************************************************************************************************\

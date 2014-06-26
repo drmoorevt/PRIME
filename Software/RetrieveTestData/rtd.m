@@ -1,12 +1,13 @@
 function [title,channels,results,time] = rtd(s, test, arg)
     argC = uint8(length(arg));
     testCommand = ['T','e','s','t','0','0'];
-    testCommand(5) = test;
-    testCommand(6) = argC;
-    testCommandWithArgs = strcat(testCommand, arg);
-    crc = crc16(testCommandWithArgs, '0000', 'A001');
-    testCommandWithArgs(7 + argC) = uint8(bitshift(crc,-8));
-    testCommandWithArgs(8 + argC) = uint8(crc);
+    testCommand(6) = test;
+    testCommand(7) = argC;
+    %testCommandWithArgs = strcat(testCommand, arg);
+    testCommandWithArgs = [testCommand, flatten(arg)];
+    crc = crc16(testCommandWithArgs, '0000', '8005');
+    testCommandWithArgs(8 + argC) = uint8(bitshift(crc,-8));
+    testCommandWithArgs(9 + argC) = uint8(crc);
 
     fprintf(s,'%s',testCommandWithArgs); % Execute test
     
