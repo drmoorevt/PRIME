@@ -170,7 +170,7 @@ boolean EEPROM_setPowerProfile(EEPROMPowerProfile profile)
 *             length - number of bytes to read
 * RETURNS     nothing
 \**************************************************************************************************/
-void EEPROM_readEE(const uint8 *pSrc, uint8 *pDest, uint16 length)
+void EEPROM_read(const uint8 *pSrc, uint8 *pDest, uint16 length)
 {
   uint8 cmd[ADDRBYTES_EE + 1];
   cmd[0] = OP_READ_MEMORY;
@@ -241,7 +241,7 @@ boolean EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
       EEPROM_setState(EEPROM_STATE_WAITING); // For monitoring and voltage control purposes
       Time_delay(5000); // EE_PAGE_WRITE_TIME
 
-      EEPROM_readEE(pDest, readBuf, numBytes); // Verify the write, re-enables then disables EEPROM
+      EEPROM_read(pDest, readBuf, numBytes); // Verify the write, re-enables then disables EEPROM
 
       writeFailed = (Util_compareMemory(pSrc, readBuf, (uint8)numBytes) != 0);
     } while (writeFailed && (retries-- != 0));
@@ -307,13 +307,13 @@ void EEPROM_test(void)
   Time_delay(1000000); // Wait 1000ms for domains to settle
 
   // basic read test
-  EEPROM_readEE((uint8*)0,test,sizeof(test));
+  EEPROM_read((uint8*)0,test,sizeof(test));
   EEPROM_write(buffer,(uint8*)0,sizeof(buffer));
-  EEPROM_readEE((uint8*)0,test,sizeof(test));
+  EEPROM_read((uint8*)0,test,sizeof(test));
 
   // boundary test
   EEPROM_write(buffer,(uint8*)(8),sizeof(buffer));
-  EEPROM_readEE((uint8*)(8),test,sizeof(test));
+  EEPROM_read((uint8*)(8),test,sizeof(test));
 
   while(1);
 }

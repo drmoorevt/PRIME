@@ -34,7 +34,7 @@ boolean EEPROM_setup(boolean state);
 EEPROMState EEPROM_getState(void);
 boolean EEPROM_setPowerProfile(EEPROMPowerProfile profile);
 boolean EEPROM_setPowerState(EEPROMState state, double vDomain);
-void EEPROM_readEE(const uint8 *pSrc, uint8 *pDest, uint16 length);
+void EEPROM_read(const uint8 *pSrc, uint8 *pDest, uint16 length);
 boolean EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length);
 boolean EEPROM_fill(uint8 *pDest, uint16 length, uint8 fillVal);
 void EEPROM_test(void);

@@ -18,8 +18,7 @@
 
 #define FILE_ID TESTS_C
 
-#define TESTS_MAX_SAMPLES (4096)
-#define TESTS_MAX_SWEEPS  (16)
+#define TESTS_MAX_SAMPLES (8192)
 
 typedef enum
 {
@@ -71,14 +70,53 @@ typedef struct
 
 typedef struct
 {
-  uint8 fillVal;
+  uint32 preTestDelayUs;
+  uint32 sampleRate;
+  uint32 postTestDelayUs;
+} CommonArgs;
+
+typedef struct
+{
+  CommonArgs commonArgs;
   uint8 *pDest;
+  uint16 writeLength;
+  uint8 writeBuffer[128];
   EEPROMPowerProfile profile;
 } Test11Args;
+
+typedef struct
+{
+  CommonArgs commonArgs;
+  uint8 *pDest;
+  uint16 writeLength;
+  uint8 writeBuffer[128];
+  SerialFlashPowerProfile profile;
+} Test12Args;
+
+typedef struct
+{
+  CommonArgs commonArgs;
+  uint8 *pDest;
+  uint16 writeLength;
+  uint8 writeBuffer[128];
+  SDCardPowerProfile profile;
+} Test13Args;
+
+typedef struct
+{
+  CommonArgs commonArgs;
+  boolean measure;
+  boolean read;
+  boolean convert;
+  HIHPowerProfile profile;
+} Test14Args;
 
 typedef union
 {
   Test11Args test11Args;
+  Test12Args test12Args;
+  Test13Args test13Args;
+  Test14Args test14Args;
   uint8 asBytes[256];
 } TestArgs;
 
@@ -94,10 +132,6 @@ static struct
   Samples adc2;
   Samples adc3;
   Samples periphState;
-  uint16  vAvg[TESTS_MAX_SAMPLES];
-  uint16  iAvg[TESTS_MAX_SAMPLES];
-  uint16  oAvg[TESTS_MAX_SAMPLES];
-  uint16  sAvg[TESTS_MAX_SAMPLES];
   struct
   {
     boolean portOpen;
@@ -193,6 +227,14 @@ void Tests_notifyReceiveTimedOut(uint32 arg)
   return;
 }
 
+/**************************************************************************************************\
+* FUNCTION    Tests_receiveData
+* DESCRIPTION Will wait for either the specified number of bytes or for the timeout to expire
+* PARAMETERS  numBytes: The number of bytes to wait for
+*             timeout: The maximum amount time in milliseconds to wait for the data
+* RETURNS     Nothing (uses callbacks via the UART notifyXXX mechanism)
+* NOTES       If timeout is 0 then the function can block forever
+\**************************************************************************************************/
 void Tests_receiveData(uint32 numBytes, uint32 timeout)
 {
   sTests.comms.receiving = TRUE;
@@ -200,6 +242,12 @@ void Tests_receiveData(uint32 numBytes, uint32 timeout)
   UART_receiveData(UART_PORT5, numBytes, timeout);
 }
 
+/**************************************************************************************************\
+* FUNCTION    Tests_sendData
+* DESCRIPTION Sends the specified number of bytes out the UART configured for tests
+* PARAMETERS  numBytes: The number of bytes from the txBuffer to send out
+* RETURNS     Nothing (uses callbacks via the UART notifyXXX mechanism)
+\**************************************************************************************************/
 void Tests_sendData(uint16 numBytes)
 {
   sTests.comms.transmitting = TRUE;
@@ -401,57 +449,6 @@ void Tests_sendBinaryResults(Samples *adcBuffer)
   }
 }
 
-void Tests_sendADCdata(void)
-{
-  uint16 i = 0, j = 0;
-
-  sTests.comms.txBuffer[i++] = 'T';
-  sTests.comms.txBuffer[i++] = '1';
-  sTests.comms.txBuffer[i++] = ' ';
-  sTests.comms.txBuffer[i++] = 'V';
-  sTests.comms.txBuffer[i++] = 'r';
-  sTests.comms.txBuffer[i++] = ' ';
-  sTests.comms.txBuffer[i++] = 'T';
-  sTests.comms.txBuffer[i++] = '1';
-  sTests.comms.txBuffer[i++] = ' ';
-  sTests.comms.txBuffer[i++] = 'B';
-  sTests.comms.txBuffer[i++] = 'I';
-  sTests.comms.txBuffer[i++] = ' ';
-  sTests.comms.txBuffer[i++] = 'T';
-  sTests.comms.txBuffer[i++] = '1';
-  sTests.comms.txBuffer[i++] = ' ';
-  sTests.comms.txBuffer[i++] = 'B';
-  sTests.comms.txBuffer[i++] = 'O';
-//  sTests.comms.txBuffer[i++] = '\r';
-//  sTests.comms.txBuffer[i++] = '\n';
-  sTests.comms.txBuffer[i++] = '\0';
-
-  Tests_sendData(i);
-  while(sTests.comms.transmitting); // wait to send out our test buffer
-  
-  for (i = 0; i < TESTS_MAX_SAMPLES; i++)
-  {  
-    Tests_receiveData(2, 0);
-    while(sTests.comms.receiving); // wait for two incoming bytes
-    
-    j = 0;
-    Util_uint16ToASCII(sTests.adc1.adcBuffer[i], (char*)&sTests.comms.txBuffer[j]);
-    j += 5;
-    sTests.comms.txBuffer[j++] = ' ';
-    Util_uint16ToASCII(sTests.adc2.adcBuffer[i], (char*)&sTests.comms.txBuffer[j]);
-    j += 5;
-    sTests.comms.txBuffer[j++] = ' ';
-    Util_uint16ToASCII(sTests.adc3.adcBuffer[i], (char*)&sTests.comms.txBuffer[j]);
-    j += 5;
-//    sTests.comms.txBuffer[j++] = '\r';
-//    sTests.comms.txBuffer[j++] = '\n';
-    sTests.comms.txBuffer[j++] = '\0';
-    
-    Tests_sendData(j);
-    while(sTests.comms.transmitting); // wait to send out our test buffer
-  }
-}
-
 /**************************************************************************************************\
 * FUNCTION    Tests_setupSPITests
 * DESCRIPTION Common setup actions for SPI tests
@@ -459,7 +456,7 @@ void Tests_sendADCdata(void)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-static void Tests_setupSPITests(PeripheralChannels periph, uint32 reloadVal)
+static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate)
 {
   AppADCConfig adc1Config = {0};
   AppADCConfig adc2Config = {0};
@@ -502,7 +499,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 reloadVal)
   adc3Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
 
   // Prepare data structures for retrieval
-  sTests.testHeader.timeScale = reloadVal / 60; // in microseconds (60MHz clock)
+  sTests.testHeader.timeScale = sampleRate; // in microseconds (60MHz clock)
   sTests.testHeader.numChannels = 4;
   sTests.testHeader.bytesPerChan = TESTS_MAX_SAMPLES * 2;
   sTests.chanHeader[0].chanNum  = adc1Config.adcConfig.chan[0].chanNum;
@@ -526,7 +523,8 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 reloadVal)
   sTests.adc1.isSampling = TRUE;
   sTests.adc2.isSampling = TRUE;
   sTests.adc3.isSampling = TRUE;
-  ADC_startSampleTimer(TIME_HARD_TIMER_TIMER3, reloadVal);     // Start timer3 triggered ADCs at xyz sample rate
+  // Start timer3 triggered ADCs at reloadVal = (sampleRate * 60), timer is at 60MHz
+  ADC_startSampleTimer(TIME_HARD_TIMER_TIMER3, sampleRate * 60);
 }
 
 /**************************************************************************************************\
@@ -536,8 +534,9 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 reloadVal)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-static void Tests_teardownSPITests(void)
+static void Tests_teardownSPITests(boolean testPassed)
 {
+  uint32 i;
   ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
 
   // Return domains to initial state
@@ -550,7 +549,14 @@ static void Tests_teardownSPITests(void)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
 
+  // Domain voltage readings come in resistor divided by two, normalize them here
+  for (i = 0; i < sizeof(sTests.adc1.adcBuffer); i++)
+    sTests.adc1.adcBuffer[i] >>= 1;
 
+  if (testPassed)
+    sprintf(sTests.testHeader.title, "Test Passed");
+  else
+    sprintf(sTests.testHeader.title, "TEST FAILED");
 
   sprintf(sTests.chanHeader[0].title, "Domain Voltage (V)");
   sprintf(sTests.chanHeader[1].title, "Domain Input Current (mA)");
@@ -649,7 +655,7 @@ uint16 Tests_test03(void *pArgs)
   // Complete the samples
   while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
 
-  Tests_teardownSPITests();
+  Tests_teardownSPITests(TRUE);
 
   return SUCCESS;
 }
@@ -663,7 +669,8 @@ uint16 Tests_test03(void *pArgs)
 \**************************************************************************************************/
 uint16 Tests_test04(void *pArgs)
 {
-  uint8 testBuffer[128];
+  uint8 txBuffer[128];
+  uint8 rxBuffer[128];
 
   Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
   Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
@@ -675,12 +682,13 @@ uint16 Tests_test04(void *pArgs)
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
   Time_delay(1000000); // Wait 1000ms for domains to settle
 
-  Util_fillMemory(testBuffer, 128, 0xA5);
-  while(1)
-  {
-    EEPROM_write(testBuffer, 0, 128);
-    Util_spinWait(2000000);
-  }
+  Util_fillMemory(txBuffer, sizeof(txBuffer), 0x5A);
+  EEPROM_write(txBuffer, 0, sizeof(txBuffer));
+
+  Util_fillMemory(rxBuffer, sizeof(rxBuffer), 0x00);
+  EEPROM_read(0, rxBuffer, sizeof(rxBuffer));
+
+  return SUCCESS;
 }
 
 /**************************************************************************************************\
@@ -688,7 +696,7 @@ uint16 Tests_test04(void *pArgs)
 * DESCRIPTION
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       None
+* NOTES       Tests writing to Serial Flash
 \**************************************************************************************************/
 uint16 Tests_test05(void *pArgs)
 {
@@ -703,19 +711,15 @@ uint16 Tests_test05(void *pArgs)
   Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-
   Time_delay(1000000); // Wait 1000ms for domains to settle
 
-  while(1)
-  {
-    while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
+  Util_fillMemory(txBuffer, sizeof(txBuffer), 0x5A);
+  SerialFlash_write(txBuffer, 0, sizeof(txBuffer));
 
-    Util_fillMemory(txBuffer, sizeof(txBuffer), 0x5A);
-    SerialFlash_write(txBuffer, 0, sizeof(txBuffer));
+  Util_fillMemory(rxBuffer, sizeof(rxBuffer), 0x00);
+  SerialFlash_read(0, rxBuffer, sizeof(rxBuffer));
 
-    Util_fillMemory(rxBuffer, sizeof(txBuffer), 0x00);
-    SerialFlash_read(0, rxBuffer, sizeof(txBuffer));
-  }
+  return SUCCESS;
 }
 
 /**************************************************************************************************\
@@ -723,7 +727,7 @@ uint16 Tests_test05(void *pArgs)
 * DESCRIPTION
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       None
+* NOTES       Tests writing to the SDCard
 \**************************************************************************************************/
 uint16 Tests_test06(void *pArgs)
 {
@@ -742,16 +746,13 @@ uint16 Tests_test06(void *pArgs)
 
   SDCard_initDisk();
 
-  while (1)
-  {
-    while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
+  Util_fillMemory(txBuffer, sizeof(txBuffer), 0x5A);
+  SDCard_write(txBuffer, 0, sizeof(txBuffer));
 
-    Util_fillMemory(txBuffer, sizeof(txBuffer), 0x5A);
-    SDCard_write(txBuffer, 0, sizeof(txBuffer));
+  Util_fillMemory(rxBuffer, sizeof(rxBuffer), 0x00);
+  SDCard_read(0, rxBuffer, sizeof(rxBuffer));
 
-    Util_fillMemory(rxBuffer, sizeof(txBuffer), 0x00);
-    SDCard_read(0, rxBuffer, sizeof(txBuffer));
-  }
+  return SUCCESS;
 }
 
 /**************************************************************************************************\
@@ -763,28 +764,7 @@ uint16 Tests_test06(void *pArgs)
 \**************************************************************************************************/
 uint16 Tests_test07(void *pArgs)
 { 
-  uint8 testBuffer[128];
-  
-  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,   TRUE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
-  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  
-  UART_init();
-  EEPROM_init();
-    
-  Util_fillMemory(testBuffer, 128, 0xA5); // @AGD: try writing 0x00 next!
-  
-  // START SAMPLER HERE
-  EEPROM_write(testBuffer, 0, 128);
-  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-  Tests_sendADCdata();
-  
-  while(1);
+  return SUCCESS;
 }
 
 /**************************************************************************************************\
@@ -796,42 +776,7 @@ uint16 Tests_test07(void *pArgs)
 \**************************************************************************************************/
 uint16 Tests_test08(void *pArgs)
 {
-  AppCommConfig comm5 = { {UART_BAUDRATE_115200, UART_FLOWCONTROL_NONE, TRUE, TRUE},
-                           &sTests.comms.rxBuffer[0], &Tests_notifyReceiveComplete,
-                           &sTests.comms.txBuffer[0], &Tests_notifyTransmitComplete,
-                                                      &Tests_notifyUnexpectedReceive,
-                                                      &Tests_notifyReceiveTimedOut };
-  uint8 testArray[18] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','\r','\n'};
-
-  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,   TRUE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Set domain voltage to nominal (3.25V)
-  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-
-  UART_init();
-  UART_openPort(UART_PORT5, comm5);
-
-  Util_copyMemory(&testArray[0], &sTests.comms.txBuffer[0], 18);
-
-  while(1)
-  {
-    Tests_receiveData(2, 0);
-    while(sTests.comms.receiving); // wait for one incoming byte
-
-    // Echo two bytes at a time
-    sTests.comms.txBuffer[0] = '\r';
-    sTests.comms.txBuffer[1] = '\n';
-    Util_copyMemory(&sTests.comms.rxBuffer[0], &sTests.comms.txBuffer[2], 2);
-    sTests.comms.txBuffer[4] = '\r';
-    sTests.comms.txBuffer[5] = '\n';
-
-    Tests_sendData(6);
-    while(sTests.comms.transmitting); // wait to send out our test buffer
-  }
+  return SUCCESS;
 }
 
 /**************************************************************************************************\
@@ -1013,16 +958,17 @@ uint16 Tests_test10(void *pArgs)
 \**************************************************************************************************/
 uint16 Tests_test11(void *pArgs)
 {
+  boolean testResult;
   Test11Args *pTestArgs = pArgs;
 
   EEPROM_setPowerProfile(pTestArgs->profile);
 
-  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900); // 15us sample rate
-  Time_delay(5000);
-  EEPROM_fill(pTestArgs->pDest, 128, pTestArgs->fillVal);
-  Time_delay(5000);
+  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
+  Time_delay(pTestArgs->commonArgs.preTestDelayUs);
+  testResult = EEPROM_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
+  Time_delay(pTestArgs->commonArgs.postTestDelayUs);
   while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-  Tests_teardownSPITests();
+  Tests_teardownSPITests(testResult);
 
   return SUCCESS;
 }
@@ -1037,48 +983,17 @@ uint16 Tests_test11(void *pArgs)
 \**************************************************************************************************/
 uint16 Tests_test12(void *pArgs)
 {
-  uint16 i, j;
-  Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
-  Util_fillMemory(&sTests.iAvg, sizeof(sTests.iAvg), 0x00);
-  Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
-  Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
+  boolean testResult;
+  Test12Args *pTestArgs = pArgs;
 
-  for (i = 0; i < TESTS_MAX_SWEEPS; i++)
-  {
-    Util_fillMemory(&sTests.comms.rxBuffer[0], 128, i);  // Using a variety of write bytes (i)
-    Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900);  // 15us sample rate
+  SerialFlash_setPowerProfile(pTestArgs->profile);
 
-    // write one page in each regular and low power mode
-    Util_spinWait(30000 * 4); // Can't use Time_delay due to non-determinism
-    EEPROM_setPowerState(EEPROM_STATE_WAITING, 3.3);
-    EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
-    Util_spinWait(30000 * 4); // Can't use Time_delay due to non-determinism
-    EEPROM_setPowerState(EEPROM_STATE_WAITING, 1.8);
-    EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128);
-
-    // Complete the samples
-    while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-    ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);  // Turn off sampling after each test iteration
-
-    // Aggregate the results into the voltage and current averages
-    for (j = 0; j < TESTS_MAX_SAMPLES; j++)
-    {
-      sTests.vAvg[j] += sTests.adc1.adcBuffer[j];
-      sTests.iAvg[j] += sTests.adc2.adcBuffer[j];
-      sTests.oAvg[j] += sTests.adc3.adcBuffer[j];
-      sTests.sAvg[j] += sTests.periphState.adcBuffer[j];
-    }
-  }
-  Tests_teardownSPITests();  // Only turn the domain off at the very end of iterations
-
-  // Sample / Accumulate complete, divide by the number of samples
-  for (i = 0; i < TESTS_MAX_SAMPLES; i++)
-  {
-    sTests.adc1.adcBuffer[i]        = (uint16)(sTests.vAvg[i] / TESTS_MAX_SWEEPS);
-    sTests.adc2.adcBuffer[i]        = (uint16)(sTests.iAvg[i] / TESTS_MAX_SWEEPS);
-    sTests.adc3.adcBuffer[i]        = (uint16)(sTests.oAvg[i] / TESTS_MAX_SWEEPS);
-    sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / TESTS_MAX_SWEEPS);
-  }
+  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
+  Time_delay(pTestArgs->commonArgs.preTestDelayUs);
+  testResult = SerialFlash_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
+  Time_delay(pTestArgs->commonArgs.postTestDelayUs);
+  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
+  Tests_teardownSPITests(testResult);
 
   return SUCCESS;
 }
@@ -1092,84 +1007,20 @@ uint16 Tests_test12(void *pArgs)
 \**************************************************************************************************/
 uint16 Tests_test13(void *pArgs)
 {
-  uint32 i, j;
+  SDWriteResult writeResult;
+  Test13Args *pTestArgs = pArgs;
 
-  Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
-  Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
-  Util_fillMemory(&sTests.iAvg, sizeof(sTests.iAvg), 0x00);
-  Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
-  Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
+  SDCard_setPowerProfile(pTestArgs->profile);
 
-  for (i = 0; i < TESTS_MAX_SWEEPS; i++)
-  {
-    // Using a variety of write bytes (i)
-    Util_fillMemory(&sTests.comms.rxBuffer[0], 128, i);
-    sTests.comms.rxBuffer[1] = 1;
-    sTests.comms.rxBuffer[2] = 2;
-    sTests.comms.rxBuffer[3] = 3;
-    sTests.comms.rxBuffer[4] = 4;
-    //Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 900); // 15us sample rate
-    Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 600); // 10us sample rate
+  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
+  Time_delay(pTestArgs->commonArgs.preTestDelayUs);
+  writeResult = SDCard_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
+  Time_delay(pTestArgs->commonArgs.postTestDelayUs);
+  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
 
-    // write one page in each regular and low power mode
-    Time_delay(30);
-    EEPROM_setPowerProfile(EEPROM_PROFILE_STANDARD);
-    if (EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)(128 * i), 128) != TRUE)
-      break;
+  Tests_teardownSPITests(SD_WRITE_RESULT_OK == writeResult);
 
-    Time_delay(30);
-    EEPROM_setPowerProfile(EEPROM_PROFILE_LP_IDLE_WAIT);
-    if (EEPROM_write(&sTests.comms.rxBuffer[1], (uint8*)(128 * i), 128) != TRUE)
-      break;
-
-    Time_delay(30);
-    EEPROM_setPowerProfile(EEPROM_PROFILE_MP_RW_LP_IW);
-    if (EEPROM_write(&sTests.comms.rxBuffer[2], (uint8*)(128 * i), 128) != TRUE)
-      break;
-
-    Time_delay(30);
-    EEPROM_setPowerProfile(EEPROM_PROFILE_LP_ALL);
-    if (EEPROM_write(&sTests.comms.rxBuffer[3], (uint8*)(128 * i), 128) != TRUE)
-      break;
-
-    Time_delay(30);
-    EEPROM_setPowerProfile(EEPROM_PROFILE_LPI_XLP_WAIT);
-    if (EEPROM_write(&sTests.comms.rxBuffer[4], (uint8*)(128 * i), 128) != TRUE)
-      break;
-
-    // Complete the samples
-    while(sTests.adc1.isSampling || sTests.adc2.isSampling|| sTests.adc3.isSampling);
-    ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
-
-    // Aggregate the results into the voltage and current averages
-    for (j = 0; j < TESTS_MAX_SAMPLES; j++)
-    {
-      sTests.vAvg[j] += sTests.adc1.adcBuffer[j];
-      sTests.iAvg[j] += sTests.adc2.adcBuffer[j];
-      sTests.oAvg[j] += sTests.adc3.adcBuffer[j];
-      sTests.sAvg[j] += sTests.periphState.adcBuffer[j];
-    }
-  }
-  Tests_teardownSPITests();  // Only turn the domain off at the very end of iterations
-
-  if (i == TESTS_MAX_SWEEPS) // Only normalize the data if the test didn't break early (all passed)
-  {
-    sprintf(sTests.testHeader.title, "All EEPROM Profiles");
-    // Sample / Accumulate complete, divide by the number of samples
-    for (i = 0; i < TESTS_MAX_SAMPLES; i++)
-    {
-      sTests.adc1.adcBuffer[i]        = (uint16)(sTests.vAvg[i] / TESTS_MAX_SWEEPS);
-      sTests.adc2.adcBuffer[i]        = (uint16)(sTests.iAvg[i] / TESTS_MAX_SWEEPS);
-      sTests.adc3.adcBuffer[i]        = (uint16)(sTests.oAvg[i] / TESTS_MAX_SWEEPS);
-      sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / TESTS_MAX_SWEEPS);
-    }
-    return SUCCESS;
-  }
-  else
-  {
-    sprintf(sTests.testHeader.title, "TEST FAILED");
-    return ERROR;
-  }
+  return SUCCESS;
 }
 
 /**************************************************************************************************\
@@ -1181,63 +1032,19 @@ uint16 Tests_test13(void *pArgs)
 \**************************************************************************************************/
 uint16 Tests_test14(void *pArgs)
 {
-  SerialFlashResult writeResult;
-  uint32 i, j;
+  HIHStatus hihResult;
+  Test14Args *pTestArgs = pArgs;
 
-  Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
-  Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
-  Util_fillMemory(&sTests.iAvg, sizeof(sTests.iAvg), 0x00);
-  Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
-  Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
+  HIH613X_setPowerProfile(pTestArgs->profile);
 
-  for (i = 0; i < TESTS_MAX_SWEEPS; i++)
-  {
-    Tests_setupSPITests(SF_CHANNEL_OVERLOAD, 30000); // 500us sample rate
+  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
+  Time_delay(pTestArgs->commonArgs.preTestDelayUs);
+  hihResult = HIH613X_readTempHumidI2CBB(pTestArgs->measure, pTestArgs->read, pTestArgs->convert);
+  Time_delay(pTestArgs->commonArgs.postTestDelayUs);
+  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
+  Tests_teardownSPITests(HIH_STATUS_NORMAL == hihResult);
 
-    // write one page in each regular and low power mode
-    Time_delay(45000);
-    Util_fillMemory(&sTests.comms.rxBuffer[0], 128, ((i * 2) + 0));
-    SerialFlash_setPowerProfile(SERIAL_FLASH_PROFILE_STANDARD);
-    writeResult = SerialFlash_write(sTests.comms.rxBuffer, (uint8 *)(128 * ((i * 2) + 0)), 128);
-    if (writeResult != SERIAL_FLASH_RESULT_OK)
-      break;
-    
-    Time_delay(45000);
-    Util_fillMemory(&sTests.comms.rxBuffer[0], 128, ((i * 2) + 1));
-    SerialFlash_setPowerProfile(SERIAL_FLASH_PROFILE_LP_ALL);
-    writeResult = SerialFlash_write(sTests.comms.rxBuffer, (uint8 *)(128 * ((i * 2) + 1)), 128);
-    if (writeResult != SERIAL_FLASH_RESULT_OK)
-      break;
-
-    // Complete the samples
-    while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-    ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
-
-    // Aggregate the results into the voltage and current averages
-    for (j = 0; j < TESTS_MAX_SAMPLES; j++)
-    {
-      sTests.vAvg[j] += sTests.adc1.adcBuffer[j];
-      sTests.iAvg[j] += sTests.adc2.adcBuffer[j];
-      sTests.oAvg[j] += sTests.adc3.adcBuffer[j];
-      sTests.sAvg[j] += sTests.periphState.adcBuffer[j];
-    }
-  }
-  Tests_teardownSPITests();  // Only turn the domain off at the very end of iterations
-
-  if (i == TESTS_MAX_SWEEPS)
-  {
-    // Sample / Accumulate complete, divide by the number of samples
-    for (i = 0; i < TESTS_MAX_SAMPLES; i++)
-    {
-      sTests.adc1.adcBuffer[i]        = (uint16)(sTests.vAvg[i] / TESTS_MAX_SWEEPS);
-      sTests.adc2.adcBuffer[i]        = (uint16)(sTests.iAvg[i] / TESTS_MAX_SWEEPS);
-      sTests.adc3.adcBuffer[i]        = (uint16)(sTests.oAvg[i] / TESTS_MAX_SWEEPS);
-      sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / TESTS_MAX_SWEEPS);
-    }
-    return SUCCESS;
-  }
-  else
-    return ERROR;
+  return SUCCESS;
 }
 
 /**************************************************************************************************\
@@ -1249,56 +1056,7 @@ uint16 Tests_test14(void *pArgs)
 \**************************************************************************************************/
 uint16 Tests_test15(void *pArgs)
 {
-  uint32 i, j;
-
-  Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
-  Util_fillMemory(&sTests.iAvg, sizeof(sTests.iAvg), 0x00);
-  Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
-  Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
-
-  for (i = 0; i < TESTS_MAX_SWEEPS; i++)
-  {
-    Tests_setupSPITests(SF_CHANNEL_OVERLOAD, 2400); // 40us sample rate
-
-    Time_delay(1000);
-    HIH613X_setPowerProfile(HIH_PROFILE_STANDARD);
-    if (HIH_STATUS_NORMAL != HIH613X_readTempHumidI2CBB(TRUE, TRUE, TRUE))
-      break;
-
-    Time_delay(1000);
-    HIH613X_setPowerProfile(HIH_PROFILE_LP_IDLE_READY);
-    if (HIH_STATUS_NORMAL != HIH613X_readTempHumidI2CBB(TRUE, TRUE, TRUE))
-      break;
-
-    // Complete the samples
-    while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-    ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
-
-    // Aggregate the results into the voltage and current averages
-    for (j = 0; j < TESTS_MAX_SAMPLES; j++)
-    {
-      sTests.vAvg[j] += sTests.adc1.adcBuffer[j];
-      sTests.iAvg[j] += sTests.adc2.adcBuffer[j];
-      sTests.oAvg[j] += sTests.adc3.adcBuffer[j];
-      sTests.sAvg[j] += sTests.periphState.adcBuffer[j];
-    }
-  }
-  Tests_teardownSPITests();  // Only turn the domain off at the very end of iterations
-
-  if (i == TESTS_MAX_SWEEPS)
-  {
-    // Sample / Accumulate complete, divide by the number of samples
-    for (i = 0; i < TESTS_MAX_SAMPLES; i++)
-    {
-      sTests.adc1.adcBuffer[i]        = (uint16)(sTests.vAvg[i] / TESTS_MAX_SWEEPS);
-      sTests.adc2.adcBuffer[i]        = (uint16)(sTests.iAvg[i] / TESTS_MAX_SWEEPS);
-      sTests.adc3.adcBuffer[i]        = (uint16)(sTests.oAvg[i] / TESTS_MAX_SWEEPS);
-      sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / TESTS_MAX_SWEEPS);
-    }
-    return SUCCESS;
-  }
-  else
-    return ERROR;
+  return SUCCESS;
 }
 
 /**************************************************************************************************\
@@ -1310,63 +1068,7 @@ uint16 Tests_test15(void *pArgs)
 \**************************************************************************************************/
 uint16 Tests_test16(void *pArgs)
 {
-  SDWriteResult writeResult;
-  uint32 i, j;
-
-  Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
-  Util_fillMemory(&sTests.vAvg, sizeof(sTests.vAvg), 0x00);
-  Util_fillMemory(&sTests.iAvg, sizeof(sTests.iAvg), 0x00);
-  Util_fillMemory(&sTests.sAvg, sizeof(sTests.sAvg), 0x00);
-  Util_fillMemory(&sTests.adc2.adcBuffer, sizeof(sTests.adc2.adcBuffer), 0x00);
-
-  for (i = 0; i < TESTS_MAX_SWEEPS; i++)
-  {
-    Tests_setupSPITests(SF_CHANNEL_OVERLOAD, 30000); // 500us sample rate
-
-    // write one page in each regular and low power mode
-    Time_delay(45000);
-    Util_fillMemory(&sTests.comms.rxBuffer[0], 128, ((i * 2) + 0));
-    SDCard_setPowerProfile(SDCARD_PROFILE_STANDARD);
-    writeResult = SDCard_write(sTests.comms.rxBuffer, (uint8 *)(128 * ((i * 2) + 0)), 128);
-    if (writeResult != SD_WRITE_RESULT_OK)
-      break;
-
-    Time_delay(45000);
-    Util_fillMemory(&sTests.comms.rxBuffer[0], 128, ((i * 2) + 1));
-    SDCard_setPowerProfile(SDCARD_PROFILE_LP_WAIT);
-    writeResult = SDCard_write(sTests.comms.rxBuffer, (uint8 *)(128 * ((i * 2) + 1)), 128);
-    if (writeResult != SD_WRITE_RESULT_OK)
-      break;
-
-    // Complete the samples
-    while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-    ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
-
-    // Aggregate the results into the voltage and current averages
-    for (j = 0; j < TESTS_MAX_SAMPLES; j++)
-    {
-      sTests.vAvg[j] += sTests.adc1.adcBuffer[j];
-      sTests.iAvg[j] += sTests.adc2.adcBuffer[j];
-      sTests.oAvg[j] += sTests.adc3.adcBuffer[j];
-      sTests.sAvg[j] += sTests.periphState.adcBuffer[j];
-    }
-  }
-  Tests_teardownSPITests();  // Only turn the domain off at the very end of iterations
-
-  if (i == TESTS_MAX_SWEEPS)
-  {
-    // Sample / Accumulate complete, divide by the number of samples
-    for (i = 0; i < TESTS_MAX_SAMPLES; i++)
-    {
-      sTests.adc1.adcBuffer[i]        = (uint16)(sTests.vAvg[i] / TESTS_MAX_SWEEPS);
-      sTests.adc2.adcBuffer[i]        = (uint16)(sTests.iAvg[i] / TESTS_MAX_SWEEPS);
-      sTests.adc3.adcBuffer[i]        = (uint16)(sTests.oAvg[i] / TESTS_MAX_SWEEPS);
-      sTests.periphState.adcBuffer[i] = (uint16)(sTests.sAvg[i] / TESTS_MAX_SWEEPS);
-    }
-    return SUCCESS;
-  }
-  else
-    return ERROR;
+  return SUCCESS;
 }
 
 /**************************************************************************************************\
