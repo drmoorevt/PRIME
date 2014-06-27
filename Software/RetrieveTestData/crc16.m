@@ -8,7 +8,7 @@ function crc = crc16(inBytes, initial, poly)
     for n = 1:length(inBytes)
         crc = bitxor(crc, bitshift(uint16(inBytes(n)), 8));
         for i = 1:8
-            flag = bitand(crc, hex2dec('8000'));
+            flag = bitand(crc, hex2dec('8000')); % Use the MSb
             if (flag > 0)
                 crc = bitxor(bitshift(crc, 1), poly);
             else

@@ -1,9 +1,0 @@
-function args = commonArgs(preTestDelayUs, sampleRateUs, postTestDelayUs)
-    args.preTestDelayUs  = uint32(preTestDelayUs);
-    args.sampleRateUs    = uint32(sampleRateUs);
-    args.postTestDelayUs = uint32(postTestDelayUs);
-    %args = [uint32(preTestDelayUs),   ...
-    %        uint32(sampleRateUs),     ...
-    %        uint32(postTestDelayUs)   ...
-    %       ];
-end
