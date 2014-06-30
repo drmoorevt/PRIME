@@ -1,15 +1,8 @@
-function [title,channels,results,time] = rtd(s, test, arg)
-    argC = uint8(length(arg));
-    testCommand = ['T','e','s','t','0','0'];
-    testCommand(6) = test;
-    testCommand(7) = argC;
-    %testCommandWithArgs = strcat(testCommand, arg);
-    testCommandWithArgs = [testCommand, flatten(arg)];
-    crc = crc16(testCommandWithArgs, '0000', '8005');
-    testCommandWithArgs(8 + argC) = uint8(bitshift(crc,-8));
-    testCommandWithArgs(9 + argC) = uint8(crc);
-
-    fprintf(s,'%s',testCommandWithArgs); % Execute test
+function [title,channels,results,time] = rtd(s, test, args)
+    testCommand = ['T','e','s', 't', test, uint8(length(args)), args];
+    crc = crc16(testCommand, '0000', '1021');
+    testCommand = [testCommand, typecast(swapbytes(uint16(crc)), 'uint8')];
+    fwrite(s, testCommand);
     
     % wait for the size of the header, timeout after 30 seconds
     i = 0;
@@ -62,7 +55,8 @@ function [title,channels,results,time] = rtd(s, test, arg)
     
     % wait for test data, timeout after 5 seconds
     i = 0;
-    while((s.BytesAvailable < testBytes) && (i < 50))
+    fprintf('Getting data from test fixture... \n');
+    while((s.BytesAvailable < testBytes) && (i < 100))
         i = i + 1;
         pause(0.1);
     end;

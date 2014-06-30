@@ -165,6 +165,8 @@ void Time_startTimer(SoftTimerConfig timerConfig)
 \**************************************************************************************************/
 void Time_delay(uint32 microSeconds)
 {
+  if (0 == microSeconds)
+    return;
   RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;  // Turn on Timer5 clocks (60 MHz)
   TIM5->CR1     = (0x0000);            // Turn off the counter entirely
   TIM5->PSC     = (60);                // Set prescalar to 60. Timer operates at 60MHz.

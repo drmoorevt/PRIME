@@ -77,38 +77,38 @@ typedef struct
 
 typedef struct
 {
-  CommonArgs commonArgs;
-  uint8 *pDest;
-  uint16 writeLength;
+  CommonArgs commonArgs      __attribute__((packed));
+  EEPROMPowerProfile profile __attribute__((packed));
   uint8 writeBuffer[128];
-  EEPROMPowerProfile profile;
+  uint8 *pDest               __attribute__((packed));
+  uint16 writeLength         __attribute__((packed));
 } Test11Args;
 
 typedef struct
 {
-  CommonArgs commonArgs;
-  uint8 *pDest;
-  uint16 writeLength;
+  CommonArgs commonArgs      __attribute__((packed));
+  SerialFlashPowerProfile profile __attribute__((packed));
   uint8 writeBuffer[128];
-  SerialFlashPowerProfile profile;
+  uint8 *pDest               __attribute__((packed));
+  uint16 writeLength         __attribute__((packed));
 } Test12Args;
 
 typedef struct
 {
-  CommonArgs commonArgs;
-  uint8 *pDest;
-  uint16 writeLength;
+  CommonArgs commonArgs      __attribute__((packed));
+  SDCardPowerProfile profile __attribute__((packed));
   uint8 writeBuffer[128];
-  SDCardPowerProfile profile;
+  uint8 *pDest               __attribute__((packed));
+  uint16 writeLength         __attribute__((packed));
 } Test13Args;
 
 typedef struct
 {
   CommonArgs commonArgs;
+  HIHPowerProfile profile;
   boolean measure;
   boolean read;
   boolean convert;
-  HIHPowerProfile profile;
 } Test14Args;
 
 typedef union
@@ -256,12 +256,15 @@ void Tests_sendData(uint16 numBytes)
 \**************************************************************************************************/
 uint8 Tests_getTestToRun(void)
 {
-  uint16 crcCalc = 0x0000, packetCRC = 0x0000;
+  uint16 crcCalc, packetCRC = 0x0000;
   boolean hasValidPacket = FALSE;
   uint8 testToRun, argCount;
 
   do
   {
+    // Fill the rxBuffer with zero so that previous executions dont erroneously begin a test
+    Util_fillMemory(sTests.comms.rxBuffer, sizeof(sTests.comms.rxBuffer), 0x00);
+    // Grab the test execution packet up to the argCount
     Tests_receiveData(6, 1000);     // Look for "Test" bytes with a 1s timeout
     while (sTests.comms.receiving); // Wait for the packet, will either rxTimeout or txComplete
     if (sTests.comms.rxTimeout || (sTests.comms.rxBuffer[0] != 'T' &&
@@ -271,15 +274,15 @@ uint8 Tests_getTestToRun(void)
       continue;
     testToRun = sTests.comms.rxBuffer[4];
     argCount  = sTests.comms.rxBuffer[5];
-    crcCalc   = CRC_crc16(crcCalc, CRC16_POLY_CCITT_STD, sTests.comms.rxBuffer, 6);
-
+    crcCalc   = CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, sTests.comms.rxBuffer, 6);
+    // Grab the number of aguments from the test execution packet along with the CRC
     Tests_receiveData(argCount + 2, 1000);  // Grab the arguments and CRC
     while (sTests.comms.receiving); // Wait for the packet, will either rxTimeout or txComplete
     if (sTests.comms.rxTimeout)
       continue;
-    crcCalc   = CRC_crc16(crcCalc, CRC16_POLY_CCITT_STD, sTests.comms.rxBuffer, argCount + 2);
-    packetCRC = (sTests.comms.rxBuffer[argCount + 1] << 8) +
-                (sTests.comms.rxBuffer[argCount + 2] << 0);
+    crcCalc   = CRC_crc16(crcCalc, CRC16_POLY_CCITT_STD, sTests.comms.rxBuffer, argCount);
+    packetCRC = (sTests.comms.rxBuffer[argCount + 0] << 8) +
+                (sTests.comms.rxBuffer[argCount + 1] << 0);
 
     hasValidPacket = packetCRC == crcCalc;
   } while (!hasValidPacket);
@@ -433,12 +436,14 @@ void Tests_sendHeaderInfo(void)
 
 void Tests_sendBinaryResults(Samples *adcBuffer)
 {
-  uint16 i = 0;
-  for (i = 0; i < TESTS_MAX_SAMPLES; i++)
+  uint16 bytesToTransmit, bytesLeft;
+  uint8 *pData = (uint8 *)&adcBuffer->adcBuffer;
+  for (bytesLeft = sizeof(adcBuffer->adcBuffer); bytesLeft > 0; bytesLeft -= bytesToTransmit)
   {
-    sTests.comms.txBuffer[1] = adcBuffer->adcBuffer[i] >> 8;
-    sTests.comms.txBuffer[0] = adcBuffer->adcBuffer[i];
-    Tests_sendData(2);
+    bytesToTransmit = MIN(sizeof(sTests.comms.txBuffer), bytesLeft);
+    Util_copyMemory(pData, sTests.comms.txBuffer, bytesToTransmit);
+    Tests_sendData(bytesToTransmit);
+    pData+= bytesToTransmit;
     while(sTests.comms.transmitting); // wait to send out our test buffer
   }
 }
@@ -470,7 +475,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate)
   adc1Config.adcConfig.continuous         = FALSE;
   adc1Config.adcConfig.numChannels        = 1;
   adc1Config.adcConfig.chan[0].chanNum    = ADC_Channel_1;
-  adc1Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc1Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_15Cycles;
   adc1Config.appSampleBuffer              = &sTests.adc1.adcBuffer[0];
   adc1Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
 
@@ -479,7 +484,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate)
   adc2Config.adcConfig.continuous         = FALSE;
   adc2Config.adcConfig.numChannels        = 1;
   adc2Config.adcConfig.chan[0].chanNum    = ADC_Channel_2;
-  adc2Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc2Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_15Cycles;
   adc2Config.appSampleBuffer              = &sTests.adc2.adcBuffer[0];
   adc2Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
 
@@ -488,7 +493,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate)
   adc3Config.adcConfig.continuous         = FALSE;
   adc3Config.adcConfig.numChannels        = 1;
   adc3Config.adcConfig.chan[0].chanNum    = ADC_Channel_3;
-  adc3Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_84Cycles;
+  adc3Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_15Cycles;
   adc3Config.appSampleBuffer              = &sTests.adc3.adcBuffer[0];
   adc3Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
 
@@ -505,7 +510,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate)
   sTests.chanHeader[3].chanNum  = sTests.periphState.channel;
   sTests.chanHeader[3].bitRes   = (3.3 / 4096.0);
 
-  ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
+  ADC_openPort(ADC_PORT1, adc1Config);        // Initializes the ADC, gated by timer3 overflow
   ADC_openPort(ADC_PORT2, adc2Config);
   ADC_openPort(ADC_PORT3, adc3Config);
   sTests.periphState.channel = periph;        // For sorting out the state of the peripheral
@@ -531,6 +536,11 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate)
 static void Tests_teardownSPITests(boolean testPassed)
 {
   uint32 i;
+
+  Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Immediately Disable the SPI domain
+
+  // Then wait for any ongoing tests to complete
+  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
   ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
 
   // Return domains to initial state
@@ -538,8 +548,8 @@ static void Tests_teardownSPITests(boolean testPassed)
   Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
   Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,   TRUE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Set domain voltage to nominal (3.25V)
+  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable SRAM domain
+  Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Disable the SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
 
@@ -961,7 +971,6 @@ uint16 Tests_test11(void *pArgs)
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
   testResult = EEPROM_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);
-  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
   Tests_teardownSPITests(testResult);
 
   return SUCCESS;
@@ -986,7 +995,6 @@ uint16 Tests_test12(void *pArgs)
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
   testResult = SerialFlash_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);
-  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
   Tests_teardownSPITests(testResult);
 
   return SUCCESS;
@@ -1010,8 +1018,6 @@ uint16 Tests_test13(void *pArgs)
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
   writeResult = SDCard_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);
-  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-
   Tests_teardownSPITests(SD_WRITE_RESULT_OK == writeResult);
 
   return SUCCESS;
@@ -1035,7 +1041,6 @@ uint16 Tests_test14(void *pArgs)
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
   hihResult = HIH613X_readTempHumidI2CBB(pTestArgs->measure, pTestArgs->read, pTestArgs->convert);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);
-  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
   Tests_teardownSPITests(HIH_STATUS_NORMAL == hihResult);
 
   return SUCCESS;
