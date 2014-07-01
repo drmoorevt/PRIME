@@ -293,6 +293,17 @@ SDCardState SDCard_getState(void)
 }
 
 /**************************************************************************************************\
+* FUNCTION    SDCard_getStateAsWord
+* DESCRIPTION Returns the current state of the SDCard
+* PARAMETERS  None
+* RETURNS     The current state of SDCard
+\**************************************************************************************************/
+uint32 SDCard_getStateAsWord(void)
+{
+  return (uint32)sSDCard.state;
+}
+
+/**************************************************************************************************\
 * FUNCTION    SDCard_setState
 * DESCRIPTION Sets the internal state of the SDCard and applies the voltage of the associated state
 * PARAMETERS  None

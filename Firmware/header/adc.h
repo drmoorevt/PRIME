@@ -38,6 +38,8 @@
 #define ADC_Channel_Vrefint                         ((uint8_t)ADC_Channel_17)
 #define ADC_Channel_Vbat                            ((uint8_t)ADC_Channel_18)
 
+#define ADC_DR_OFFSET (0x4C)
+
 typedef enum
 {
   ADC_PORT1,

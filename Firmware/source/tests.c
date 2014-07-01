@@ -18,7 +18,8 @@
 
 #define FILE_ID TESTS_C
 
-#define TESTS_MAX_SAMPLES (8192)
+//#define TESTS_MAX_SAMPLES (8192)
+#define TESTS_MAX_SAMPLES (10240)
 
 typedef enum
 {
@@ -132,6 +133,7 @@ static struct
   Samples adc2;
   Samples adc3;
   Samples periphState;
+  uint32 (*getPeriphState)(void);
   struct
   {
     boolean portOpen;
@@ -210,7 +212,7 @@ TestFunction testFunctions[] = { &Tests_test00,
 
 void Tests_init(void)
 {
-  AppCommConfig comm5 = { {UART_BAUDRATE_115200, UART_FLOWCONTROL_NONE, TRUE, TRUE},
+  AppCommConfig comm5 = { {UART_BAUDRATE_460800, UART_FLOWCONTROL_NONE, TRUE, TRUE},
                            &sTests.comms.rxBuffer[0],
                            &sTests.comms.txBuffer[0],
                            &Tests_notifyCommsEvent };
@@ -303,23 +305,7 @@ void Tests_notifySampleTrigger(void)
   if (FALSE == sTests.periphState.isSampling)
     return;
   if (sTests.periphState.numSamples < TESTS_MAX_SAMPLES)
-  {
-    switch (sTests.periphState.channel)
-    {
-      case HIH_CHANNEL_OVERLOAD:
-        sTests.periphState.adcBuffer[sTests.periphState.numSamples++] = HIH613X_getState()*1000;
-        break;
-      case EE_CHANNEL_OVERLOAD:
-        sTests.periphState.adcBuffer[sTests.periphState.numSamples++] = EEPROM_getState()*1000;
-        break;
-      case SF_CHANNEL_OVERLOAD:
-        sTests.periphState.adcBuffer[sTests.periphState.numSamples++] = SerialFlash_getState()*800;
-        break;
-      case SD_CHANNEL_OVERLOAD:
-        sTests.periphState.adcBuffer[sTests.periphState.numSamples++] = SDCard_getState()*1000;
-        break;
-    }
-  }
+    sTests.periphState.adcBuffer[sTests.periphState.numSamples++] = sTests.getPeriphState();
 }
 
 /**************************************************************************************************\
@@ -333,19 +319,19 @@ void Tests_notifyConversionComplete(uint8 chan, uint16 numSamples)
   switch (chan)
   {
     case ADC_Channel_1:
-      sTests.adc1.channel = chan;
+      sTests.adc1.channel    = chan;
       sTests.adc1.isSampling = FALSE;
-      sTests.adc1.numSamples = numSamples;
+      sTests.adc1.numSamples = sizeof(sTests.adc1.adcBuffer) / 2;
       break;
     case ADC_Channel_2:
-      sTests.adc2.channel = chan;
+      sTests.adc2.channel    = chan;
       sTests.adc2.isSampling = FALSE;
-      sTests.adc2.numSamples = numSamples;
+      sTests.adc2.numSamples = sizeof(sTests.adc2.adcBuffer) / 2;
       break;
     case ADC_Channel_3:
-      sTests.adc3.channel = chan;
+      sTests.adc3.channel    = chan;
       sTests.adc3.isSampling = FALSE;
-      sTests.adc3.numSamples = numSamples;
+      sTests.adc3.numSamples = sizeof(sTests.adc3.adcBuffer) / 2;
       break;
     default:
       break;
@@ -508,11 +494,19 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate)
   sTests.chanHeader[2].chanNum  = adc3Config.adcConfig.chan[0].chanNum;
   sTests.chanHeader[2].bitRes   = (3.3 / 4096.0);
   sTests.chanHeader[3].chanNum  = sTests.periphState.channel;
-  sTests.chanHeader[3].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[3].bitRes   = (3.3 * 800.0 / 4096.0);
 
   ADC_openPort(ADC_PORT1, adc1Config);        // Initializes the ADC, gated by timer3 overflow
   ADC_openPort(ADC_PORT2, adc2Config);
   ADC_openPort(ADC_PORT3, adc3Config);
+  switch (periph)
+  {
+    case HIH_CHANNEL_OVERLOAD: sTests.getPeriphState = HIH613X_getStateAsWord;     break;
+    case EE_CHANNEL_OVERLOAD:  sTests.getPeriphState = EEPROM_getStateAsWord;      break;
+    case SF_CHANNEL_OVERLOAD:  sTests.getPeriphState = SerialFlash_getStateAsWord; break;
+    case SD_CHANNEL_OVERLOAD:  sTests.getPeriphState = SDCard_getStateAsWord;      break;
+    default: break;
+  }
   sTests.periphState.channel = periph;        // For sorting out the state of the peripheral
   sTests.periphState.isSampling = TRUE;
   sTests.periphState.numSamples = 0;
@@ -527,7 +521,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate)
 }
 
 /**************************************************************************************************\
-* FUNCTION    Tests_setupSPITests
+* FUNCTION    Tests_teardownSPITests
 * DESCRIPTION Common teardown actions for SPI tests
 * PARAMETERS  None
 * RETURNS     Nothing
@@ -535,8 +529,6 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate)
 \**************************************************************************************************/
 static void Tests_teardownSPITests(boolean testPassed)
 {
-  uint32 i;
-
   Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Immediately Disable the SPI domain
 
   // Then wait for any ongoing tests to complete
@@ -552,10 +544,6 @@ static void Tests_teardownSPITests(boolean testPassed)
   Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Disable the SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-
-  // Domain voltage readings come in resistor divided by two, normalize them here
-  for (i = 0; i < sizeof(sTests.adc1.adcBuffer); i++)
-    sTests.adc1.adcBuffer[i] >>= 1;
 
   if (testPassed)
     sprintf(sTests.testHeader.title, "Test Passed");

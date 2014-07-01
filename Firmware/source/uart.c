@@ -431,6 +431,12 @@ static uint16 Uart_calcBaudRateRegister(BaudRate baud)
       return 0x0208;  // 32.5
     case UART_BAUDRATE_115200:
       return 0x0104;  // 16.25
+    case UART_BAUDRATE_230400:
+      return 0x0082;  // 8.125
+    case UART_BAUDRATE_460800:
+      return 0x0041;  // 4.0625
+    case UART_BAUDRATE_921600:
+      return 0x0020;    // 2.013125
     default:
       return 0;
   }

@@ -158,6 +158,17 @@ SerialFlashState SerialFlash_getState(void)
 }
 
 /**************************************************************************************************\
+* FUNCTION    SerialFlash_getStateAsWord
+* DESCRIPTION Returns the internal state of SerialFlash
+* PARAMETERS  None
+* RETURNS     The SerialFlashState
+\**************************************************************************************************/
+uint32 SerialFlash_getStateAsWord(void)
+{
+  return (uint32)sSerialFlash.state;
+}
+
+/**************************************************************************************************\
 * FUNCTION    SerialFlash_setState
 * DESCRIPTION Sets the internal state of SerialFlash and applies the voltage of the associated state
 * PARAMETERS  None

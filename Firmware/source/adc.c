@@ -231,6 +231,20 @@ static ADC_TypeDef *ADC_getPortPtr(ADCPort port)
   }
 }
 
+void ADC_DMACmd(ADC_TypeDef* ADCx, FunctionalState NewState)
+{
+  if (NewState != DISABLE)
+  {
+    /* Enable the selected ADC DMA request */
+    ADCx->CR2 |= (uint32_t)ADC_CR2_DMA;
+  }
+  else
+  {
+    /* Disable the selected ADC DMA request */
+    ADCx->CR2 &= (uint32_t)(~ADC_CR2_DMA);
+  }
+}
+
 void ADC_DMARequestAfterLastTransferCmd(ADC_TypeDef* ADCx, FunctionalState NewState)
 {
   if (NewState != DISABLE)
@@ -242,6 +256,20 @@ void ADC_DMARequestAfterLastTransferCmd(ADC_TypeDef* ADCx, FunctionalState NewSt
   {
     /* Disable the selected ADC DMA request after last transfer */
     ADCx->CR2 &= (uint32_t)(~ADC_CR2_DDS);
+  }
+}
+
+void ADC_MultiModeDMARequestAfterLastTransferCmd(FunctionalState NewState)
+{
+  if (NewState != DISABLE)
+  {
+    /* Enable the selected ADC DMA request after last transfer */
+    ADC->CCR |= (uint32_t)ADC_CCR_DDS;
+  }
+  else
+  {
+    /* Disable the selected ADC DMA request after last transfer */
+    ADC->CCR &= (uint32_t)(~ADC_CCR_DDS);
   }
 }
 
@@ -257,16 +285,34 @@ void ADC_openPort(ADCPort port, AppADCConfig appConfig)
 {
   ADC_InitTypeDef adcInit;
   ADC_CommonInitTypeDef adcCommonInit;
-
   ADCConfig *pCfg = &appConfig.adcConfig;
+
   // Copy the configuration information into sADC
   Util_fillMemory((uint8*)&sADC.adc[port], sizeof(sADC.adc[port]), 0x00);
   Util_copyMemory((uint8*)&appConfig, (uint8*)&sADC.adc[port].appConfig, sizeof(appConfig));
   sADC.adc[port].pADC = ADC_getPortPtr(port);
   sADC.adc[port].isConfigured = TRUE;
 
-  /****** TRANSLATE adcConfig to adcInitStructs HERE ******/
-  /****** RIGHT NOW THESE ARE JUST CONFIGURED TO HARDCODED VALUES *****/
+  switch (port)
+  {
+    case ADC_PORT1:
+      DMA_DeInit(DMA2_Stream0);
+      break;
+    case ADC_PORT2:
+      DMA_DeInit(DMA2_Stream2);
+      break;
+    case ADC_PORT3:
+      DMA_DeInit(DMA2_Stream1);
+      break;
+    default:
+      return;
+  }
+
+  // Initialize the structure common to all ADCs
+  ADC_CommonStructInit(&adcCommonInit);
+  ADC_CommonInit(&adcCommonInit);
+
+  // Initialize the individual ADC for DMA transfer mode
   ADC_StructInit(&adcInit);
   adcInit.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_Rising;
   adcInit.ADC_ExternalTrigConv     = ADC_ExternalTrigConv_T3_TRGO;
@@ -274,11 +320,11 @@ void ADC_openPort(ADCPort port, AppADCConfig appConfig)
   ADC_RegularChannelConfig(sADC.adc[port].pADC, pCfg->chan[0].chanNum, 1, pCfg->chan[0].sampleTime);
   sADC.adc[port].adcStatus.currChan = pCfg->chan[0].chanNum;
 
-  ADC_CommonStructInit(&adcCommonInit);
-  adcCommonInit.ADC_DMAAccessMode = ADC_DMAAccessMode_1;
-  ADC_CommonInit(&adcCommonInit);
+  ADC_DMACmd(sADC.adc[port].pADC, ENABLE);
 
   ADC_DMARequestAfterLastTransferCmd(sADC.adc[port].pADC, ENABLE);
+
+  ADC_ClearFlag(sADC.adc[port].pADC, ADC_SR_OVR); // Clear any previous overrun errors
 
 //  ADC_MultiModeDMARequestAfterLastTransferCmd(ENABLE);
 
@@ -444,34 +490,38 @@ void ADC_getSamples(ADCPort port, uint16 numSamples)
 
   DMA_StructInit(&dmaInit);
   dmaInit.DMA_Memory0BaseAddr = (uint32)&sADC.adc[port].appConfig.appSampleBuffer[0];
-  dmaInit.DMA_PeripheralBaseAddr = (uint32)sADC.adc[port].pADC;
+  dmaInit.DMA_PeripheralBaseAddr = ((uint32)sADC.adc[port].pADC) + ADC_DR_OFFSET;
   dmaInit.DMA_BufferSize = sADC.adc[port].adcStatus.samplesRemaining;
   dmaInit.DMA_MemoryInc = DMA_MemoryInc_Enable;
   dmaInit.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
   dmaInit.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
   dmaInit.DMA_Priority = DMA_Priority_High;
-  dmaInit.DMA_FIFOMode = DMA_FIFOMode_Enable;
-  dmaInit.DMA_FIFOThreshold = DMA_FIFOThreshold_HalfFull;
+  dmaInit.DMA_FIFOMode = DMA_FIFOMode_Disable;
+//  dmaInit.DMA_FIFOMode = DMA_FIFOMode_Enable;
+//  dmaInit.DMA_FIFOThreshold = DMA_FIFOThreshold_HalfFull;
 
   switch (port) // Enable DMA Stream Half / Transfer Complete interrupt
   {
     case ADC_PORT1:
+      dmaInit.DMA_Channel = DMA_Channel_0;
       DMA_Init(DMA2_Stream0, &dmaInit);
-      DMA_ITConfig(DMA2_Stream0, DMA_IT_TC | DMA_IT_HT, ENABLE);
+      DMA_ITConfig(DMA2_Stream0, DMA_IT_TC, ENABLE);
       DMA_Cmd(DMA2_Stream0, ENABLE, sADC.adc[port].appConfig.appNotifyConversionComplete);
       NVIC_EnableIRQ(DMA2_Stream0_IRQn);
       break;
     case ADC_PORT2:
-      DMA_Init(DMA2_Stream1, &dmaInit);
-      DMA_ITConfig(DMA2_Stream1, DMA_IT_TC | DMA_IT_HT, ENABLE);
-      DMA_Cmd(DMA2_Stream1, ENABLE, sADC.adc[port].appConfig.appNotifyConversionComplete);
-      NVIC_EnableIRQ(DMA2_Stream1_IRQn);
-      break;
-    case ADC_PORT3:
+      dmaInit.DMA_Channel = DMA_Channel_1;
       DMA_Init(DMA2_Stream2, &dmaInit);
-      DMA_ITConfig(DMA2_Stream2, DMA_IT_TC | DMA_IT_HT, ENABLE);
+      DMA_ITConfig(DMA2_Stream2, DMA_IT_TC, ENABLE);
       DMA_Cmd(DMA2_Stream2, ENABLE, sADC.adc[port].appConfig.appNotifyConversionComplete);
       NVIC_EnableIRQ(DMA2_Stream2_IRQn);
+      break;
+    case ADC_PORT3:
+      dmaInit.DMA_Channel = DMA_Channel_2;
+      DMA_Init(DMA2_Stream1, &dmaInit);
+      DMA_ITConfig(DMA2_Stream1, DMA_IT_TC, ENABLE);
+      DMA_Cmd(DMA2_Stream1, ENABLE, sADC.adc[port].appConfig.appNotifyConversionComplete);
+      NVIC_EnableIRQ(DMA2_Stream1_IRQn);
       break;
     default:
       return;

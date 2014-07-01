@@ -104,6 +104,7 @@ typedef struct
 void    SerialFlash_test(void);
 void    SerialFlash_init(void);
 FlashID SerialFlash_readFlashID(void);
+uint32 SerialFlash_getStateAsWord(void);
 boolean SerialFlash_setup(boolean state);
 SerialFlashState SerialFlash_getState(void);
 boolean SerialFlash_setPowerProfile(SerialFlashPowerProfile profile);

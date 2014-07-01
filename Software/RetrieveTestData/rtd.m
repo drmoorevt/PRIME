@@ -1,4 +1,9 @@
-function [title,channels,results,time] = rtd(s, test, args)
+function [title,channels,results,time,success] = rtd(s, test, args)
+    title = {};
+    channels = {};
+    results = {};
+    time = {};
+    success = false;
     testCommand = ['T','e','s', 't', test, uint8(length(args)), args];
     crc = crc16(testCommand, '0000', '1021');
     testCommand = [testCommand, typecast(swapbytes(uint16(crc)), 'uint8')];
@@ -56,10 +61,14 @@ function [title,channels,results,time] = rtd(s, test, args)
     % wait for test data, timeout after 5 seconds
     i = 0;
     fprintf('Getting data from test fixture... \n');
-    while((s.BytesAvailable < testBytes) && (i < 100))
+    while((s.BytesAvailable < testBytes) && (i < 50))
         i = i + 1;
         pause(0.1);
     end;
+    if (s.BytesAvailable < testBytes)
+        return;
+    end
+    
     fprintf('Received %d bytes of data info\n',s.BytesAvailable);
 
     try
@@ -70,6 +79,7 @@ function [title,channels,results,time] = rtd(s, test, args)
         end
         results  = data;
         time = (1:1:bytesPerChannel/2) * (timeScaleMicroSec / 1000.0);
+        success = true;
         return
     catch ME
         ME

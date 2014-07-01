@@ -1,19 +1,24 @@
 function [success, name, chans, data, time] = TestConsole(CommPort)
-    s = openFixtureComms(CommPort, 115200); % Open the comm port...
-    
-    numSweeps = 1; % Run the test...
-    args = argGenTest11(5000, 5, 5000, 0, [0:127], 0, 128);
+    s = openFixtureComms(CommPort, 460800); % Open the comm port...
+%   s = openFixtureComms(CommPort, 115200); % Open the comm port...
+    success = false;
+    numSweeps = 100; % Run the test...
+    args = argGenTest11(250, 1, 250, 0, [0:127], 0, 128);
     for i = 1:numSweeps
-        try
+%        try
             fprintf('\nExecution %d/%d\n',i,numSweeps);
-            [name, chans, data(:,:,i), time] = rtd(s, 11, args);
-            avgData = mean(data,3);
-            plot(time, avgData)
-            %pause(0.25);
-        catch ME
-            delete(instrfindall)
-            fprintf(ME);
-        end
+            [name, chans, data(:,:,i), time, success] = rtd(s, 11, args);
+            if (success == true)
+                avgData = mean(data,3);
+                plot(time, avgData)
+            else
+                disp('Test failure ... retrying');
+                numSweeps = numSweeps - 1;
+            end
+%        catch ME
+%            delete(instrfindall)
+%            fprintf(ME);
+%        end
     end
     
     closeFixtureComms(s); % Close the comm port...

@@ -29,9 +29,6 @@ static struct
 
 void DMA_DeInit(DMA_Stream_TypeDef* DMAy_Streamx)
 {
-  /* Check the parameters */
-  // assert_param(IS_DMA_ALL_PERIPH(DMAy_Streamx));
-
   /* Disable the selected DMAy Streamx */
   DMAy_Streamx->CR &= ~((uint32_t)DMA_SxCR_EN);
 
@@ -1111,7 +1108,7 @@ void DMA2_Stream0_IRQHandler(void)
   {
     /* Clear DMA Stream Transfer Complete interrupt pending bit */
     DMA_ClearITPendingBit(DMA2_Stream0, DMA_IT_TCIF0);
-    sDMA.notifyStream0Complete(1, 8192);
+    sDMA.notifyStream0Complete(1, 0);
   }
 }
 
@@ -1131,7 +1128,7 @@ void DMA2_Stream1_IRQHandler(void)
   {
     /* Clear DMA Stream Transfer Complete interrupt pending bit */
     DMA_ClearITPendingBit(DMA2_Stream1, DMA_IT_TCIF1);
-    sDMA.notifyStream1Complete(2, 8192);
+    sDMA.notifyStream1Complete(3, 0);
   }
 }
 
@@ -1151,6 +1148,6 @@ void DMA2_Stream2_IRQHandler(void)
   {
     /* Clear DMA Stream Transfer Complete interrupt pending bit */
     DMA_ClearITPendingBit(DMA2_Stream2, DMA_IT_TCIF2);
-    sDMA.notifyStream2Complete(2, 8192);
+    sDMA.notifyStream2Complete(2, 0);
   }
 }

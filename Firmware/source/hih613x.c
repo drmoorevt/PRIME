@@ -93,6 +93,17 @@ HIHState HIH613X_getState(void)
 }
 
 /**************************************************************************************************\
+* FUNCTION    HIH613X_getStateAsWord
+* DESCRIPTION Returns the current state of HIH613X
+* PARAMETERS  None
+* RETURNS     The current state of HIH613X
+\**************************************************************************************************/
+uint32 HIH613X_getStateAsWord(void)
+{
+  return (uint32)sHIH613X.state;
+}
+
+/**************************************************************************************************\
 * FUNCTION    HIH613X_setState
 * DESCRIPTION Sets the internal state of HIH613X and applies the voltage of the associated state
 * PARAMETERS  None

@@ -32,6 +32,7 @@ typedef enum
 void EEPROM_init(void);
 boolean EEPROM_setup(boolean state);
 EEPROMState EEPROM_getState(void);
+uint32 EEPROM_getStateAsWord(void);
 boolean EEPROM_setPowerProfile(EEPROMPowerProfile profile);
 boolean EEPROM_setPowerState(EEPROMState state, double vDomain);
 void EEPROM_read(const uint8 *pSrc, uint8 *pDest, uint16 length);

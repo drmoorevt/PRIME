@@ -116,6 +116,17 @@ EEPROMState EEPROM_getState(void)
 }
 
 /**************************************************************************************************\
+* FUNCTION    EEPROM_getStateAsWord
+* DESCRIPTION Returns the current state of EEPROM
+* PARAMETERS  None
+* RETURNS     The current state of EEPROM
+\**************************************************************************************************/
+uint32 EEPROM_getStateAsWord(void)
+{
+  return (uint32)sEEPROM.state;
+}
+
+/**************************************************************************************************\
 * FUNCTION    EEPROM_setState
 * DESCRIPTION Sets the internal state of EEPROM and applies the voltage of the associated state
 * PARAMETERS  None

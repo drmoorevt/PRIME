@@ -23243,6 +23243,8 @@ Source: 008-0260-0_E.pdf</description>
 <text x="457.2" y="114.3" size="1.778" layer="91">SDA</text>
 <text x="457.2" y="109.22" size="1.778" layer="91">SCL</text>
 <text x="482.6" y="248.92" size="1.778" layer="95" rot="R90">SPI1 Max is 15Mbit/s</text>
+<text x="500.38" y="340.36" size="1.778" layer="95" rot="R90">You need to voltage divide this!</text>
+<text x="497.84" y="340.36" size="1.778" layer="95" rot="R90">Only 3adcs...</text>
 </plain>
 <instances>
 <instance part="J13" gate="-1" x="25.4" y="457.2" rot="R180"/>

@@ -482,6 +482,11 @@
               <FileType>5</FileType>
               <FilePath>..\header\crc.h</FilePath>
             </File>
+            <File>
+              <FileName>dma.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\dma.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -687,6 +692,11 @@
               <FileName>crc.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\crc.c</FilePath>
+            </File>
+            <File>
+              <FileName>dma.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\dma.c</FilePath>
             </File>
           </Files>
         </Group>
