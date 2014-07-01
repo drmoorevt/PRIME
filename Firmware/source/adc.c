@@ -1,5 +1,6 @@
 #include "stm32f2xx.h"
 #include "adc.h"
+#include "dma.h"
 #include "eeprom.h"
 #include "gpio.h"
 #include "util.h"
@@ -230,6 +231,20 @@ static ADC_TypeDef *ADC_getPortPtr(ADCPort port)
   }
 }
 
+void ADC_DMARequestAfterLastTransferCmd(ADC_TypeDef* ADCx, FunctionalState NewState)
+{
+  if (NewState != DISABLE)
+  {
+    /* Enable the selected ADC DMA request after last transfer */
+    ADCx->CR2 |= (uint32_t)ADC_CR2_DDS;
+  }
+  else
+  {
+    /* Disable the selected ADC DMA request after last transfer */
+    ADCx->CR2 &= (uint32_t)(~ADC_CR2_DDS);
+  }
+}
+
 /**************************************************************************************************\
 * FUNCTION    ADC_openPort
 * DESCRIPTION Initializes the specified ADCPort with the provided AppLayer configuration
@@ -242,6 +257,7 @@ void ADC_openPort(ADCPort port, AppADCConfig appConfig)
 {
   ADC_InitTypeDef adcInit;
   ADC_CommonInitTypeDef adcCommonInit;
+
   ADCConfig *pCfg = &appConfig.adcConfig;
   // Copy the configuration information into sADC
   Util_fillMemory((uint8*)&sADC.adc[port], sizeof(sADC.adc[port]), 0x00);
@@ -251,7 +267,6 @@ void ADC_openPort(ADCPort port, AppADCConfig appConfig)
 
   /****** TRANSLATE adcConfig to adcInitStructs HERE ******/
   /****** RIGHT NOW THESE ARE JUST CONFIGURED TO HARDCODED VALUES *****/
-
   ADC_StructInit(&adcInit);
   adcInit.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_Rising;
   adcInit.ADC_ExternalTrigConv     = ADC_ExternalTrigConv_T3_TRGO;
@@ -260,11 +275,16 @@ void ADC_openPort(ADCPort port, AppADCConfig appConfig)
   sADC.adc[port].adcStatus.currChan = pCfg->chan[0].chanNum;
 
   ADC_CommonStructInit(&adcCommonInit);
+  adcCommonInit.ADC_DMAAccessMode = ADC_DMAAccessMode_1;
   ADC_CommonInit(&adcCommonInit);
 
-  ADC_ITConfig(sADC.adc[port].pADC, ADC_IT_EOC, ENABLE); // Enable interrupts
+  ADC_DMARequestAfterLastTransferCmd(sADC.adc[port].pADC, ENABLE);
 
-  NVIC_EnableIRQ(ADC_IRQn);
+//  ADC_MultiModeDMARequestAfterLastTransferCmd(ENABLE);
+
+//  ADC_ITConfig(sADC.adc[port].pADC, ADC_IT_EOC, ENABLE); // Enable interrupts
+
+//  NVIC_EnableIRQ(ADC_IRQn);
 }
 
 void ADC_configureADC(ADC_TypeDef *ADCx, ADC_InitTypeDef *ADC_InitStruct)
@@ -418,8 +438,44 @@ void ADC_Cmd(ADC_TypeDef* ADCx, FunctionalState newState)
 \**************************************************************************************************/
 void ADC_getSamples(ADCPort port, uint16 numSamples)
 {
+  DMA_InitTypeDef dmaInit;
   sADC.adc[port].adcStatus.samplesRemaining = numSamples;
   sADC.adc[port].adcStatus.sampBufIdx = 0;
+
+  DMA_StructInit(&dmaInit);
+  dmaInit.DMA_Memory0BaseAddr = (uint32)&sADC.adc[port].appConfig.appSampleBuffer[0];
+  dmaInit.DMA_PeripheralBaseAddr = (uint32)sADC.adc[port].pADC;
+  dmaInit.DMA_BufferSize = sADC.adc[port].adcStatus.samplesRemaining;
+  dmaInit.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  dmaInit.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
+  dmaInit.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
+  dmaInit.DMA_Priority = DMA_Priority_High;
+  dmaInit.DMA_FIFOMode = DMA_FIFOMode_Enable;
+  dmaInit.DMA_FIFOThreshold = DMA_FIFOThreshold_HalfFull;
+
+  switch (port) // Enable DMA Stream Half / Transfer Complete interrupt
+  {
+    case ADC_PORT1:
+      DMA_Init(DMA2_Stream0, &dmaInit);
+      DMA_ITConfig(DMA2_Stream0, DMA_IT_TC | DMA_IT_HT, ENABLE);
+      DMA_Cmd(DMA2_Stream0, ENABLE, sADC.adc[port].appConfig.appNotifyConversionComplete);
+      NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+      break;
+    case ADC_PORT2:
+      DMA_Init(DMA2_Stream1, &dmaInit);
+      DMA_ITConfig(DMA2_Stream1, DMA_IT_TC | DMA_IT_HT, ENABLE);
+      DMA_Cmd(DMA2_Stream1, ENABLE, sADC.adc[port].appConfig.appNotifyConversionComplete);
+      NVIC_EnableIRQ(DMA2_Stream1_IRQn);
+      break;
+    case ADC_PORT3:
+      DMA_Init(DMA2_Stream2, &dmaInit);
+      DMA_ITConfig(DMA2_Stream2, DMA_IT_TC | DMA_IT_HT, ENABLE);
+      DMA_Cmd(DMA2_Stream2, ENABLE, sADC.adc[port].appConfig.appNotifyConversionComplete);
+      NVIC_EnableIRQ(DMA2_Stream2_IRQn);
+      break;
+    default:
+      return;
+  }
   ADC_Cmd(sADC.adc[port].pADC, ENABLE); // Turn on the ADC
 }
 
