@@ -136,6 +136,7 @@ static struct
   uint32 (*getPeriphState)(void);
   struct
   {
+    uint32 bytesReceived;
     boolean portOpen;
     boolean receiving;
     boolean rxTimeout;
@@ -173,8 +174,10 @@ void Tests_notifyCommsEvent(CommsEvent event, uint32 arg)
   {
     case COMMS_EVENT_RX_COMPLETE:
       sTests.comms.receiving = FALSE;
+      sTests.comms.bytesReceived = arg;
       break;
     case COMMS_EVENT_RX_TIMEOUT:
+      sTests.comms.bytesReceived = arg;
       sTests.comms.receiving = FALSE;
       sTests.comms.rxTimeout = TRUE;
       break;
@@ -212,7 +215,7 @@ TestFunction testFunctions[] = { &Tests_test00,
 
 void Tests_init(void)
 {
-  AppCommConfig comm5 = { {UART_BAUDRATE_460800, UART_FLOWCONTROL_NONE, TRUE, TRUE},
+  AppCommConfig comm5 = { {UART_BAUDRATE_921600, UART_FLOWCONTROL_NONE, TRUE, TRUE},
                            &sTests.comms.rxBuffer[0],
                            &sTests.comms.txBuffer[0],
                            &Tests_notifyCommsEvent };
@@ -235,6 +238,7 @@ void Tests_receiveData(uint32 numBytes, uint32 timeout)
 {
   sTests.comms.receiving = TRUE;
   sTests.comms.rxTimeout = FALSE;
+  sTests.comms.bytesReceived = 0;
   UART_receiveData(UART_PORT5, numBytes, timeout);
 }
 
@@ -258,38 +262,30 @@ void Tests_sendData(uint16 numBytes)
 \**************************************************************************************************/
 uint8 Tests_getTestToRun(void)
 {
-  uint16 crcCalc, packetCRC = 0x0000;
+  const uint32 MIN_PACKET_SIZE = 8;
   boolean hasValidPacket = FALSE;
   uint8 testToRun, argCount;
+  uint32 size;
 
   do
   {
-    // Fill the rxBuffer with zero so that previous executions dont erroneously begin a test
-    Util_fillMemory(sTests.comms.rxBuffer, sizeof(sTests.comms.rxBuffer), 0x00);
-    // Grab the test execution packet up to the argCount
-    Tests_receiveData(6, 1000);     // Look for "Test" bytes with a 1s timeout
+    // Grab the test execution packet
+    Tests_receiveData(sizeof(sTests.comms.rxBuffer), 1000);
     while (sTests.comms.receiving); // Wait for the packet, will either rxTimeout or txComplete
-    if (sTests.comms.rxTimeout || (sTests.comms.rxBuffer[0] != 'T' &&
-                                   sTests.comms.rxBuffer[1] != 'e' &&
-                                   sTests.comms.rxBuffer[2] != 's' &&
-                                   sTests.comms.rxBuffer[3] != 't'))
+    if ((sTests.comms.rxBuffer[0] != 'T') ||
+        (sTests.comms.rxBuffer[1] != 'e') ||
+        (sTests.comms.rxBuffer[2] != 's') ||
+        (sTests.comms.rxBuffer[3] != 't') ||
+        (sTests.comms.rxBuffer[4] >=  17) ||
+        (sTests.comms.bytesReceived < MIN_PACKET_SIZE))
       continue;
     testToRun = sTests.comms.rxBuffer[4];
     argCount  = sTests.comms.rxBuffer[5];
-    crcCalc   = CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, sTests.comms.rxBuffer, 6);
-    // Grab the number of aguments from the test execution packet along with the CRC
-    Tests_receiveData(argCount + 2, 1000);  // Grab the arguments and CRC
-    while (sTests.comms.receiving); // Wait for the packet, will either rxTimeout or txComplete
-    if (sTests.comms.rxTimeout)
-      continue;
-    crcCalc   = CRC_crc16(crcCalc, CRC16_POLY_CCITT_STD, sTests.comms.rxBuffer, argCount);
-    packetCRC = (sTests.comms.rxBuffer[argCount + 0] << 8) +
-                (sTests.comms.rxBuffer[argCount + 1] << 0);
-
-    hasValidPacket = packetCRC == crcCalc;
+    size = MIN_PACKET_SIZE + argCount;
+    hasValidPacket = (0x0000 == CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, sTests.comms.rxBuffer, size));
   } while (!hasValidPacket);
 
-  Util_copyMemory(sTests.comms.rxBuffer, sTests.testArgs.asBytes, argCount);
+  Util_copyMemory(&sTests.comms.rxBuffer[6], sTests.testArgs.asBytes, argCount);
   sTests.argCount = argCount;
   return testToRun;
 }

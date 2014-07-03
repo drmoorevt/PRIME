@@ -271,7 +271,7 @@ void UART_handleInterrupt(UARTPort port)
       if (pStatus->bytesReceived >= pStatus->bytesToReceive)
       { // finished now? -- last expected byte is in the data register
         UART_stopReceive(port);
-        sUART.port[port].appConfig.appNotifyCommsEvent(COMMS_EVENT_RX_COMPLETE, 0);
+        sUART.port[port].appConfig.appNotifyCommsEvent(COMMS_EVENT_RX_COMPLETE, pStatus->bytesReceived);
       }
     }
     else
@@ -358,9 +358,11 @@ boolean UART_sendData(UARTPort port, uint16 numBytes)
 \**************************************************************************************************/
 void UART_notifyTimeout(SoftTimer timer)
 {
+  uint32 bytesReceived;
   UARTPort port = UART_getPortHandle(timer);
+  bytesReceived = sUART.port[port].commStatus.bytesReceived;
   UART_stopReceive(port);
-  sUART.port[port].appConfig.appNotifyCommsEvent(COMMS_EVENT_RX_TIMEOUT, 0);
+  sUART.port[port].appConfig.appNotifyCommsEvent(COMMS_EVENT_RX_TIMEOUT, bytesReceived);
 }
 
 /**************************************************************************************************\
@@ -438,7 +440,7 @@ static uint16 Uart_calcBaudRateRegister(BaudRate baud)
     case UART_BAUDRATE_460800:
       return 0x0041;  // 4.0625
     case UART_BAUDRATE_921600:
-      return 0x0020;  // 2.013125
+      return 0x0021;  // 2.0625
     default:
       return 0;
   }
