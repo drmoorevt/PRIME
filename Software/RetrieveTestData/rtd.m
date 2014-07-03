@@ -9,9 +9,9 @@ function [title,channels,results,time,success] = rtd(s, test, args)
     testCommand = [testCommand, typecast(swapbytes(uint16(crc)), 'uint8')];
     fwrite(s, testCommand);
     
-    % wait for the size of the header, timeout after 30 seconds
+    % wait for the size of the header, timeout after 5 seconds
     i = 0;
-    while((s.BytesAvailable < 2) && (i < 150))
+    while((s.BytesAvailable < 2) && (i < 50))
         i = i + 1;
         pause(0.1);
     end;
