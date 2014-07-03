@@ -379,6 +379,8 @@ void UART_stopReceive(UARTPort port)
   sUART.port[port].pUART->CR1 &=  (~USART_CR1_RXNEIE); // Turn off the rx interrupt
   sUART.port[port].commStatus.bytesToReceive = 0;
   sUART.port[port].commStatus.bytesReceived  = 0;
+  sUART.port[port].pUART->CR1 &= (~USART_CR1_UE);      // Disable UART
+  sUART.port[port].pUART->CR1 |= USART_CR1_UE;         // Enable UART
 }
 
 /**************************************************************************************************\
@@ -436,7 +438,7 @@ static uint16 Uart_calcBaudRateRegister(BaudRate baud)
     case UART_BAUDRATE_460800:
       return 0x0041;  // 4.0625
     case UART_BAUDRATE_921600:
-      return 0x0020;    // 2.013125
+      return 0x0020;  // 2.013125
     default:
       return 0;
   }

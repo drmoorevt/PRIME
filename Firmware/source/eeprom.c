@@ -209,7 +209,7 @@ void EEPROM_read(const uint8 *pSrc, uint8 *pDest, uint16 length)
 *             length - number of bytes to write
 * RETURNS     true if the write succeeds
 \**************************************************************************************************/
-boolean EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
+EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
   uint8 retries;
   uint16 numBytes;
@@ -218,7 +218,6 @@ boolean EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 
   while (length > 0)
   {
-
     // for EE, write must not go past a page boundary
     numBytes = WRITEPAGESIZE_EE - ((uint32)pDest & (WRITEPAGESIZE_EE-1));
     if (length < numBytes)
@@ -261,8 +260,7 @@ boolean EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
     pDest  +=  numBytes; // update destination pointer
     length -= numBytes;
   }
-
-  return (boolean)!writeFailed;
+  return (writeFailed) ? EEPROM_RESULT_ERROR : EEPROM_RESULT_OK;
 }
 
 /**************************************************************************************************\

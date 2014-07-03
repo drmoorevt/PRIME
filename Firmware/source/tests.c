@@ -306,6 +306,8 @@ void Tests_notifySampleTrigger(void)
     return;
   if (sTests.periphState.numSamples < TESTS_MAX_SAMPLES)
     sTests.periphState.adcBuffer[sTests.periphState.numSamples++] = sTests.getPeriphState();
+  else
+    sTests.periphState.isSampling = FALSE;
 }
 
 /**************************************************************************************************\
@@ -496,6 +498,11 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate)
   sTests.chanHeader[3].chanNum  = sTests.periphState.channel;
   sTests.chanHeader[3].bitRes   = (3.3 * 800.0 / 4096.0);
 
+  // Disable SysTick
+  DISABLE_SYSTICK();
+  NVIC_DisableIRQ(SysTick_IRQn);
+  NVIC_DisableIRQ(UART5_IRQn);
+
   ADC_openPort(ADC_PORT1, adc1Config);        // Initializes the ADC, gated by timer3 overflow
   ADC_openPort(ADC_PORT2, adc2Config);
   ADC_openPort(ADC_PORT3, adc3Config);
@@ -532,8 +539,12 @@ static void Tests_teardownSPITests(boolean testPassed)
   Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Immediately Disable the SPI domain
 
   // Then wait for any ongoing tests to complete
-  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
+//  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
+  while (sTests.periphState.isSampling);
   ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
+  ENABLE_SYSTICK();
+  NVIC_EnableIRQ(SysTick_IRQn);
+  NVIC_EnableIRQ(UART5_IRQn);
 
   // Return domains to initial state
   Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
@@ -950,18 +961,18 @@ uint16 Tests_test10(void *pArgs)
 \**************************************************************************************************/
 uint16 Tests_test11(void *pArgs)
 {
-  boolean testResult;
+  EEPROMResult result;
   Test11Args *pTestArgs = pArgs;
 
   EEPROM_setPowerProfile(pTestArgs->profile);
 
   Tests_setupSPITests(EE_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
-  testResult = EEPROM_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
+  result = EEPROM_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);
-  Tests_teardownSPITests(testResult);
+  Tests_teardownSPITests((EEPROM_RESULT_OK == result));
 
-  return SUCCESS;
+  return (EEPROM_RESULT_OK == result);
 }
 
 /**************************************************************************************************\
@@ -974,18 +985,18 @@ uint16 Tests_test11(void *pArgs)
 \**************************************************************************************************/
 uint16 Tests_test12(void *pArgs)
 {
-  boolean testResult;
+  SerialFlashResult result;
   Test12Args *pTestArgs = pArgs;
 
   SerialFlash_setPowerProfile(pTestArgs->profile);
 
-  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
+  Tests_setupSPITests(SF_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
-  testResult = SerialFlash_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
+  result = SerialFlash_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);
-  Tests_teardownSPITests(testResult);
+  Tests_teardownSPITests((SERIAL_FLASH_RESULT_OK == result));
 
-  return SUCCESS;
+  return (SERIAL_FLASH_RESULT_OK == result);
 }
 
 /**************************************************************************************************\
@@ -1001,14 +1012,15 @@ uint16 Tests_test13(void *pArgs)
   Test13Args *pTestArgs = pArgs;
 
   SDCard_setPowerProfile(pTestArgs->profile);
+  SDCard_initDisk();  // disk must be initialized before we can test writes to it
 
-  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
+  Tests_setupSPITests(SD_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
   writeResult = SDCard_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);
   Tests_teardownSPITests(SD_WRITE_RESULT_OK == writeResult);
 
-  return SUCCESS;
+  return (SD_WRITE_RESULT_OK == writeResult);
 }
 
 /**************************************************************************************************\
@@ -1025,7 +1037,7 @@ uint16 Tests_test14(void *pArgs)
 
   HIH613X_setPowerProfile(pTestArgs->profile);
 
-  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
+  Tests_setupSPITests(HIH_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
   hihResult = HIH613X_readTempHumidI2CBB(pTestArgs->measure, pTestArgs->read, pTestArgs->convert);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);

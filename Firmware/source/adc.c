@@ -55,10 +55,10 @@
 #define ADC_Resolution_8b                          ((uint32_t)0x02000000)
 #define ADC_Resolution_6b                          ((uint32_t)0x03000000)
 
-#define ADC_ExternalTrigConvEdge_None          ((uint32_t)0x00000000)
-#define ADC_ExternalTrigConvEdge_Rising        ((uint32_t)0x10000000)
-#define ADC_ExternalTrigConvEdge_Falling       ((uint32_t)0x20000000)
-#define ADC_ExternalTrigConvEdge_RisingFalling ((uint32_t)0x30000000)
+#define ADC_ExternalTrigConvEdge_None              ((uint32_t)0x00000000)
+#define ADC_ExternalTrigConvEdge_Rising            ((uint32_t)0x10000000)
+#define ADC_ExternalTrigConvEdge_Falling           ((uint32_t)0x20000000)
+#define ADC_ExternalTrigConvEdge_RisingFalling     ((uint32_t)0x30000000)
 
 #define ADC_ExternalTrigConv_T1_CC1                ((uint32_t)0x00000000)
 #define ADC_ExternalTrigConv_T1_CC2                ((uint32_t)0x01000000)
@@ -273,66 +273,6 @@ void ADC_MultiModeDMARequestAfterLastTransferCmd(FunctionalState NewState)
   }
 }
 
-/**************************************************************************************************\
-* FUNCTION    ADC_openPort
-* DESCRIPTION Initializes the specified ADCPort with the provided AppLayer configuration
-* PARAMETERS  port: The ADC port to open
-*             adcConfig: The AppLayer configuration to apply to the port
-* RETURNS     Nothing
-* NOTES       None
-\**************************************************************************************************/
-void ADC_openPort(ADCPort port, AppADCConfig appConfig)
-{
-  ADC_InitTypeDef adcInit;
-  ADC_CommonInitTypeDef adcCommonInit;
-  ADCConfig *pCfg = &appConfig.adcConfig;
-
-  // Copy the configuration information into sADC
-  Util_fillMemory((uint8*)&sADC.adc[port], sizeof(sADC.adc[port]), 0x00);
-  Util_copyMemory((uint8*)&appConfig, (uint8*)&sADC.adc[port].appConfig, sizeof(appConfig));
-  sADC.adc[port].pADC = ADC_getPortPtr(port);
-  sADC.adc[port].isConfigured = TRUE;
-
-  switch (port)
-  {
-    case ADC_PORT1:
-      DMA_DeInit(DMA2_Stream0);
-      break;
-    case ADC_PORT2:
-      DMA_DeInit(DMA2_Stream2);
-      break;
-    case ADC_PORT3:
-      DMA_DeInit(DMA2_Stream1);
-      break;
-    default:
-      return;
-  }
-
-  // Initialize the structure common to all ADCs
-  ADC_CommonStructInit(&adcCommonInit);
-  ADC_CommonInit(&adcCommonInit);
-
-  // Initialize the individual ADC for DMA transfer mode
-  ADC_StructInit(&adcInit);
-  adcInit.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_Rising;
-  adcInit.ADC_ExternalTrigConv     = ADC_ExternalTrigConv_T3_TRGO;
-  ADC_configureADC(sADC.adc[port].pADC, &adcInit);
-  ADC_RegularChannelConfig(sADC.adc[port].pADC, pCfg->chan[0].chanNum, 1, pCfg->chan[0].sampleTime);
-  sADC.adc[port].adcStatus.currChan = pCfg->chan[0].chanNum;
-
-  ADC_DMACmd(sADC.adc[port].pADC, ENABLE);
-
-  ADC_DMARequestAfterLastTransferCmd(sADC.adc[port].pADC, ENABLE);
-
-  ADC_ClearFlag(sADC.adc[port].pADC, ADC_SR_OVR); // Clear any previous overrun errors
-
-//  ADC_MultiModeDMARequestAfterLastTransferCmd(ENABLE);
-
-//  ADC_ITConfig(sADC.adc[port].pADC, ADC_IT_EOC, ENABLE); // Enable interrupts
-
-//  NVIC_EnableIRQ(ADC_IRQn);
-}
-
 void ADC_configureADC(ADC_TypeDef *ADCx, ADC_InitTypeDef *ADC_InitStruct)
 {
   uint32_t tmpreg1 = 0;
@@ -475,6 +415,66 @@ void ADC_Cmd(ADC_TypeDef* ADCx, FunctionalState newState)
 }
 
 /**************************************************************************************************\
+* FUNCTION    ADC_openPort
+* DESCRIPTION Initializes the specified ADCPort with the provided AppLayer configuration
+* PARAMETERS  port: The ADC port to open
+*             adcConfig: The AppLayer configuration to apply to the port
+* RETURNS     Nothing
+* NOTES       None
+\**************************************************************************************************/
+void ADC_openPort(ADCPort port, AppADCConfig appConfig)
+{
+  ADC_InitTypeDef adcInit;
+  ADC_CommonInitTypeDef adcCommonInit;
+  ADCConfig *pCfg = &appConfig.adcConfig;
+
+  // Copy the configuration information into sADC
+  Util_fillMemory((uint8*)&sADC.adc[port], sizeof(sADC.adc[port]), 0x00);
+  Util_copyMemory((uint8*)&appConfig, (uint8*)&sADC.adc[port].appConfig, sizeof(appConfig));
+  sADC.adc[port].pADC = ADC_getPortPtr(port);
+  sADC.adc[port].isConfigured = TRUE;
+
+  switch (port)
+  {
+    case ADC_PORT1:
+      DMA_DeInit(DMA2_Stream0);
+      break;
+    case ADC_PORT2:
+      DMA_DeInit(DMA2_Stream2);
+      break;
+    case ADC_PORT3:
+      DMA_DeInit(DMA2_Stream1);
+      break;
+    default:
+      return;
+  }
+
+  // Initialize the structure common to all ADCs
+  ADC_CommonStructInit(&adcCommonInit);
+  ADC_CommonInit(&adcCommonInit);
+
+  // Initialize the individual ADC for DMA transfer mode
+  ADC_StructInit(&adcInit);
+  adcInit.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_Rising;
+  adcInit.ADC_ExternalTrigConv     = ADC_ExternalTrigConv_T3_TRGO;
+  ADC_configureADC(sADC.adc[port].pADC, &adcInit);
+  ADC_RegularChannelConfig(sADC.adc[port].pADC, pCfg->chan[0].chanNum, 1, pCfg->chan[0].sampleTime);
+  sADC.adc[port].adcStatus.currChan = pCfg->chan[0].chanNum;
+
+  ADC_DMACmd(sADC.adc[port].pADC, ENABLE);
+
+  ADC_DMARequestAfterLastTransferCmd(sADC.adc[port].pADC, ENABLE);
+
+  ADC_ClearFlag(sADC.adc[port].pADC, ADC_SR_OVR); // Clear any previous overrun errors
+
+//  ADC_MultiModeDMARequestAfterLastTransferCmd(ENABLE);
+
+//  ADC_ITConfig(sADC.adc[port].pADC, ADC_IT_EOC, ENABLE); // Enable interrupts
+
+//  NVIC_EnableIRQ(ADC_IRQn);
+}
+
+/**************************************************************************************************\
 * FUNCTION    ADC_getSamples
 * DESCRIPTION Configures an ADC port to provide a number of samples
 * PARAMETERS  port: The ADC port to get samples from
@@ -495,10 +495,10 @@ void ADC_getSamples(ADCPort port, uint16 numSamples)
   dmaInit.DMA_MemoryInc = DMA_MemoryInc_Enable;
   dmaInit.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
   dmaInit.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
-  dmaInit.DMA_Priority = DMA_Priority_High;
-  dmaInit.DMA_FIFOMode = DMA_FIFOMode_Disable;
-//  dmaInit.DMA_FIFOMode = DMA_FIFOMode_Enable;
-//  dmaInit.DMA_FIFOThreshold = DMA_FIFOThreshold_HalfFull;
+  dmaInit.DMA_Priority = DMA_Priority_Medium;
+//  dmaInit.DMA_FIFOMode = DMA_FIFOMode_Disable;
+  dmaInit.DMA_FIFOMode = DMA_FIFOMode_Enable;
+  dmaInit.DMA_FIFOThreshold = DMA_FIFOStatus_HalfFull;
 
   switch (port) // Enable DMA Stream Half / Transfer Complete interrupt
   {

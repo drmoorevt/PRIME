@@ -54,6 +54,9 @@ void Time_stopTimer(HardTimer timer)
       TIM2->CR1 &= (~TIM_CR1_CEN);
       break;
     case TIME_HARD_TIMER_TIMER3:
+      NVIC_ClearPendingIRQ(TIM3_IRQn);
+      NVIC_DisableIRQ(TIM3_IRQn);
+      TIM3->CNT  = 0;
       TIM3->CR1 &= (~TIM_CR1_CEN);
       break;
   }
@@ -122,7 +125,9 @@ void TIM2_IRQHandler(void)
 void Time_initTimer3(uint16 reloadValue)
 {
   RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Turn on Timer3 clocks (60 MHz)
+  NVIC_ClearPendingIRQ(TIM3_IRQn);
   TIM3->ARR     = reloadValue;
+  TIM3->CNT     = reloadValue;
   TIM3->CR1    |= (TIM_CR1_CEN | TIM_CR1_URS | TIM_CR1_ARPE);
   TIM3->CR2    &= (~TIM_CR2_MMS);
   TIM3->CR2    |= (TIM_TRGOSource_Update);

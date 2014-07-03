@@ -1,6 +1,7 @@
 #include "stm32f2xx.h"
 #include "adc.h"
 #include "analog.h"
+#include "bluetooth.h"
 #include "dac.h"
 #include "eeprom.h"
 #include "gpio.h"
@@ -12,6 +13,7 @@
 #include "tests.h"
 #include "util.h"
 #include "uart.h"
+#include "zigbee.h"
 
 int main(void)
 {
@@ -20,12 +22,14 @@ int main(void)
   DAC_init();
   Analog_init();
   UART_init();
+  Bluetooth_init();
   HIH613X_init();
   EEPROM_init();
   SerialFlash_init();
   SDCard_init();
   SPI_init();
   Tests_init();
+  ZigBee_init();
   
   while(1)
   {

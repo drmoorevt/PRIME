@@ -50,6 +50,9 @@ typedef struct
   void      (*appNotifyTimerExpired)(SoftTimer timer); // Can be null
 } SoftTimerConfig;
 
+#define ENABLE_SYSTICK()  SysTick->CTRL = SysTick->CTRL | (SysTick_CTRL_ENABLE_Msk)
+#define DISABLE_SYSTICK() SysTick->CTRL = SysTick->CTRL & (~SysTick_CTRL_ENABLE_Msk)
+
 void Time_init(void);
 void Time_delay(uint32 microSeconds);
 

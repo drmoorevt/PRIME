@@ -29,6 +29,13 @@ typedef enum
   EEPROM_PROFILE_MAX          = 5
 } EEPROMPowerProfile;
 
+typedef enum
+{
+  EEPROM_RESULT_OK           = 0,
+  EEPROM_RESULT_NEEDED_RETRY = 1,
+  EEPROM_RESULT_ERROR        = 2
+} EEPROMResult;
+
 void EEPROM_init(void);
 boolean EEPROM_setup(boolean state);
 EEPROMState EEPROM_getState(void);
@@ -36,7 +43,7 @@ uint32 EEPROM_getStateAsWord(void);
 boolean EEPROM_setPowerProfile(EEPROMPowerProfile profile);
 boolean EEPROM_setPowerState(EEPROMState state, double vDomain);
 void EEPROM_read(const uint8 *pSrc, uint8 *pDest, uint16 length);
-boolean EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length);
+EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length);
 boolean EEPROM_fill(uint8 *pDest, uint16 length, uint8 fillVal);
 void EEPROM_test(void);
 
