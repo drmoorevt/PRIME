@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="6.2">
+<eagle version="6.5.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -23229,7 +23229,6 @@ Source: 008-0260-0_E.pdf</description>
 <text x="828.04" y="518.16" size="1.778" layer="95">1V-6V Switchable Output</text>
 <text x="782.32" y="25.4" size="6.4516" layer="94">LAB304 LLC</text>
 <text x="848.36" y="5.08" size="5.08" layer="94">0</text>
-<text x="459.74" y="116.84" size="2.54" layer="95" rot="R90">PAGE ERASE DOMINATES TIME DELAY</text>
 <text x="398.78" y="241.3" size="1.778" layer="95">V1EN Controlled from MCU</text>
 <text x="398.78" y="238.76" size="1.778" layer="95">BOOST4EN Controlled from MCU</text>
 <text x="398.78" y="236.22" size="1.778" layer="95">BOOST5EN Controlled from MCU</text>
@@ -23240,8 +23239,8 @@ Source: 008-0260-0_E.pdf</description>
 <text x="604.52" y="322.58" size="1.778" layer="95">Always booting from internal flash</text>
 <text x="817.88" y="167.64" size="1.778" layer="95">3V - 5.5V</text>
 <text x="812.8" y="241.3" size="1.778" layer="95">Pin13 to VCC per Datasheet</text>
-<text x="457.2" y="114.3" size="1.778" layer="91">SDA</text>
-<text x="457.2" y="109.22" size="1.778" layer="91">SCL</text>
+<text x="457.2" y="116.84" size="1.778" layer="91">SDA</text>
+<text x="457.2" y="111.76" size="1.778" layer="91">SCL</text>
 <text x="482.6" y="248.92" size="1.778" layer="95" rot="R90">SPI1 Max is 15Mbit/s</text>
 <text x="500.38" y="340.36" size="1.778" layer="95" rot="R90">You need to voltage divide this!</text>
 <text x="497.84" y="340.36" size="1.778" layer="95" rot="R90">Only 3adcs...</text>
