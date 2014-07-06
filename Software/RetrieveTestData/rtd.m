@@ -52,12 +52,6 @@ function [title,channels,results,time,success] = rtd(s, test, args)
     end
     testBytes = numChannels * bytesPerChannel;
     
-    
-        %numChannels     = sizeofHeader(1);
-        %bytesPerChannel = uint16(bitshift(uint16(sizeofHeader(2)), 8)) + uint16(sizeofHeader(3));
-        %totalBytes = (bytesPerChannel + 1 ID byte) * numChannels
-        %totalBytes = numChannels * (bytesPerChannel + 1);
-    
     % wait for test data, timeout after 5 seconds
     i = 0;
     fprintf('Getting data from test fixture... \n');

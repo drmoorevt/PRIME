@@ -1,25 +1,35 @@
 #include "stm32f2xx.h"
 #include "gpio.h"
 #include "i2cbb.h"
+#include "time.h"
 #include "util.h"
 
 #define FILE_ID I2CBB_C
 
-#define SCL_PIN (GPIO_Pin_9)
+#define SCL_PIN (GPIO_Pin_3)
 #define SDA_PIN (GPIO_Pin_13)
 #define SDA_DIR_HIH613X_I2C(x) do { GPIOB->MODER &= ~(GPIO_MODER_MODER0 << 26); \
                                     GPIOB->MODER |= (((uint32_t)x) << 26);      \
                                   } while (0)
-#define SDA_HIGH_HIH613X_I2C() do { GPIOB->BSRRL |= 0x00002000; } while (0)
-#define SDA_LOW_HIH613X_I2C()  do { GPIOB->BSRRH |= 0x00002000; } while (0)
-#define SCL_HIGH_HIH613X_I2C() do { GPIOB->BSRRL |= 0x00000200; } while (0)
-#define SCL_LOW_HIH613X_I2C()  do { GPIOB->BSRRH |= 0x00000200; } while (0)
+#define SCL_DIR_HIH613X_I2C(x) do { GPIOD->MODER &= ~(GPIO_MODER_MODER0 << 6); \
+                                    GPIOD->MODER |= (((uint32_t)x) << 6);      \
+                                  } while (0)
+
+#define SDA_HIGH_HIH613X_I2C() do { GPIOB->BSRRL |= 0x00002000;         \
+                                    SDA_DIR_HIH613X_I2C(GPIO_Mode_IN);  } while (0)
+#define SDA_LOW_HIH613X_I2C()  do { GPIOB->BSRRH |= 0x00002000;         \
+                                    SDA_DIR_HIH613X_I2C(GPIO_Mode_OUT); } while (0)
+
+#define SCL_HIGH_HIH613X_I2C() do { GPIOB->BSRRL |= 0x00000200;         \
+                                    SCL_DIR_HIH613X_I2C(GPIO_Mode_IN);  } while (0)
+#define SCL_LOW_HIH613X_I2C()  do { GPIOB->BSRRH |= 0x00000200;         \
+                                    SCL_DIR_HIH613X_I2C(GPIO_Mode_OUT); } while (0)
 
 static struct
 {
-  uint16 freqKhz;
-  uint16 tClockLow;
-  uint16 tClockHigh;
+  uint32 clockFreqKhz;
+  uint32 clockTimeUs;
+  uint32 setupTimeSDA;
 } sI2CBB;
 
 static void    I2CBB_sendStart(void);
@@ -38,10 +48,7 @@ static uint8   I2CBB_getByte(boolean ack);
 void I2CBB_init(void)
 {
   Util_fillMemory(&sI2CBB, sizeof(sI2CBB), 0x00);
-  sI2CBB.freqKhz    = (150);
-  sI2CBB.tClockHigh = (125 * 100) / sI2CBB.freqKhz; // 125*2 = 10uS = 100kHz
-  sI2CBB.tClockLow  = (125 * 100) / sI2CBB.freqKhz;
-  I2CBB_setup(FALSE);
+  I2CBB_setup(FALSE, I2CBB_CLOCK_RATE_101562);
 }
 
 /**************************************************************************************************\
@@ -51,20 +58,24 @@ void I2CBB_init(void)
 *                    set to input.
 * RETURNS     TRUE
 \**************************************************************************************************/
-boolean I2CBB_setup(boolean state)
+boolean I2CBB_setup(boolean state, I2CBBClockRate rate)
 {
   // Initialize the SCL and SDA lines (Note open drain on SDA and push pull on SCL)
-  GPIO_InitTypeDef SCLI2CBBCtrl = {SCL_PIN, GPIO_Mode_OUT, GPIO_Speed_25MHz, GPIO_OType_PP,
+  GPIO_InitTypeDef SCLI2CBBCtrl = {SCL_PIN, GPIO_Mode_IN, GPIO_Speed_25MHz, GPIO_OType_OD,
                                                      GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
-  GPIO_InitTypeDef SDAI2CBBCtrl = {SDA_PIN, GPIO_Mode_OUT, GPIO_Speed_25MHz, GPIO_OType_OD,
+  GPIO_InitTypeDef SDAI2CBBCtrl = {SDA_PIN, GPIO_Mode_IN, GPIO_Speed_25MHz, GPIO_OType_OD,
                                                      GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
-  SCLI2CBBCtrl.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
-  SDAI2CBBCtrl.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
-  GPIO_configurePins(GPIOB, &SCLI2CBBCtrl);
+  
+  // @DRM: Use the input clock rate here...
+  sI2CBB.setupTimeSDA = (1);
+  sI2CBB.clockFreqKhz = (100);
+  sI2CBB.clockTimeUs  = (1000) / sI2CBB.clockFreqKhz;
+  
+  GPIO_configurePins(GPIOD, &SCLI2CBBCtrl);
   GPIO_configurePins(GPIOB, &SDAI2CBBCtrl);
   GPIO_setPortClock(GPIOB, TRUE);
-  SDA_HIGH_HIH613X_I2C();
-  SCL_HIGH_HIH613X_I2C();
+  I2CBB_sendStop();
+
   return TRUE;
 }
 
@@ -76,12 +87,10 @@ boolean I2CBB_setup(boolean state)
 \**************************************************************************************************/
 static void I2CBB_sendStart(void)
 {
-  SCL_HIGH_HIH613X_I2C();
-  Util_spinWait(sI2CBB.tClockLow);
   SDA_LOW_HIH613X_I2C();
-  SDA_DIR_HIH613X_I2C(GPIO_Mode_OUT);
-  Util_spinWait(sI2CBB.tClockHigh);
+  Time_delay(sI2CBB.clockTimeUs);
   SCL_LOW_HIH613X_I2C();
+  Time_delay(sI2CBB.clockTimeUs);
 }
 
 /**************************************************************************************************\
@@ -92,10 +101,10 @@ static void I2CBB_sendStart(void)
 \**************************************************************************************************/
 static void I2CBB_sendStop(void)
 {
-  Util_spinWait(sI2CBB.tClockHigh * 2);
   SCL_HIGH_HIH613X_I2C();
-  Util_spinWait(sI2CBB.tClockLow);
-  SDA_DIR_HIH613X_I2C(GPIO_Mode_IN);
+  Time_delay(sI2CBB.clockTimeUs);
+  SDA_HIGH_HIH613X_I2C();
+  Time_delay(sI2CBB.clockTimeUs);
 }
 
 /**************************************************************************************************\
@@ -108,13 +117,9 @@ static boolean I2CBB_getAck(void)
 {
   boolean ack;
   SDA_DIR_HIH613X_I2C(GPIO_Mode_IN);
-  Util_spinWait(sI2CBB.tClockLow * 2);
   SCL_HIGH_HIH613X_I2C();
-  Util_spinWait(sI2CBB.tClockHigh * 2);
-  if (GPIOB->IDR & GPIO_IDR_IDR_13)
-    ack = FALSE;
-  else
-    ack = TRUE;
+  Time_delay(sI2CBB.clockTimeUs);
+  ack = ((GPIOB->IDR & GPIO_IDR_IDR_13) > 0);
   SCL_LOW_HIH613X_I2C();
   return ack;
 }
@@ -125,20 +130,23 @@ static boolean I2CBB_getAck(void)
 * PARAMETERS  byte: The byte to send out
 * RETURNS     TRUE if the byte was ACKed, FALSE if the byte was NACKed
 \**************************************************************************************************/
-boolean I2CBB_sendByte(uint8 byte)
+static boolean I2CBB_sendByte(uint8 byte)
 {
   uint8 count;
   for (count = 0; count < 8; count++) // Clock out the bits of command, MSB first
   {
-    Util_spinWait(sI2CBB.tClockHigh);
+    Time_delay(sI2CBB.clockTimeUs);
+    
     if (byte & 0x80)
       SDA_HIGH_HIH613X_I2C();
     else
       SDA_LOW_HIH613X_I2C();
     byte <<= 1;
-    Util_spinWait(sI2CBB.tClockLow);
+    
+    Time_delay(sI2CBB.setupTimeSDA);
     SCL_HIGH_HIH613X_I2C();
-    Util_spinWait(sI2CBB.tClockHigh * 2);
+    
+    Time_delay(sI2CBB.clockTimeUs);
     SCL_LOW_HIH613X_I2C();
   }
   return I2CBB_getAck(); // Switch the SDA direction and receive the ACK signal from the device
@@ -156,14 +164,11 @@ static void I2CBB_sendAckNack(boolean ack)
     SDA_LOW_HIH613X_I2C();
   else
     SDA_HIGH_HIH613X_I2C();
-  SDA_DIR_HIH613X_I2C(GPIO_Mode_OUT);
-  Util_spinWait(sI2CBB.tClockLow * 2);
-
+  Time_delay(sI2CBB.setupTimeSDA);
   SCL_HIGH_HIH613X_I2C();
-  Util_spinWait(sI2CBB.tClockHigh * 2);
-
+  Time_delay(sI2CBB.clockTimeUs);
   SCL_LOW_HIH613X_I2C();
-  SDA_DIR_HIH613X_I2C(GPIO_Mode_IN);
+  SDA_HIGH_HIH613X_I2C(); // Turn it around into an input...
 }
 
 /**************************************************************************************************\
@@ -172,14 +177,14 @@ static void I2CBB_sendAckNack(boolean ack)
 * PARAMETERS  ack: indicates whether to send an ACK or NACK after receiving the byte
 * RETURNS     The received byte
 \**************************************************************************************************/
-uint8 I2CBB_getByte(boolean ack)
+static uint8 I2CBB_getByte(boolean ack)
 {
   uint8 count, byte;
   for (count = 8, byte = 0; count != 0; count--)
   {
-    Util_spinWait(sI2CBB.tClockLow * 2);
+    Time_delay(sI2CBB.clockTimeUs);
     SCL_HIGH_HIH613X_I2C();
-    Util_spinWait(sI2CBB.tClockHigh * 2);
+    Time_delay(sI2CBB.setupTimeSDA);
     byte <<= 1;
     if (GPIOB->IDR & GPIO_IDR_IDR_13)
       byte |= 1;
@@ -203,8 +208,6 @@ uint8 I2CBB_getByte(boolean ack)
 boolean I2CBB_readData(uint8 command, uint8 *pResponse, uint8 respLength)
 {
   boolean ack;
-
-  I2CBB_setup(TRUE);
 
   I2CBB_sendStart();
   ack = I2CBB_sendByte(command);

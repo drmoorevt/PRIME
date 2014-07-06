@@ -14,7 +14,7 @@ typedef enum
   SPI_CLOCK_RATE_203125   = 6,
   SPI_CLOCK_RATE_101562   = 7,
   SPI_CLOCK_RATE_MAX
-}SPIClockRate;
+} SPIClockRate;
 
 void SPI_init(void);
 boolean SPI_setup(boolean state, SPIClockRate rate);

@@ -85,11 +85,11 @@ void Analog_init(void)
   const uint16 ctrlPortC = GPIO_Pin_0|GPIO_Pin_1|GPIO_Pin_2|GPIO_Pin_3|GPIO_Pin_4|GPIO_Pin_5;
   const uint16 ctrlPortE = GPIO_Pin_2;
 
-  GPIO_InitTypeDef analogCtrlPortB = {ctrlPortB, GPIO_Mode_OUT, GPIO_Speed_2MHz, GPIO_OType_PP,
+  GPIO_InitTypeDef analogCtrlPortB = {ctrlPortB, GPIO_Mode_OUT, GPIO_Speed_25MHz, GPIO_OType_PP,
                                                  GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
-  GPIO_InitTypeDef analogCtrlPortC = {ctrlPortC, GPIO_Mode_OUT, GPIO_Speed_2MHz, GPIO_OType_PP,
+  GPIO_InitTypeDef analogCtrlPortC = {ctrlPortC, GPIO_Mode_OUT, GPIO_Speed_25MHz, GPIO_OType_PP,
                                                  GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
-  GPIO_InitTypeDef analogCtrlPortE = {ctrlPortE, GPIO_Mode_OUT, GPIO_Speed_2MHz, GPIO_OType_PP,
+  GPIO_InitTypeDef analogCtrlPortE = {ctrlPortE, GPIO_Mode_OUT, GPIO_Speed_25MHz, GPIO_OType_PP,
                                                  GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
   GPIO_setPortClock(GPIOB, TRUE);
   GPIO_configurePins(GPIOB, &analogCtrlPortB);
@@ -205,19 +205,19 @@ boolean Analog_setDomain(VoltageDomain domain, boolean state, double vOut)
       if (sAnalog.domainStatus[domain].isEnabled != state)
       {
         Analog_selectChannel(domain, state);
-        SELECT_DOMLEN();       // DOMLEN low to latch in new vals
-        Util_spinDelay(1);     // 1us to latch in the new value
-        DESELECT_DOMLEN();     // DOMLEN high so we can otherwise use the bus
-        Util_spinDelay(1);     // 1us to let the DOMLEN latch in
-        if (state == TRUE)
-          Util_spinDelay(250); // 250us from EN to active, per datasheet
+        SELECT_DOMLEN();   // DOMLEN low to latch in new vals
+        Time_delay(1);     // 1us to latch in the new value
+        DESELECT_DOMLEN(); // DOMLEN high so we can otherwise use the bus
+        Time_delay(1);     // 1us to let the DOMLEN latch in
+//        if (state == TRUE)
+//          Time_delay(250); // 250us from EN to active, per datasheet
       }
       DAC_setVoltage(DAC_PORT1, fbVoltage);
       /***** This is a hack to ensure that the fbVoltage is reaching the selected domain *****/
       Analog_selectChannel(domain, FALSE);
       // If this is the first time enabling the domain, give it some time for voltage to stabilize
       if ((sAnalog.domainStatus[domain].isEnabled != state) && (state == TRUE))
-        Util_spinDelay(250);  // 250us to stabilize voltage (datasheet says 500us...)
+        Time_delay(250);  // 250us to stabilize voltage (datasheet says 500us...)
 
       // Make a record of what we just did here
       sAnalog.domainStatus[domain].isEnabled       = state;

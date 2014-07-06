@@ -18,7 +18,7 @@
 
 #define FILE_ID ZIGBEE_C
 
-#define ZIGBEE_PIN_RESET         (GPIO_Pin_6) // Port B
+#define ZIGBEE_PIN_RESET         (GPIO_Pin_6) // Port d
 
 #define ZIGBEE_SELECT_RESET()   do { GPIOD->BSRRH |= 0x00000040; } while (0)
 #define ZIGBEE_DESELECT_RESET() do { GPIOD->BSRRL |= 0x00000040; } while (0)
@@ -105,10 +105,9 @@ void ZigBee_init(void)
                            &sZigBee.comms.txBuffer[0],
                            &ZigBee_notifyCommsEvent };
   Util_fillMemory(&sZigBee, sizeof(sZigBee), 0x00);
-  Analog_setDomain(COMMS_DOMAIN,  TRUE, 3.3);  // Enable comms domain
   UART_openPort(USART_PORT3, comm3);
   sZigBee.comms.portOpen = TRUE;
-  ZigBee_setup(TRUE);
+  ZigBee_setup(FALSE);
 }
 
 /**************************************************************************************************\
@@ -120,12 +119,12 @@ void ZigBee_init(void)
 void ZigBee_setup(boolean state)
 {
   // Initialize the ZigBee chip reset line
-  GPIO_InitTypeDef zbCtrlPortB = {(ZIGBEE_PIN_RESET), GPIO_Mode_OUT,
+  GPIO_InitTypeDef zbCtrlPortD = {(ZIGBEE_PIN_RESET), GPIO_Mode_OUT,
                                    GPIO_Speed_25MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL,
                                    GPIO_AF_SYSTEM };
-  zbCtrlPortB.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
-  GPIO_configurePins(GPIOB, &zbCtrlPortB);
-  GPIO_setPortClock(GPIOB, TRUE);    
+  zbCtrlPortD.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
+  GPIO_configurePins(GPIOD, &zbCtrlPortD);
+  GPIO_setPortClock(GPIOD, TRUE);    
   ZIGBEE_SELECT_RESET();
   Time_delay(1000);
   ZIGBEE_DESELECT_RESET();

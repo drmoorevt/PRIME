@@ -10,7 +10,7 @@
 
 #define FILE_ID HIH613X_C
 
-#define HIHALM_PIN      (GPIO_Pin_3) // Labeled as HIHALM -- actually not connected (pin pulled)
+#define HIHALM_PIN      (GPIO_Pin_3) // Labeled as HIHALM -- (pin pulled, used as I2CBBSCL)
 #define HIH_I2C_ADDRESS (0x27)
 #define HIH_MEASURE_CMD (HIH_I2C_ADDRESS << 1)
 #define HIH_READ_CMD    (HIH_MEASURE_CMD  + 1)
@@ -29,7 +29,7 @@ typedef struct
 
 // Power profile voltage definitions, in HIHPowerProfile / HIHState order
 static const double HIH_POWER_PROFILES[HIH_PROFILE_MAX][HIH_STATE_MAX] =
-{
+{ // Idle, Data Ready, Transmitting, Waiting, Reading
   {3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile
   {2.3, 3.3, 3.3, 3.3, 3.3},  // Low power idle profile
   {2.3, 2.3, 3.3, 3.3, 3.3},  // Low power idle/ready profile
@@ -71,13 +71,9 @@ void HIH613X_init(void)
 * NOTES       Also configures the state of the I2CBB pins
 \**************************************************************************************************/
 boolean HIH613X_setup(boolean state)
-{
-  // Initialize the HIH613X alarm line input
-  GPIO_InitTypeDef hihCtrlPortD = {HIHALM_PIN, GPIO_Mode_IN, GPIO_Speed_25MHz, GPIO_OType_PP,
-                                                             GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
-  GPIO_configurePins(GPIOD, &hihCtrlPortD);
-  GPIO_setPortClock(GPIOD, TRUE);
-  I2CBB_setup(state);  // Now configure the I2C lines
+{ 
+  // @DRM: Determine the clock rate relative to the voltage here
+  I2CBB_setup(state, I2CBB_CLOCK_RATE_101562);  // Now configure the I2C lines
   return TRUE;
 }
 
@@ -101,6 +97,17 @@ HIHState HIH613X_getState(void)
 uint32 HIH613X_getStateAsWord(void)
 {
   return (uint32)sHIH613X.state;
+}
+
+/**************************************************************************************************\
+* FUNCTION    HIH613X_getStateVoltage
+* DESCRIPTION Returns the ideal voltage of the current state (as dictated by the current profile)
+* PARAMETERS  None
+* RETURNS     The ideal state voltage
+\**************************************************************************************************/
+double HIH613X_getStateVoltage(void)
+{
+  return sHIH613X.vDomain[sHIH613X.state];
 }
 
 /**************************************************************************************************\
@@ -195,9 +202,7 @@ void HIH613X_readTempHumidSPI(void)
   int16 hihDataBuffer[2];
 
   SELECT_CHIP_HIH613X();
-  Util_spinDelay(10);
   SPI_read((uint8*)&hihDataBuffer, 4); // Note that SPI can only write at 800kHz
-  Util_spinDelay(15);
   DESELECT_CHIP_HIH613X();
 }
 
@@ -217,7 +222,9 @@ HIHStatus HIH613X_readTempHumidI2CBB(boolean measure, boolean read, boolean conv
   if (measure)
   {
     HIH613X_setState(HIH_STATE_SENDING_CMD);
+    HIH613X_setup(TRUE);
     I2CBB_readData(HIH_MEASURE_CMD, NULL, 0); // send measure command
+    HIH613X_setup(FALSE);
     HIH613X_setState(HIH_STATE_WAITING);
   }
 
@@ -230,8 +237,10 @@ HIHStatus HIH613X_readTempHumidI2CBB(boolean measure, boolean read, boolean conv
   if (read)
   {
     HIH613X_setState(HIH_STATE_READING);
+    HIH613X_setup(TRUE);
     I2CBB_readData(HIH_READ_CMD, (uint8*)&sHIH613X.currData, sizeof(sHIH613X.currData));
     Util_swap32((uint32*)&sHIH613X.currData);
+    HIH613X_setup(FALSE);
     HIH613X_setState(HIH_STATE_DATA_READY);
   }
 

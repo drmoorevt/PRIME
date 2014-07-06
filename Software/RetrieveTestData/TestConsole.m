@@ -1,18 +1,12 @@
-function [success, name, chans, data, time] = TestConsole(CommPort)
-    %s = openFixtureComms(CommPort, 460800);
+function [name, chans, data, time] = TestConsole(CommPort)
     s = openFixtureComms(CommPort, 921600);
-    [name, chans, data, time] = runTest13(s, 10);
+    [name, chans, data, time] = runTest11(s, 2);
     closeFixtureComms(s);
     
     % Parse the data, call individual parsers to calculate EDP
     
     %http://www.mathworks.com/help/matlab/creating_plots/plotting-with-two-y-axes.html
     %stem3(time,chans,data)
-    legend(chans)
-    xlabel('Time (ms)');
-    ylabel('Voltage (V)');
-    title(name);
-    success = 1;
     
     return
     % End selection bypass

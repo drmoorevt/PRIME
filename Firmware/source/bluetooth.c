@@ -108,10 +108,9 @@ void Bluetooth_init(void)
                            &sBluetooth.comms.txBuffer[0],
                            &Bluetooth_notifyCommsEvent };
   Util_fillMemory(&sBluetooth, sizeof(sBluetooth), 0x00);
-  Analog_setDomain(COMMS_DOMAIN,  TRUE, 3.3);  // Enable comms domain
   UART_openPort(UART_PORT4, comm4);
   sBluetooth.comms.portOpen = TRUE;
-  Bluetooth_setup(TRUE);
+  Bluetooth_setup(FALSE);
 }
 
 /**************************************************************************************************\

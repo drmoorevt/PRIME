@@ -6,7 +6,7 @@
 #include "eeprom.h"
 #include "gpio.h"
 #include "hih613x.h"
-#include "i2c.h"
+#include "i2cbb.h"
 #include "sdcard.h"
 #include "serialflash.h"
 #include "spi.h"
@@ -28,6 +28,7 @@ int main(void)
   SerialFlash_init();
   SDCard_init();
   SPI_init();
+  I2CBB_init();
   Tests_init();
   ZigBee_init();
   

@@ -221,12 +221,12 @@ typedef struct
 
 // Power profile voltage definitions, in SDCardPowerProfile / SDCardState order
 static const double SDCARD_POWER_PROFILES[SDCARD_PROFILE_MAX][SDCARD_STATE_MAX] =
-{
+{ // Idle, Setup, Ready, Reading, Writing, Verifying
   {3.3, 3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile
-  {2.0, 3.3, 3.3, 3.3, 3.3, 3.3},  // Low power idle profile
-  {2.0, 3.3, 2.0, 3.3, 3.3, 3.3},  // Low power idle/ready profile
-  {2.0, 3.3, 2.0, 2.0, 3.3, 3.3},  // Low power idle/ready/read profile
-  {2.0, 2.0, 2.0, 2.0, 2.0, 2.0}   // Low power all
+  {2.0, 2.0, 2.0, 3.3, 3.3, 3.3},  // Low power idle, setup, ready, profile
+  {2.0, 2.0, 2.0, 2.7, 3.3, 3.3},  // Low power LPISR, LPR, HSWV
+  {2.0, 2.0, 2.0, 2.7, 2.7, 2.7},  // Low power all
+  {2.0, 2.0, 2.0, 2.0, 2.0, 2.0}   // XLP all
 };
 
 static struct
@@ -301,6 +301,17 @@ SDCardState SDCard_getState(void)
 uint32 SDCard_getStateAsWord(void)
 {
   return (uint32)sSDCard.state;
+}
+
+/**************************************************************************************************\
+* FUNCTION    SDCard_getStateVoltage
+* DESCRIPTION Returns the ideal voltage of the current state (as dictated by the current profile)
+* PARAMETERS  None
+* RETURNS     The ideal state voltage
+\**************************************************************************************************/
+double SDCard_getStateVoltage(void)
+{
+  return sSDCard.vDomain[sSDCard.state];
 }
 
 /**************************************************************************************************\

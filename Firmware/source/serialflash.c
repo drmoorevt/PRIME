@@ -72,12 +72,11 @@ typedef struct
 static const double SERIAL_FLASH_POWER_PROFILES[SERIAL_FLASH_PROFILE_MAX][SERIAL_FLASH_STATE_MAX] =
 {
   {3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile
-  {3.3, 3.3, 3.3, 3.3, 2.3},  // Low power wait profile
+  {2.3, 3.3, 3.3, 3.3, 2.3},  // Low power idle/wait profile
   {2.3, 3.3, 2.3, 2.3, 2.3},  // High Speed Read, Low all other states
-  {2.3, 3.3, 3.3, 3.3, 2.3},  // High Speed Read/Write, Low all other states
+  {2.3, 2.3, 2.3, 3.3, 2.3},  // High Speed write, Low all other states
   {2.3, 2.3, 2.3, 2.3, 2.3},  // Low power all profile
-  {3.3, 3.3, 3.3, 3.3, 1.8},  // Extreme low power wait profile
-  {2.3, 2.3, 2.3, 2.3, 2.3}   // Low power all, extreme low power wait profile
+  {2.3, 2.3, 2.3, 2.3, 1.8}   // Low power all, extreme low power wait profile
 };
 
 static struct
@@ -122,9 +121,6 @@ boolean SerialFlash_setup(boolean state)
   GPIO_InitTypeDef sfCtrlPortB = {(SERIAL_FLASH_PIN_HOLD | SERIAL_FLASH_PIN_SELECT), GPIO_Mode_OUT,
                                    GPIO_Speed_25MHz, GPIO_OType_OD, GPIO_PuPd_NOPULL,
                                    GPIO_AF_SYSTEM };
-//  GPIO_InitTypeDef sfCtrlPortB = {(SERIAL_FLASH_PIN_HOLD | SERIAL_FLASH_PIN_SELECT), GPIO_Mode_OUT,
-//                                   GPIO_Speed_25MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL,
-//                                   GPIO_AF_SYSTEM };
 
   sfCtrlPortB.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
   GPIO_configurePins(GPIOB, &sfCtrlPortB);
@@ -166,6 +162,17 @@ SerialFlashState SerialFlash_getState(void)
 uint32 SerialFlash_getStateAsWord(void)
 {
   return (uint32)sSerialFlash.state;
+}
+
+/**************************************************************************************************\
+* FUNCTION    SerialFlash_getStateVoltage
+* DESCRIPTION Returns the ideal voltage of the current state (as dictated by the current profile)
+* PARAMETERS  None
+* RETURNS     The ideal state voltage
+\**************************************************************************************************/
+double SerialFlash_getStateVoltage(void)
+{
+  return sSerialFlash.vDomain[sSerialFlash.state];
 }
 
 /**************************************************************************************************\

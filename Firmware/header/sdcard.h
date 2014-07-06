@@ -52,6 +52,7 @@ boolean SDCard_setPowerState(SDCardState state, double vDomain);
 boolean SDCard_setPowerProfile(SDCardPowerProfile profile);
 uint32 SDCard_getStateAsWord(void);
 SDCardState SDCard_getState(void);
+double SDCard_getStateVoltage(void);
 void    SDCard_test(void);
 
 #endif

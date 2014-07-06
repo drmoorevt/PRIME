@@ -129,6 +129,7 @@ static struct
   uint8  argCount;
   TestArgs testArgs;
   TestState state;
+  uint32  powerProfile;
   Samples adc1;
   Samples adc2;
   Samples adc3;
@@ -220,8 +221,14 @@ void Tests_init(void)
                            &sTests.comms.txBuffer[0],
                            &Tests_notifyCommsEvent };
   Util_fillMemory(&sTests, sizeof(sTests), 0x00);
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3); // Enable analog domain
-  Analog_setDomain(COMMS_DOMAIN,  TRUE, 3.3);  // Enable comms domain
+  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
+  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
+  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
+  Analog_setDomain(COMMS_DOMAIN,   TRUE, 3.3);  // Enable comms domain
+  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
+  Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Disable SPI domain
+  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
+  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
   UART_openPort(UART_PORT5, comm5);
   sTests.comms.portOpen = TRUE;
 }
@@ -360,6 +367,9 @@ const uint8 resetMessage[6] = {'R','e','s','e','t','\n'};
  \*************************************************************************************************/
 void Tests_run(void)
 {
+//  Test14Args testArgs = {{1000, 100, 1000}, HIH_PROFILE_STANDARD, TRUE, FALSE, FALSE};
+//  while (1)
+//    Tests_test14(&testArgs);
   switch (sTests.state)
   {
     case TEST_IDLE:  // Clear test data and setup listening for commands on the comm port
@@ -439,20 +449,14 @@ void Tests_sendBinaryResults(Samples *adcBuffer)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate)
+static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate, double initVoltage)
 {
   AppADCConfig adc1Config = {0};
   AppADCConfig adc2Config = {0};
   AppADCConfig adc3Config = {0};
 
-  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,  FALSE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
-  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
+  Analog_setDomain(SPI_DOMAIN, TRUE, initVoltage);  // Set domain voltage to ideal for IDLE state
+  Time_delay(5000); // The SF chip has a power on reset timer requiring 10ms max to finish
 
   // ADC1 sampling domain voltage
   adc1Config.adcConfig.scan               = FALSE;
@@ -532,7 +536,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate)
 \**************************************************************************************************/
 static void Tests_teardownSPITests(boolean testPassed)
 {
-  Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Immediately Disable the SPI domain
+  Analog_setDomain(SPI_DOMAIN, FALSE, 3.3);  // Immediately Disable the SPI domain
 
   // Then wait for any ongoing tests to complete
 //  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
@@ -542,20 +546,175 @@ static void Tests_teardownSPITests(boolean testPassed)
   NVIC_EnableIRQ(SysTick_IRQn);
   NVIC_EnableIRQ(UART5_IRQn);
 
-  // Return domains to initial state
-  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,   TRUE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable SRAM domain
+  // Return domain to initial state
   Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Disable the SPI domain
-  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
 
-  if (testPassed)
-    sprintf(sTests.testHeader.title, "Test Passed");
-  else
-    sprintf(sTests.testHeader.title, "TEST FAILED");
+  switch (sTests.testToRun)
+  {
+    case 11:
+      switch (sTests.powerProfile)
+      {
+        case 0:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "EEPROM Standard Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "EEPROM Standard Profile Failed");
+          break;
+        case 1:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "EEPROM LP Idle/Wait High-Speed Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "EEPROM LP Idle/Wait High-Speed Profile Failed");
+          break;
+        case 2:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "EEPROM LP Idle/Wait Mid-Speed Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "EEPROM LP Idle/Wait Mid-Speed Profile Failed");
+          break;
+        case 3:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "EEPROM LP Idle/Wait Low-Speed Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "EEPROM LP Idle/Wait Low-Speed Profile Failed");
+          break;
+        case 4:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "EEPROM LPI, XLPW, LSRW, Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "EEPROM LPI, XLPW, LSRW, Profile Failed");
+          break;
+        default: break;
+      }
+      break;
+    case 12:
+      switch (sTests.powerProfile)
+      {
+        case 0:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "SerialFlash Standard Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "SerialFlash Standard Profile Failed");
+          break;
+        case 1:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait HSRW Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait HSRW Profile Failed");
+          break;
+        case 2:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait HSR, LSW Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait HSR, LSW Profile Failed");
+          break;
+        case 3:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait LSR, HSW Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait LSR, HSW Profile Failed");
+          break;
+        case 4:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait LSRW Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait LSRW Profile Failed");
+          break;
+        case 5:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "SerialFlash LP Idle LSRW, HSW, XLPW Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "SerialFlash LP Idle LSRW, HSW, XLPW Profile Failed");
+          break;
+        default: break;
+      }
+      break;
+    case 13:
+      switch (sTests.powerProfile)
+      {
+        case 0:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "SDCard Standard Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "SDCard Standard Profile Failed");
+          break;
+        case 1:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait HSRW Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait HSRW Profile Failed");
+          break;
+        case 2:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait HSR, LSW Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait HSR, LSW Profile Failed");
+          break;
+        case 3:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait LSR, HSW Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait LSR, HSW Profile Failed");
+          break;
+        case 4:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait LSRW Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait LSRW Profile Failed");
+          break;
+        case 5:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "SDCard LP Idle LSRW, HSW, XLPW Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "SDCard LP Idle LSRW, HSW, XLPW Profile Failed");
+          break;
+        default: break;
+      }
+      break;
+    case 14:
+      switch (sTests.powerProfile)
+      {
+        case 0:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "HIH61XX Standard Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "HIH61XX Standard Profile Failed");
+          break;
+        case 1:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle Profile Failed");
+          break;
+        case 2:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait HSR, LSW Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait HSR, LSW Profile Failed");
+          break;
+        case 3:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait LSR, HSW Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait LSR, HSW Profile Failed");
+          break;
+        case 4:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait LSRW Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait LSRW Profile Failed");
+          break;
+        case 5:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle LSRW, HSW, XLPW Profile Passed");
+          else
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle LSRW, HSW, XLPW Profile Failed");
+          break;
+        default: break;
+      }
+      break;
+    default: break;
+  }
 
   sprintf(sTests.chanHeader[0].title, "Domain Voltage (V)");
   sprintf(sTests.chanHeader[1].title, "Domain Input Current (mA)");
@@ -637,7 +796,7 @@ uint16 Tests_test03(void *pArgs)
   EEPROM_setup(FALSE);
   SerialFlash_setup(FALSE);
 
-  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 6000); // 100us sample rate
+  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 6000, 3.3); // 100us sample rate
 
   Util_spinWait(1000000);  // Adjusting the graph so as to have a distinct beginning of the test
   for (i = 3300; i > 0; i--)
@@ -960,9 +1119,10 @@ uint16 Tests_test11(void *pArgs)
   EEPROMResult result;
   Test11Args *pTestArgs = pArgs;
 
+  sTests.powerProfile = pTestArgs->profile;
   EEPROM_setPowerProfile(pTestArgs->profile);
 
-  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
+  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate, EEPROM_getStateVoltage());
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
   result = EEPROM_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);
@@ -984,9 +1144,10 @@ uint16 Tests_test12(void *pArgs)
   SerialFlashResult result;
   Test12Args *pTestArgs = pArgs;
 
+  sTests.powerProfile = pTestArgs->profile;
   SerialFlash_setPowerProfile(pTestArgs->profile);
 
-  Tests_setupSPITests(SF_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
+  Tests_setupSPITests(SF_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate, SerialFlash_getStateVoltage());
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
   result = SerialFlash_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);
@@ -1007,10 +1168,11 @@ uint16 Tests_test13(void *pArgs)
   SDWriteResult writeResult;
   Test13Args *pTestArgs = pArgs;
 
+  sTests.powerProfile = pTestArgs->profile;
   SDCard_setPowerProfile(pTestArgs->profile);
   SDCard_initDisk();  // disk must be initialized before we can test writes to it
 
-  Tests_setupSPITests(SD_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
+  Tests_setupSPITests(SD_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate, SDCard_getStateVoltage());
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
   writeResult = SDCard_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);
@@ -1031,9 +1193,10 @@ uint16 Tests_test14(void *pArgs)
   HIHStatus hihResult;
   Test14Args *pTestArgs = pArgs;
 
+  sTests.powerProfile = pTestArgs->profile;
   HIH613X_setPowerProfile(pTestArgs->profile);
 
-  Tests_setupSPITests(HIH_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate);
+  Tests_setupSPITests(HIH_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate, HIH613X_getStateVoltage());
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
   hihResult = HIH613X_readTempHumidI2CBB(pTestArgs->measure, pTestArgs->read, pTestArgs->convert);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);

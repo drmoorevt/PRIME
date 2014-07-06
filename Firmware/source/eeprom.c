@@ -13,10 +13,10 @@
 #define EEPROM_PIN_SELECT (GPIO_Pin_5)
 
 // Can remove the wait by configuring the pins as push-pull, but risk leakage into the domain
-#define SELECT_CHIP_EE0()   do { GPIOB->BSRRH |= 0x00000020; Util_spinWait(60); } while (0)
-#define DESELECT_CHIP_EE0() do { GPIOB->BSRRL |= 0x00000020; Util_spinWait(60); } while (0)
-#define SELECT_EE_HOLD()    do { GPIOB->BSRRH |= 0x00000004; Util_spinWait(60); } while (0)
-#define DESELECT_EE_HOLD()  do { GPIOB->BSRRL |= 0x00000004; Util_spinWait(60); } while (0)
+#define SELECT_CHIP_EE0()   do { GPIOB->BSRRH |= 0x00000020; } while (0)
+#define DESELECT_CHIP_EE0() do { GPIOB->BSRRL |= 0x00000020; } while (0)
+#define SELECT_EE_HOLD()    do { GPIOB->BSRRH |= 0x00000004; } while (0)
+#define DESELECT_EE_HOLD()  do { GPIOB->BSRRL |= 0x00000004; } while (0)
 
 #define WRITEPAGESIZE_EE ((uint16)128)
 #define EE_NUM_RETRIES   (3)
@@ -43,7 +43,7 @@ static const double EEPROM_POWER_PROFILES[EEPROM_PROFILE_MAX][EEPROM_STATE_MAX] 
   {1.8, 3.3, 3.3, 1.8},  // Low power wait/idle profile
   {1.8, 2.5, 2.5, 1.8},  // Low power wait/idle, mid r/w profile
   {1.8, 1.8, 1.8, 1.8},  // Low power all profile
-  {1.8, 3.3, 3.3, 1.4},  // Extreme low power wait profile
+  {1.8, 1.8, 1.8, 1.5},  // Extreme low power wait profile
 };
 
 static struct
@@ -94,7 +94,7 @@ boolean EEPROM_setup(boolean state)
   else if (sEEPROM.vDomain[sEEPROM.state] >= EE_MID_SPEED_VMIN)
     SPI_setup(state, SPI_CLOCK_RATE_3250000);
   else if (sEEPROM.vDomain[sEEPROM.state] >= EE_LOW_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_1625000);
+    SPI_setup(state, SPI_CLOCK_RATE_812500);
   else
   {
     SPI_setup(state, SPI_CLOCK_RATE_406250);
@@ -124,6 +124,17 @@ EEPROMState EEPROM_getState(void)
 uint32 EEPROM_getStateAsWord(void)
 {
   return (uint32)sEEPROM.state;
+}
+
+/**************************************************************************************************\
+* FUNCTION    EEPROM_getStateVoltage
+* DESCRIPTION Returns the ideal voltage of the current state (as dictated by the current profile)
+* PARAMETERS  None
+* RETURNS     The ideal state voltage
+\**************************************************************************************************/
+double EEPROM_getStateVoltage(void)
+{
+  return sEEPROM.vDomain[sEEPROM.state];
 }
 
 /**************************************************************************************************\
