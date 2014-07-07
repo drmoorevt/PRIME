@@ -1,6 +1,6 @@
 function [name, chans, data, time] = TestConsole(CommPort)
     s = openFixtureComms(CommPort, 921600);
-    [name, chans, data, time] = runTest11(s, 2);
+    [name, chans, data, time] = runTest14(s, 1);
     closeFixtureComms(s);
     
     % Parse the data, call individual parsers to calculate EDP
@@ -30,5 +30,3 @@ function [name, chans, data, time] = TestConsole(CommPort)
         end
     end
 end
-            
-        
