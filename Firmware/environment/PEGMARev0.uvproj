@@ -500,6 +500,16 @@
               <FileType>5</FileType>
               <FilePath>..\header\dma.h</FilePath>
             </File>
+            <File>
+              <FileName>zigbee.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\zigbee.h</FilePath>
+            </File>
+            <File>
+              <FileName>bluetooth.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\bluetooth.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -714,6 +724,16 @@
               <FileName>dma.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\dma.c</FilePath>
+            </File>
+            <File>
+              <FileName>zigbee.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\zigbee.c</FilePath>
+            </File>
+            <File>
+              <FileName>bluetooth.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\bluetooth.c</FilePath>
             </File>
           </Files>
         </Group>

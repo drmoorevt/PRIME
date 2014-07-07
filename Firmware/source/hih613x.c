@@ -74,14 +74,14 @@ void HIH613X_init(void)
 * NOTES       Also configures the state of the I2CBB pins
 \**************************************************************************************************/
 boolean HIH613X_setup(boolean state)
-{ /*
+{
   if (sHIH613X.vDomain[state] > HIH_HIGH_SPEED_VMIN)
-    I2CBB_setup(state, I2CBB_CLOCK_RATE_406250);  // Configure the I2C lines for HS txrx
+    I2CBB_setup(state, I2CBB_CLOCK_RATE_1500000);  // Configure the I2C lines for HS txrx
   else if (sHIH613X.vDomain[state] > HIH_LOW_SPEED_VMIN)
-    I2CBB_setup(state, I2CBB_CLOCK_RATE_203125);  // Configure the I2C lines for LS txrx
+    I2CBB_setup(state, I2CBB_CLOCK_RATE_800000);  // Configure the I2C lines for LS txrx
   else
-    I2CBB_setup(state, I2CBB_CLOCK_RATE_101562);  // Configure the I2C lines for XLS txrx
-  */return TRUE;
+    I2CBB_setup(state, I2CBB_CLOCK_RATE_400000);  // Configure the I2C lines for XLS txrx
+  return TRUE;
 }
 
 /**************************************************************************************************\
