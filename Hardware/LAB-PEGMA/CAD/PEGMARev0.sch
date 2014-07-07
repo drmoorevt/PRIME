@@ -23239,7 +23239,7 @@ Source: 008-0260-0_E.pdf</description>
 <text x="604.52" y="322.58" size="1.778" layer="95">Always booting from internal flash</text>
 <text x="817.88" y="167.64" size="1.778" layer="95">3V - 5.5V</text>
 <text x="812.8" y="241.3" size="1.778" layer="95">Pin13 to VCC per Datasheet</text>
-<text x="457.2" y="116.84" size="1.778" layer="91">SDA</text>
+<text x="457.2" y="116.84" size="1.778" layer="91">SDA-&gt;HIHALM</text>
 <text x="457.2" y="111.76" size="1.778" layer="91">SCL</text>
 <text x="482.6" y="248.92" size="1.778" layer="95" rot="R90">SPI1 Max is 15Mbit/s</text>
 <text x="500.38" y="340.36" size="1.778" layer="95" rot="R90">You need to voltage divide this!</text>

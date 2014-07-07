@@ -19,6 +19,9 @@
 #define SELECT_CHIP_HIH613X()   do { GPIOB->BSRRH |= 0x00000200; } while (0)
 #define DESELECT_CHIP_HIH613X() do { GPIOB->BSRRL |= 0x00000200; } while (0)
 
+#define HIH_HIGH_SPEED_VMIN (2.7)
+#define HIH_LOW_SPEED_VMIN (2.0)
+
 typedef struct
 {
   uint32  dontCare    : 2;
@@ -31,9 +34,9 @@ typedef struct
 static const double HIH_POWER_PROFILES[HIH_PROFILE_MAX][HIH_STATE_MAX] =
 { // Idle, Data Ready, Transmitting, Waiting, Reading
   {3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile
-  {2.3, 3.3, 3.3, 3.3, 3.3},  // Low power idle profile
-  {2.3, 2.3, 3.3, 3.3, 3.3},  // Low power idle/ready profile
-  {2.3, 2.3, 3.3, 2.3, 3.3},  // Low power idle/ready/wait profile
+  {2.3, 2.3, 3.3, 2.3, 3.3},  // Low power idle/wait/ready profile HSRW
+  {2.3, 2.3, 2.3, 2.3, 3.3},  // Low power idle/wait/ready profile HSR,LSW
+  {2.3, 2.3, 3.3, 2.3, 2.3},  // Low power idle/ready/wait profile LSR,HSW
   {2.3, 2.3, 2.3, 2.3, 2.3}   // Low power all, (may have comm errors)
 };
 
@@ -71,10 +74,14 @@ void HIH613X_init(void)
 * NOTES       Also configures the state of the I2CBB pins
 \**************************************************************************************************/
 boolean HIH613X_setup(boolean state)
-{ 
-  // @DRM: Determine the clock rate relative to the voltage here
-  I2CBB_setup(state, I2CBB_CLOCK_RATE_101562);  // Now configure the I2C lines
-  return TRUE;
+{ /*
+  if (sHIH613X.vDomain[state] > HIH_HIGH_SPEED_VMIN)
+    I2CBB_setup(state, I2CBB_CLOCK_RATE_406250);  // Configure the I2C lines for HS txrx
+  else if (sHIH613X.vDomain[state] > HIH_LOW_SPEED_VMIN)
+    I2CBB_setup(state, I2CBB_CLOCK_RATE_203125);  // Configure the I2C lines for LS txrx
+  else
+    I2CBB_setup(state, I2CBB_CLOCK_RATE_101562);  // Configure the I2C lines for XLS txrx
+  */return TRUE;
 }
 
 /**************************************************************************************************\
@@ -230,7 +237,7 @@ HIHStatus HIH613X_readTempHumidI2CBB(boolean measure, boolean read, boolean conv
 
   if (measure && read)
   {
-    Time_delay(40000); // tMeasure ~= 36.65ms, but 40ms for reliability
+    Time_delay(45000); // tMeasure ~= 36.65ms, but 45ms for reliability
     HIH613X_setState(HIH_STATE_DATA_READY);
   }
 

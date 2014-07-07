@@ -367,7 +367,7 @@ const uint8 resetMessage[6] = {'R','e','s','e','t','\n'};
  \*************************************************************************************************/
 void Tests_run(void)
 {
-//  Test14Args testArgs = {{1000, 100, 1000}, HIH_PROFILE_STANDARD, TRUE, FALSE, FALSE};
+//  Test14Args testArgs = {{1000, 100, 1000}, HIH_PROFILE_STANDARD, TRUE, TRUE, FALSE};
 //  while (1)
 //    Tests_test14(&testArgs);
   switch (sTests.state)
@@ -496,8 +496,15 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate, do
   sTests.chanHeader[2].chanNum  = adc3Config.adcConfig.chan[0].chanNum;
   sTests.chanHeader[2].bitRes   = (3.3 / 4096.0);
   sTests.chanHeader[3].chanNum  = sTests.periphState.channel;
-  sTests.chanHeader[3].bitRes   = (3.3 * 800.0 / 4096.0);
-
+  switch (sTests.testToRun)
+  {
+    case 11: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / EEPROM_STATE_MAX)       / 4096.0); break;
+    case 12: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / SERIAL_FLASH_STATE_MAX) / 4096.0); break;
+    case 13: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / SDCARD_STATE_MAX)       / 4096.0); break;
+    case 14: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / HIH_STATE_MAX)          / 4096.0); break;
+    default: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / 5)                      / 4096.0); break;
+  }
+  
   // Disable SysTick
   DISABLE_SYSTICK();
   NVIC_DisableIRQ(SysTick_IRQn);
@@ -682,33 +689,33 @@ static void Tests_teardownSPITests(boolean testPassed)
           break;
         case 1:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle Profile Passed");
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready Profile Passed");
           else
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle Profile Failed");
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready Profile Failed");
           break;
         case 2:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait HSR, LSW Profile Passed");
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready, HSRW Profile Passed");
           else
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait HSR, LSW Profile Failed");
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready, HSRW Profile Failed");
           break;
         case 3:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait LSR, HSW Profile Passed");
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready HSR, LSW Profile Passed");
           else
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait LSR, HSW Profile Failed");
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready HSR, LSW Profile Failed");
           break;
         case 4:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait LSRW Profile Passed");
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready LSR HSW Profile Passed");
           else
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait LSRW Profile Failed");
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready LSR HSW Profile Failed");
           break;
         case 5:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle LSRW, HSW, XLPW Profile Passed");
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready LSRW Profile Passed");
           else
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle LSRW, HSW, XLPW Profile Failed");
+            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready LSRW Profile Failed");
           break;
         default: break;
       }
