@@ -1,7 +1,3 @@
-%data1 = voltage
-%data2 = inputCurrent
-%data3 = outputCurrent
-%data4 = state
 function [name, chans, data, time] = runTest12(s, numSweeps)
     close all
     writeBuffer(1:128) = uint8(0);
@@ -23,9 +19,7 @@ function [name, chans, data, time] = runTest12(s, numSweeps)
                 disp('Test failure ... retrying');
             end
         end
-        [axes, lines] = ploty4(time, avgData(:,1), time, avgData(:,2), time, avgData(:,3), time, avgData(:,4), chans);
-        xlabel('Time (ms)');
-        title(name);
+        testPlot(avgData, time, chans, name, 275);
         profIter = profIter + 1;
     end
 end
