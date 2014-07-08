@@ -33,7 +33,7 @@ boolean SPI_setup(boolean state, SPIClockRate rate)
 //                                GPIO_Speed_25MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM};
 
   GPIO_InitTypeDef spiPortB  = {(SPI_MSCK_PIN | SPI_MISO_PIN | SPI_MOSI_PIN), GPIO_Mode_AF,
-                                GPIO_Speed_100MHz, GPIO_OType_OD, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM};
+                                GPIO_Speed_100MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM};
   spiPortB.GPIO_Mode    = (state == TRUE) ? GPIO_Mode_AF   : GPIO_Mode_IN;
   spiPortB.GPIO_AltFunc = (state == TRUE) ? GPIO_AF_SPI1_2 : GPIO_AF_SYSTEM;
 

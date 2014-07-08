@@ -119,7 +119,7 @@ boolean SerialFlash_setup(boolean state)
 {
   // Initialize the EEPROM chip select and hold lines
   GPIO_InitTypeDef sfCtrlPortB = {(SERIAL_FLASH_PIN_HOLD | SERIAL_FLASH_PIN_SELECT), GPIO_Mode_OUT,
-                                   GPIO_Speed_25MHz, GPIO_OType_OD, GPIO_PuPd_NOPULL,
+                                   GPIO_Speed_100MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL,
                                    GPIO_AF_SYSTEM };
 
   sfCtrlPortB.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;

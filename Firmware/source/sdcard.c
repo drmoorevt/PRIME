@@ -15,16 +15,19 @@
 #define SD_MAX_WAIT_BUS_BYTES   (65535)
 #define SD_MAX_WAIT_INIT_BYTES  (4095)
 #define SD_MAX_WAIT_WRITE_BYTES (4095)
-#define SD_MAX_WAIT_RESP_BYTES  (10)
+#define SD_MAX_WAIT_RESP_BYTES  (255)
 
-#define SELECT_CHIP_SD()    do { GPIOB->BSRRH |= 0x00000010; } while (0)
-#define DESELECT_CHIP_SD()  do { GPIOB->BSRRL |= 0x00000010; } while (0)
+#define SELECT_CHIP_SD()    do { GPIOB->BSRRH |= 0x00000010; Time_delay(1); } while (0)
+#define DESELECT_CHIP_SD()  do { GPIOB->BSRRL |= 0x00000010; Time_delay(1); } while (0)
 
 #define START_SINGLE_BLOCK_TOKEN    (0xFE)
 #define START_MULTIPLE_BLOCK_TOKEN  (0xFC)
 #define STOP_MULTIPLE_BLOCK_TOKEN   (0xFD)
 
 #define DEFAULT_BLOCK_LENGTH (512)
+
+#define SD_HIGH_SPEED_VMIN (3.3)
+#define SD_LOW_SPEED_VMIN (2.7)
 
 typedef enum
 {
@@ -270,15 +273,23 @@ void SDCard_init(void)
 \**************************************************************************************************/
 boolean SDCard_setup(boolean state)
 {
-  // Initialize the EEPROM chip select and hold lines
-  GPIO_InitTypeDef sdCtrlPortB = {SD_SELECT_PIN, GPIO_Mode_OUT, GPIO_Speed_25MHz,
+  // Initialize the SDCard chip select line
+  GPIO_InitTypeDef sdCtrlPortB = {SD_SELECT_PIN, GPIO_Mode_OUT, GPIO_Speed_100MHz,
                                   GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
   sdCtrlPortB.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
   GPIO_configurePins(GPIOB, &sdCtrlPortB);
   GPIO_setPortClock(GPIOB, TRUE);
   DESELECT_CHIP_SD();
-  SPI_setup(state, SPI_CLOCK_RATE_1625000);
-  return TRUE;
+  
+  // Set up the SPI transaction with respect to domain voltage
+  if (sSDCard.vDomain[sSDCard.state] >= SD_HIGH_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_7500000);
+  else if (sSDCard.vDomain[sSDCard.state] >= SD_LOW_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_3250000);
+  else
+    SPI_setup(state, SPI_CLOCK_RATE_1625000); // Voltage too low, attempt at very low speed
+  
+  return (sSDCard.vDomain[sSDCard.state] >= SD_LOW_SPEED_VMIN);
 }
 
 /**************************************************************************************************\
@@ -554,7 +565,7 @@ static SDCommandResult SDCard_readBlock(uint32 block)
   sSDCard.preReadWaitClocks = SDCard_waitReady(0xFF, 65535);
   SDCard_sendCommand(READ_SINGLE_BLOCK, block, 0); // Result should == 0, waits in getDataBlock
   readResult = SDCard_getDataBlock(START_SINGLE_BLOCK_TOKEN);
-  sSDCard.postReadWaitClocks = SDCard_waitReady(0xFF, 65535);;
+  sSDCard.postReadWaitClocks = SDCard_waitReady(0xFF, 65535);
   DESELECT_CHIP_SD();
   return readResult;
 }

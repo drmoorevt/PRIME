@@ -52,6 +52,8 @@ typedef struct
 
 #define ENABLE_SYSTICK()  SysTick->CTRL = SysTick->CTRL | (SysTick_CTRL_ENABLE_Msk)
 #define DISABLE_SYSTICK() SysTick->CTRL = SysTick->CTRL & (~SysTick_CTRL_ENABLE_Msk)
+#define ENABLE_SYSTICK_INTERRUPT()  SysTick->CTRL = SysTick->CTRL | (SysTick_CTRL_TICKINT_Msk)
+#define DISABLE_SYSTICK_INTERRUPT() SysTick->CTRL = SysTick->CTRL & (~SysTick_CTRL_TICKINT_Msk)
 
 void Time_init(void);
 void Time_delay(uint32 microSeconds);

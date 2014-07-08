@@ -367,9 +367,15 @@ const uint8 resetMessage[6] = {'R','e','s','e','t','\n'};
  \*************************************************************************************************/
 void Tests_run(void)
 {
-//  Test14Args testArgs = {{1000, 100, 1000}, HIH_PROFILE_STANDARD, TRUE, TRUE, FALSE};
-//  while (1)
-//    Tests_test14(&testArgs);
+  //sTests.testArgs.test13Args.commonArgs.preTestDelayUs  = 1000;
+  //sTests.testArgs.test13Args.commonArgs.sampleRate      = 100;
+  //sTests.testArgs.test13Args.commonArgs.postTestDelayUs = 1000;
+  //sTests.testArgs.test13Args.profile = SDCARD_PROFILE_STANDARD;
+  //Util_fillMemory(sTests.testArgs.test11Args.writeBuffer, 64, 0xAA);
+  //sTests.testArgs.test13Args.pDest = 0;
+  //sTests.testArgs.test13Args.writeLength = 128;
+  //while (1)
+  //  Tests_test13(&sTests.testArgs);
   switch (sTests.state)
   {
     case TEST_IDLE:  // Clear test data and setup listening for commands on the comm port
@@ -505,9 +511,10 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate, do
     default: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / 5)                      / 4096.0); break;
   }
   
-  // Disable SysTick
-  DISABLE_SYSTICK();
-  NVIC_DisableIRQ(SysTick_IRQn);
+  // Disable all interrupts (except for the adc trigger which will be enabled last)
+  DISABLE_SYSTICK_INTERRUPT();
+  NVIC_DisableIRQ(USART3_IRQn);
+  NVIC_DisableIRQ(UART4_IRQn);
   NVIC_DisableIRQ(UART5_IRQn);
 
   ADC_openPort(ADC_PORT1, adc1Config);        // Initializes the ADC, gated by timer3 overflow
@@ -549,8 +556,10 @@ static void Tests_teardownSPITests(boolean testPassed)
 //  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
   while (sTests.periphState.isSampling);
   ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
-  ENABLE_SYSTICK();
-  NVIC_EnableIRQ(SysTick_IRQn);
+  // Enable all previous interrupts
+  ENABLE_SYSTICK_INTERRUPT();
+  NVIC_EnableIRQ(USART3_IRQn);
+  NVIC_EnableIRQ(UART4_IRQn);
   NVIC_EnableIRQ(UART5_IRQn);
 
   // Return domain to initial state
@@ -1177,6 +1186,8 @@ uint16 Tests_test13(void *pArgs)
 
   sTests.powerProfile = pTestArgs->profile;
   SDCard_setPowerProfile(pTestArgs->profile);
+  Analog_setDomain(SPI_DOMAIN, TRUE, SDCard_getStateVoltage());
+  Time_delay(1000000);
   SDCard_initDisk();  // disk must be initialized before we can test writes to it
 
   Tests_setupSPITests(SD_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate, SDCard_getStateVoltage());

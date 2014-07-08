@@ -10,9 +10,6 @@
 #define MILLISECONDS_PER_HOUR   (MILLISECONDS_PER_MINUTE * 60)
 #define MILLISECONDS_PER_DAY    (MILLISECONDS_PER_HOUR   * 24)
 
-#define ENABLE_SYSTICK_INTERRUPT()  do {NVIC_EnableIRQ(SysTick_IRQn);} while(0)
-#define DISABLE_SYSTICK_INTERRUPT() do {NVIC_DisableIRQ(SysTick_IRQn);} while(0)
-
 #define TIM_TRGOSource_Update              ((uint16_t)0x0020)
 
 struct
