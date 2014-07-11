@@ -67,8 +67,8 @@ typedef struct
   void (*appNotifyCommsEvent)(CommsEvent, uint32);
 } AppCommConfig;
 
-void UART_init(void);
-void UART_stopReceive(UARTPort port);
+void    UART_init(void);
+uint32  UART_stopReceive(UARTPort port);
 boolean UART_openPort(UARTPort port, AppCommConfig config);
 boolean UART_closePort(UARTPort port);
 boolean UART_sendData(UARTPort port, uint16 numBytes);

@@ -1,4 +1,5 @@
 #include "stm32f2xx.h" // Used for manipulating base UART registers
+#include "dma.h"
 #include "gpio.h"      // Used for setting up the pins as UART
 #include "time.h"      // Used for timeout functionality
 #include "util.h"
@@ -18,13 +19,20 @@ typedef struct
     uint32    clockEnableBit;   // The bit mask used for enabling the clock to the UART
     uint32    resetBit;         // The bit mask used for resetting the UART
     IRQn_Type irqNumber;        // The irqNumber associated with this UART
+    DMA_TypeDef *dmaController; // The dmaController associated with this UART
   } periph;
 
-  GPIO_TypeDef     *rxPinPort;
-  GPIO_InitTypeDef  rxPinConfig;
+  GPIO_TypeDef       *rxPinPort;
+  GPIO_InitTypeDef    rxPinConfig;
+  DMA_Stream_TypeDef *rxStreamNumDMA;
+  uint32              rxChanNumDMA;
+  IRQn_Type           rxCompleteIRQ;
 
-  GPIO_TypeDef     *txPinPort;
-  GPIO_InitTypeDef  txPinConfig;
+  GPIO_TypeDef       *txPinPort;
+  GPIO_InitTypeDef    txPinConfig;
+  DMA_Stream_TypeDef *txStreamNumDMA;
+  uint32              txChanNumDMA;
+  IRQn_Type           txCompleteIRQ;
 } PortInfo;
 
 // CommStatus is maintained internally but toSend and toReceive are populated via appLayer requests
@@ -85,10 +93,19 @@ static boolean UART_getPortInfo(UARTPort port, PortInfo *portInfo)
       portInfo->periph.pResetReg          = &RCC->APB2RSTR;
       portInfo->periph.resetBit           = RCC_APB2RSTR_USART1RST;
       portInfo->periph.irqNumber          = USART1_IRQn;
+      portInfo->periph.dmaController      = DMA2;
+    
       portInfo->rxPinPort = GPIOB;
       GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_7, port);
+      portInfo->rxStreamNumDMA = DMA2_Stream5;
+      portInfo->rxChanNumDMA   = DMA_Channel_4;
+      portInfo->rxCompleteIRQ  = DMA2_Stream5_IRQn;
+    
       portInfo->txPinPort = GPIOB;
       GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_6, port);
+      portInfo->txStreamNumDMA = DMA2_Stream7;
+      portInfo->txChanNumDMA   = DMA_Channel_4;
+      portInfo->txCompleteIRQ  = DMA2_Stream7_IRQn;
       break;
     case USART_PORT3:
       portInfo->periph.pUART              = USART3;
@@ -97,10 +114,19 @@ static boolean UART_getPortInfo(UARTPort port, PortInfo *portInfo)
       portInfo->periph.pResetReg          = &RCC->APB1RSTR;
       portInfo->periph.resetBit           = RCC_APB1RSTR_USART3RST;
       portInfo->periph.irqNumber          = USART3_IRQn;
+      portInfo->periph.dmaController      = DMA1;
+    
       portInfo->rxPinPort = GPIOB;
       GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_11, port);
+      portInfo->rxStreamNumDMA = DMA1_Stream1;
+      portInfo->rxChanNumDMA   = DMA_Channel_4;
+      portInfo->rxCompleteIRQ  = DMA1_Stream1_IRQn;
+    
       portInfo->txPinPort = GPIOB;
       GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_10, port);
+      portInfo->txStreamNumDMA = DMA1_Stream3;
+      portInfo->txChanNumDMA   = DMA_Channel_4;
+      portInfo->txCompleteIRQ  = DMA1_Stream3_IRQn;
       break;
     case UART_PORT4:
       portInfo->periph.pUART              = UART4;
@@ -109,10 +135,19 @@ static boolean UART_getPortInfo(UARTPort port, PortInfo *portInfo)
       portInfo->periph.pResetReg          = &RCC->APB1RSTR;
       portInfo->periph.resetBit           = RCC_APB1RSTR_UART4RST;
       portInfo->periph.irqNumber          = UART4_IRQn;
+      portInfo->periph.dmaController      = DMA1;
+    
       portInfo->rxPinPort = GPIOC;
       GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_11, port);
+      portInfo->rxStreamNumDMA = DMA1_Stream2;
+      portInfo->rxChanNumDMA   = DMA_Channel_4;
+      portInfo->rxCompleteIRQ  = DMA1_Stream2_IRQn;
+    
       portInfo->txPinPort = GPIOC;
       GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_10, port);
+      portInfo->txStreamNumDMA = DMA1_Stream4;
+      portInfo->txChanNumDMA   = DMA_Channel_4;
+      portInfo->txCompleteIRQ  = DMA1_Stream4_IRQn;
       break;
     case UART_PORT5:
       portInfo->periph.pUART              = UART5;
@@ -121,10 +156,19 @@ static boolean UART_getPortInfo(UARTPort port, PortInfo *portInfo)
       portInfo->periph.pResetReg          = &RCC->APB1RSTR;
       portInfo->periph.resetBit           = RCC_APB1RSTR_UART5RST;
       portInfo->periph.irqNumber          = UART5_IRQn;
+      portInfo->periph.dmaController      = DMA1;
+    
       portInfo->rxPinPort = GPIOD;
       GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_2, port);
+      portInfo->rxStreamNumDMA = DMA1_Stream0;
+      portInfo->rxChanNumDMA   = DMA_Channel_4;
+      portInfo->rxCompleteIRQ  = DMA1_Stream0_IRQn;
+    
       portInfo->txPinPort = GPIOC;
       GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_12, port);
+      portInfo->txStreamNumDMA = DMA1_Stream7;
+      portInfo->txChanNumDMA   = DMA_Channel_4;
+      portInfo->txCompleteIRQ  = DMA1_Stream7_IRQn;
       break;
     case USART_PORT6:
       portInfo->periph.pUART              = USART6;
@@ -133,10 +177,19 @@ static boolean UART_getPortInfo(UARTPort port, PortInfo *portInfo)
       portInfo->periph.pResetReg          = &RCC->APB2RSTR;
       portInfo->periph.resetBit           = RCC_APB2RSTR_USART6RST;
       portInfo->periph.irqNumber          = USART6_IRQn;
+      portInfo->periph.dmaController      = DMA2;
+    
       portInfo->rxPinPort = GPIOC;
       GPIO_structInitUART(&portInfo->rxPinConfig, GPIO_Pin_7, port);
+      portInfo->rxStreamNumDMA = DMA2_Stream1;
+      portInfo->rxChanNumDMA   = DMA_Channel_5;
+      portInfo->rxCompleteIRQ  = DMA2_Stream1_IRQn;
+    
       portInfo->txPinPort = GPIOC;
       GPIO_structInitUART(&portInfo->txPinConfig, GPIO_Pin_6, port);
+      portInfo->txStreamNumDMA = DMA2_Stream6;
+      portInfo->txChanNumDMA   = DMA_Channel_5;
+      portInfo->txCompleteIRQ  = DMA2_Stream6_IRQn;
       break;
     default:
       return ERROR;
@@ -173,8 +226,10 @@ boolean UART_openPort(UARTPort port, AppCommConfig config)
    pi.periph.pUART->CR1 &= ~USART_CR1_TCIE;         // Disable the tx complete int
    pi.periph.pUART->CR2 &= 0xFFFF0000;              // Unnecessary, but for consistency
    pi.periph.pUART->CR3 &= 0xFFFF0000;              // No flow control
+   pi.periph.pUART->CR3 |= USART_CR3_DMAT;          // Enable DMA transmissions
+   pi.periph.pUART->CR3 |= USART_CR3_DMAR;          // Enable DMA receptions
    pi.periph.pUART->BRR  = Uart_calcBaudRateRegister(config.UARTConfig.baud);
-   pi.periph.pUART->CR1 |= USART_CR1_UE;           // Enable UART
+   pi.periph.pUART->CR1 |= USART_CR1_UE;            // Enable UART
 
   /***** Configure the RX GPIO Pin *****/
   GPIO_setPortClock(pi.rxPinPort, TRUE); // Enable pin clocks
@@ -183,9 +238,6 @@ boolean UART_openPort(UARTPort port, AppCommConfig config)
   /***** Configure the TX GPIO Pin *****/
   GPIO_setPortClock(pi.txPinPort, TRUE); // Enable pin clocks
   GPIO_configurePins(pi.txPinPort, &pi.txPinConfig);
-
-  /***** Enable Interrupts *****/
-  NVIC_EnableIRQ(pi.periph.irqNumber);
 
   /***** Set the App layer buffers, callbacks, timer and configured *****/
   Util_copyMemory((uint8*)&config, (uint8*)&sUART.port[portToOpen].appConfig, sizeof(config));
@@ -336,16 +388,36 @@ void USART6_IRQHandler(void)
 \**************************************************************************************************/
 boolean UART_sendData(UARTPort port, uint16 numBytes)
 {
-  if (sUART.port[port].commStatus.bytesToSend == 0)
-  { // Transmitter is idle
-    sUART.port[port].commStatus.bytesToSend  = numBytes;
-    sUART.port[port].commStatus.bytesSent = 0;
-    sUART.port[port].pUART->CR1 |=  USART_CR1_TXEIE;  // Enable the tx data reg empty int
-    sUART.port[port].pUART->SR  &= ~USART_SR_TC;      // Clear the transmission complete flag
-    return SUCCESS;
-  }
-  else
-    return ERROR; // UART is currently transmitting
+  PortInfo portInfo;
+  DMA_InitTypeDef dmaInit;
+  
+//  if (sUART.port[port].commStatus.bytesToSend != 0)
+//    return FALSE;  // UART is currently transmitting
+  
+  UART_getPortInfo(port, &portInfo);
+//  DMA_DeInit(portInfo.txStreamNumDMA);
+  
+  /***** Configure DMA TX transfers *****/
+  DMA_StructInit(&dmaInit);
+  dmaInit.DMA_Channel = portInfo.txChanNumDMA;
+  dmaInit.DMA_PeripheralBaseAddr = (uint32)&sUART.port[port].pUART->DR;
+  dmaInit.DMA_Memory0BaseAddr = (uint32)sUART.port[port].appConfig.appTransmitBuffer;
+  dmaInit.DMA_DIR = DMA_DIR_MemoryToPeripheral;
+  dmaInit.DMA_BufferSize = numBytes;
+  dmaInit.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  dmaInit.DMA_Priority = DMA_Priority_Medium;
+  dmaInit.DMA_FIFOMode = DMA_FIFOMode_Enable;
+
+  /***** Enable DMA TX transfers *****/
+  DMA_Init(portInfo.txStreamNumDMA, &dmaInit);
+  DMA_ITConfig(portInfo.txStreamNumDMA, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE, ENABLE);
+  NVIC_EnableIRQ(portInfo.txCompleteIRQ);
+  DMA_Cmd(portInfo.txStreamNumDMA, ENABLE, sUART.port[port].appConfig.appNotifyCommsEvent);
+  
+//  sUART.port[port].commStatus.bytesToSend  = numBytes;
+//  sUART.port[port].commStatus.bytesSent = 0;
+  
+  return TRUE;
 }
 
 /**************************************************************************************************\
@@ -360,8 +432,7 @@ void UART_notifyTimeout(SoftTimer timer)
 {
   uint32 bytesReceived;
   UARTPort port = UART_getPortHandle(timer);
-  bytesReceived = sUART.port[port].commStatus.bytesReceived;
-  UART_stopReceive(port);
+  bytesReceived = UART_stopReceive(port);
   sUART.port[port].appConfig.appNotifyCommsEvent(COMMS_EVENT_RX_TIMEOUT, bytesReceived);
 }
 
@@ -369,20 +440,31 @@ void UART_notifyTimeout(SoftTimer timer)
 * FUNCTION    UART_stopReceive
 * DESCRIPTION Allows the applayer to abort a reception operation
 * PARAMETERS  port: The port to stop receiving on
-* RETURNS     Nothing
+* RETURNS     The number of bytes received before stopping
 * NOTES       None
 \**************************************************************************************************/
-void UART_stopReceive(UARTPort port)
+uint32 UART_stopReceive(UARTPort port)
 {
+  PortInfo portInfo;
+  uint32 bytesReceived;
+  
   SoftTimerConfig nullTimer = {TIME_SOFT_TIMER_USART1, 0, 0, 0};
   nullTimer.timer = sUART.port[port].timer;
   Time_startTimer(nullTimer); // Clear the UART timeout timer by 'starting' it zeroed out
 
+  UART_getPortInfo(port, &portInfo);
+  // Bytes received is the number we intended on receiving minus the number remaining
+  bytesReceived = sUART.port[port].commStatus.bytesToReceive -
+                  portInfo.rxStreamNumDMA->NDTR;
+  
+  DMA_DeInit(portInfo.rxStreamNumDMA);                 // Turn off the DMA
   sUART.port[port].pUART->CR1 &=  (~USART_CR1_RXNEIE); // Turn off the rx interrupt
   sUART.port[port].commStatus.bytesToReceive = 0;
   sUART.port[port].commStatus.bytesReceived  = 0;
   sUART.port[port].pUART->CR1 &= (~USART_CR1_UE);      // Disable UART
   sUART.port[port].pUART->CR1 |= USART_CR1_UE;         // Enable UART
+  
+  return bytesReceived;
 }
 
 /**************************************************************************************************\
@@ -395,19 +477,36 @@ void UART_stopReceive(UARTPort port)
 \**************************************************************************************************/
 boolean UART_receiveData(UARTPort port, uint32 numBytes, uint32 timeout)
 {
+  PortInfo portInfo;
+  DMA_InitTypeDef dmaInit;
   SoftTimerConfig timer = {TIME_SOFT_TIMER_USART1, 0, 0, &UART_notifyTimeout};
   timer.timer = sUART.port[port].timer;
   timer.value = timeout;
+  
+  UART_getPortInfo(port, &portInfo);
+//  DMA_DeInit(portInfo.rxStreamNumDMA);
+  
+  /***** Configure DMA RX transfers *****/
+  DMA_StructInit(&dmaInit);
+  dmaInit.DMA_Channel = portInfo.rxChanNumDMA;
+  dmaInit.DMA_PeripheralBaseAddr = (uint32)&sUART.port[port].pUART->DR;
+  dmaInit.DMA_Memory0BaseAddr = (uint32)sUART.port[port].appConfig.appReceiveBuffer;
+  dmaInit.DMA_BufferSize = numBytes;
+  dmaInit.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  dmaInit.DMA_Priority = DMA_Priority_Medium;
+  dmaInit.DMA_FIFOMode = DMA_FIFOMode_Enable;
 
-  if (sUART.port[port].commStatus.bytesReceived == 0)
-  { // Receiver is idle
-    sUART.port[port].commStatus.bytesToReceive  = numBytes;
-    sUART.port[port].commStatus.bytesReceived   = 0;
-    sUART.port[port].pUART->CR1 |=  USART_CR1_RXNEIE;  // Enable the rx data reg not empty int
-    Time_startTimer(timer);
-    return SUCCESS;
-  }
-  return ERROR; // UART is currently receiving
+  /***** Enable DMA RX transfers *****/
+  DMA_Init(portInfo.rxStreamNumDMA, &dmaInit);
+  DMA_ITConfig(portInfo.rxStreamNumDMA, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE, ENABLE);
+  NVIC_EnableIRQ(portInfo.rxCompleteIRQ);
+  DMA_Cmd(portInfo.rxStreamNumDMA, ENABLE, sUART.port[port].appConfig.appNotifyCommsEvent);
+  
+  sUART.port[port].commStatus.bytesToReceive  = numBytes;
+  sUART.port[port].commStatus.bytesReceived   = 0;
+  
+  Time_startTimer(timer);
+  return SUCCESS;
 }
 
 /*************************************************************************************************\

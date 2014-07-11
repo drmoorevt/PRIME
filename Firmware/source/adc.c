@@ -496,7 +496,6 @@ void ADC_getSamples(ADCPort port, uint16 numSamples)
   dmaInit.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
   dmaInit.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
   dmaInit.DMA_Priority = DMA_Priority_Medium;
-//  dmaInit.DMA_FIFOMode = DMA_FIFOMode_Disable;
   dmaInit.DMA_FIFOMode = DMA_FIFOMode_Enable;
   dmaInit.DMA_FIFOThreshold = DMA_FIFOStatus_HalfFull;
 

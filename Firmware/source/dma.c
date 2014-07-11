@@ -25,6 +25,8 @@ static struct
   void  (*notifyStream0Complete)(uint8, uint16);
   void  (*notifyStream1Complete)(uint8, uint16);
   void  (*notifyStream2Complete)(uint8, uint16);
+  void  (*notifyDMA1Stream0Complete)(uint8, uint16);
+  void  (*notifyDMA1Stream7Complete)(uint8, uint16);
 } sDMA;
 
 void DMA_DeInit(DMA_Stream_TypeDef* DMAy_Streamx)
@@ -151,6 +153,7 @@ void DMA_Init(DMA_Stream_TypeDef* DMAy_Streamx, DMA_InitTypeDef* DMA_InitStruct)
 {
   uint32_t tmpreg = 0;
 	
+	RCC->AHB1ENR |= RCC_AHB1ENR_DMA1EN; // Enable DMA1 clocks
 	RCC->AHB1ENR |= RCC_AHB1ENR_DMA2EN; // Enable DMA2 clocks
 	
   /*------------------------- DMAy Streamx CR Configuration ------------------*/
@@ -300,6 +303,10 @@ void DMA_Cmd(DMA_Stream_TypeDef* DMAy_Streamx, FunctionalState NewState, void (*
     sDMA.notifyStream1Complete = callback;
   else if (DMAy_Streamx == DMA2_Stream2)
     sDMA.notifyStream2Complete = callback;
+  else if (DMAy_Streamx == DMA1_Stream0)
+    sDMA.notifyDMA1Stream0Complete = callback;
+  else if (DMAy_Streamx == DMA1_Stream7)
+    sDMA.notifyDMA1Stream7Complete = callback;
 
   if (NewState != DISABLE)
   {
@@ -1149,5 +1156,43 @@ void DMA2_Stream2_IRQHandler(void)
     /* Clear DMA Stream Transfer Complete interrupt pending bit */
     DMA_ClearITPendingBit(DMA2_Stream2, DMA_IT_TCIF2);
     sDMA.notifyStream2Complete(2, 0);
+  }
+}
+
+// UART5 RX, stream0 channel 4
+void DMA1_Stream0_IRQHandler(void)
+{
+  if (DMA_GetITStatus(DMA1_Stream0, DMA_IT_TEIF0)) // Transfer error?
+    DMA_ClearITPendingBit(DMA1_Stream0, DMA_IT_TEIF0);
+    
+  if (DMA_GetITStatus(DMA1_Stream0, DMA_IT_FEIF0)) // FIFO error?
+    DMA_ClearITPendingBit(DMA1_Stream0, DMA_IT_FEIF0);
+    
+  if (DMA_GetITStatus(DMA1_Stream0, DMA_IT_HTIF0)) // Half transfer interrupt?
+    DMA_ClearITPendingBit(DMA1_Stream0, DMA_IT_HTIF0);
+
+  if (DMA_GetITStatus(DMA1_Stream0, DMA_IT_TCIF0)) // Transfer complete interrupt?
+  {
+    DMA_ClearITPendingBit(DMA1_Stream0, DMA_IT_TCIF0);
+    sDMA.notifyDMA1Stream0Complete(0, DMA1_Stream0->NDTR);
+  }
+}
+
+// UART5 TX, stream 7 channel 4
+void DMA1_Stream7_IRQHandler(void)
+{
+  if (DMA_GetITStatus(DMA1_Stream7, DMA_IT_TEIF7)) // Transfer error?
+    DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TEIF7);
+    
+  if (DMA_GetITStatus(DMA1_Stream7, DMA_IT_FEIF7)) // FIFO error?
+    DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_FEIF7);
+  
+  if(DMA_GetITStatus(DMA1_Stream7, DMA_IT_HTIF7)) // Half transfer interrupt?
+    DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_HTIF7);
+
+  if(DMA_GetITStatus(DMA1_Stream7, DMA_IT_TCIF7))
+  {
+    DMA_ClearITPendingBit(DMA1_Stream7, DMA_IT_TCIF7); // Transfer complete interrupt?
+    sDMA.notifyDMA1Stream7Complete(3, 0);
   }
 }

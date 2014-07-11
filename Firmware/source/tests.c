@@ -138,6 +138,7 @@ static struct
   struct
   {
     uint32 bytesReceived;
+    uint32 bytesToReceive;
     boolean portOpen;
     boolean receiving;
     boolean rxTimeout;
@@ -175,7 +176,7 @@ void Tests_notifyCommsEvent(CommsEvent event, uint32 arg)
   {
     case COMMS_EVENT_RX_COMPLETE:
       sTests.comms.receiving = FALSE;
-      sTests.comms.bytesReceived = arg;
+      sTests.comms.bytesReceived = sTests.comms.bytesToReceive;
       break;
     case COMMS_EVENT_RX_TIMEOUT:
       sTests.comms.bytesReceived = arg;
@@ -246,6 +247,7 @@ void Tests_receiveData(uint32 numBytes, uint32 timeout)
   sTests.comms.receiving = TRUE;
   sTests.comms.rxTimeout = FALSE;
   sTests.comms.bytesReceived = 0;
+  sTests.comms.bytesToReceive = numBytes;
   UART_receiveData(UART_PORT5, numBytes, timeout);
 }
 
@@ -345,7 +347,7 @@ void Tests_notifyConversionComplete(uint8 chan, uint16 numSamples)
 }
 
 // User sends a two-byte ASCII test number to run, respond with ACK or NAK
-const uint8 runMessage[6]   = {'T','e','s','t','0','\n'};
+uint8 runMessage[6]   = {'T','e','s','t','0','\n'};
 // User sends a status request, respond with #bytes available for done or NAK for not done
 const uint8 statMessage[7]  = {'S','t','a','t','u','s','\n'};
 // User requests byte offset (uint16) into test buffer
@@ -376,6 +378,23 @@ void Tests_run(void)
   //sTests.testArgs.test13Args.writeLength = 128;
   //while (1)
   //  Tests_test13(&sTests.testArgs);
+  //while(1)
+  //{
+  //  Tests_receiveData(1, 1000);
+  //  while (sTests.comms.receiving);
+  //  if (sTests.comms.bytesReceived > 0)
+  //  {
+  //    sTests.comms.txBuffer[0] = sTests.comms.rxBuffer[0];
+  //    Tests_sendData(1);
+  //    while (sTests.comms.transmitting);
+  //  }
+  //}
+  //Util_copyMemory(&runMessage[0], &sTests.comms.txBuffer[0], sizeof(runMessage));
+  //while (1)
+  //{
+  //  Tests_sendData(6);
+  //  while (sTests.comms.transmitting);
+  //}
   switch (sTests.state)
   {
     case TEST_IDLE:  // Clear test data and setup listening for commands on the comm port
@@ -388,11 +407,19 @@ void Tests_run(void)
     case TEST_RUNNING:
       testFunctions[sTests.testToRun](&sTests.testArgs);
       // Notify user that test is complete and to expect sizeofTestData bytes
+  // Disable all interrupts (except for the adc trigger which will be enabled last)
+  DISABLE_SYSTICK_INTERRUPT();
+  NVIC_DisableIRQ(USART3_IRQn);
+  NVIC_DisableIRQ(UART4_IRQn);
       Tests_sendHeaderInfo();
       Tests_sendBinaryResults(&sTests.adc1);
       Tests_sendBinaryResults(&sTests.adc2);
       Tests_sendBinaryResults(&sTests.adc3);
       Tests_sendBinaryResults(&sTests.periphState);
+  // Enable all previous interrupts
+  ENABLE_SYSTICK_INTERRUPT();
+  NVIC_EnableIRQ(USART3_IRQn);
+  NVIC_EnableIRQ(UART4_IRQn);
       // Advance the state machine to data retrieval stage
       sTests.state = TEST_COMPLETE;
       break;
@@ -1024,7 +1051,7 @@ uint16 Tests_test09(void *pArgs)
 * NOTES       None
 \**************************************************************************************************/
 uint16 Tests_test10(void *pArgs)
-{
+{/*
   AppADCConfig adc1Config = {0};
   AppADCConfig adc2Config = {0};
   AppADCConfig adc3Config = {0};
@@ -1119,7 +1146,7 @@ uint16 Tests_test10(void *pArgs)
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
   Time_delay(10000); // Wait 10ms for domains to settle
-
+*/
   return SUCCESS;
 }
 
