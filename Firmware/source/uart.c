@@ -47,11 +47,12 @@ typedef struct
 // CommPort contains the information required for an appLayer agent to send and receive data
 typedef struct
 {
-  boolean       isConfigured; // Indicates if this port is registered to an appLayer
-  USART_TypeDef *pUART;       // The base register for hardware UART interaction
-  AppCommConfig appConfig;    // Buffers and callbacks set by the appLayer
-  CommStatus    commStatus;   // State information for sending and receiving
-  SoftTimer     timer;        // The soft timer to be used with this port
+  boolean         isConfigured; // Indicates if this port is registered to an appLayer
+  USART_TypeDef   *pUART;       // The base register for hardware UART interaction
+  AppCommConfig   appConfig;    // Buffers and callbacks set by the appLayer
+  CommStatus      commStatus;   // State information for sending and receiving
+  SoftTimer       timer;        // The soft timer to be used with this port
+  SoftTimerConfig icConfig;     // Configuration used for inter char timeouts
 } CommPort;
 
 static struct
@@ -61,6 +62,7 @@ static struct
 
 static UARTPort UART_getPortHandle(SoftTimer timer);
 static SoftTimer UART_getTimerHandle(UARTPort port);
+static void UART_notifyTimeout(SoftTimer timer);
 static uint16 Uart_calcBaudRateRegister(BaudRate baud);
 
 /*************************************************************************************************\
@@ -219,8 +221,6 @@ boolean UART_openPort(UARTPort port, AppCommConfig config)
   *pi.periph.pClockReg |= pi.periph.clockEnableBit; // Enable port clocks
   *pi.periph.pResetReg |= pi.periph.resetBit;       // Reset the peripheral
   *pi.periph.pResetReg &= ~pi.periph.resetBit;      // Then release it from reset
-   pi.periph.pUART->CR1 |= USART_CR1_RE;            // Enable RX
-   pi.periph.pUART->CR1 |= USART_CR1_TE;            // Enable TX
    pi.periph.pUART->CR1 |= USART_CR1_RXNEIE;        // Enable the RX not empty int
    pi.periph.pUART->CR1 &= ~USART_CR1_TXEIE;        // Disable the tx data reg empty int
    pi.periph.pUART->CR1 &= ~USART_CR1_TCIE;         // Disable the tx complete int
@@ -290,107 +290,22 @@ static UARTPort UART_getPortHandle(SoftTimer timer)
   }
 }
 
-/*****************************************************************************\
-* FUNCTION    UART_handleInterrupt
-* DESCRIPTION Generic handler for UART interrupts
-* PARAMETERS  port: The port on which the interrupt occurred
-* RETURNS     Nothing
-* NOTES       This should be broken up into multiple functions
-\*****************************************************************************/
-void UART_handleInterrupt(UARTPort port)
-{
-  CommPort      *pComm    = &sUART.port[port];
-  USART_TypeDef *pUART    = sUART.port[port].pUART;
-  CommStatus    *pStatus  = &sUART.port[port].commStatus;
-  uint16    USART_STATUS  = pUART->SR;
-
-  if (READ_BIT(USART_STATUS, USART_SR_TXE)) // Transmit data register empty
-  {
-    if (pStatus->bytesSent < pStatus->bytesToSend)  // Still have more bytes to send?
-      pUART->DR = (uint8)*((uint8*)pComm->appConfig.appTransmitBuffer + pStatus->bytesSent++);
-    else
-    { // Last byte is in the shift register
-      CLEAR_BIT(pUART->CR1, USART_CR1_TXEIE); // Disable the tx data reg empty int
-      SET_BIT(pUART->CR1, USART_SR_TC);       // Enable the transmit complete int
-    }
-  }
-  
-  if (READ_BIT(USART_STATUS, USART_SR_RXNE)) // Received data ready to be read
-  {
-    if (pStatus->bytesReceived < pStatus->bytesToReceive)
-    { // App is waiting on bytes, fill up its buffer
-      *(((uint8*)pComm->appConfig.appReceiveBuffer) + pStatus->bytesReceived++) = pUART->DR;
-      if (pStatus->bytesReceived >= pStatus->bytesToReceive)
-      { // finished now? -- last expected byte is in the data register
-        UART_stopReceive(port);
-        sUART.port[port].appConfig.appNotifyCommsEvent(COMMS_EVENT_RX_COMPLETE, pStatus->bytesReceived);
-      }
-    }
-    else
-    { // App not ready for this reception, throw it away and disable the interrupt
-      sUART.port[port].appConfig.appNotifyCommsEvent(COMMS_EVENT_RX_INTERRUPT, (uint32)pUART->DR);
-      CLEAR_BIT(pUART->CR1, USART_CR1_RXNEIE); // Disable the rx data reg not empty int
-    }
-  }
-  
-  if (READ_BIT(USART_STATUS, USART_SR_TC)) // Last byte shifted out of the shift reg
-  {
-    sUART.port[port].appConfig.appNotifyCommsEvent(COMMS_EVENT_TX_COMPLETE, pStatus->bytesSent);
-    pStatus->bytesToSend = 0;
-    pStatus->bytesSent   = 0;
-    pUART->SR &= (~USART_CR1_TCIE);  // Disable the transmit complete int
-  }
-}
-
-/*****************************************************************************\
-* FUNCTION    UARTx_IRQHandler
-* DESCRIPTION Writes character to the indicated serial port
-* PARAMETERS  None
-* RETURNS     Nothing
-\*****************************************************************************/
-void USART1_IRQHandler(void)
-{
-  UART_handleInterrupt(USART_PORT1);
-}
-
-void USART2_IRQHandler(void)
-{
-  UART_handleInterrupt(USART_PORT2);
-}
-
-void USART3_IRQHandler(void)
-{
-  UART_handleInterrupt(USART_PORT3);
-}
-
-void UART4_IRQHandler(void)
-{
-  UART_handleInterrupt(UART_PORT4);
-}
-
-void UART5_IRQHandler(void)
-{
-  UART_handleInterrupt(UART_PORT5);
-}
-
-void USART6_IRQHandler(void)
-{
-  UART_handleInterrupt(USART_PORT6);
-}
-
 /**************************************************************************************************\
 * FUNCTION    UART_sendData
 * DESCRIPTION Writes character to the indicated serial port
 * PARAMETERS  port: The port over which to transmit
-              numBytes: The number of bytes at which to trigger the transmit complete function
+*             pSrc: Source of the data to send
+*             numBytes: The number of bytes at which to trigger the transmit complete function
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-boolean UART_sendData(UARTPort port, uint16 numBytes)
+boolean UART_sendData(UARTPort port, uint8 *pSrc, uint16 numBytes)
 {
   PortInfo portInfo;
   DMA_InitTypeDef dmaInit;
   
+  sUART.port[port].appConfig.appTransmitBuffer = pSrc; // Store the source just in case
+
 //  if (sUART.port[port].commStatus.bytesToSend != 0)
 //    return FALSE;  // UART is currently transmitting
   
@@ -401,7 +316,7 @@ boolean UART_sendData(UARTPort port, uint16 numBytes)
   DMA_StructInit(&dmaInit);
   dmaInit.DMA_Channel = portInfo.txChanNumDMA;
   dmaInit.DMA_PeripheralBaseAddr = (uint32)&sUART.port[port].pUART->DR;
-  dmaInit.DMA_Memory0BaseAddr = (uint32)sUART.port[port].appConfig.appTransmitBuffer;
+  dmaInit.DMA_Memory0BaseAddr = (uint32)pSrc;
   dmaInit.DMA_DIR = DMA_DIR_MemoryToPeripheral;
   dmaInit.DMA_BufferSize = numBytes;
   dmaInit.DMA_MemoryInc = DMA_MemoryInc_Enable;
@@ -413,11 +328,74 @@ boolean UART_sendData(UARTPort port, uint16 numBytes)
   DMA_ITConfig(portInfo.txStreamNumDMA, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE, ENABLE);
   NVIC_EnableIRQ(portInfo.txCompleteIRQ);
   DMA_Cmd(portInfo.txStreamNumDMA, ENABLE, sUART.port[port].appConfig.appNotifyCommsEvent);
-  
+     
+  sUART.port[port].pUART->CR1 |= USART_CR1_TE;            // Enable TX
 //  sUART.port[port].commStatus.bytesToSend  = numBytes;
 //  sUART.port[port].commStatus.bytesSent = 0;
   
   return TRUE;
+}
+
+/**************************************************************************************************\
+* FUNCTION    UART_receiveData
+* DESCRIPTION Reads characters from the indicated serial port
+* PARAMETERS  port: The port over which to receive
+              numBytes: The number of bytes at which to trigger the receive complete function
+* RETURNS     Nothing
+* NOTES       None
+\**************************************************************************************************/
+boolean UART_receiveData(UARTPort port, uint32 numBytes, uint32 timeout, boolean interChar)
+{
+  PortInfo portInfo;
+  SoftTimerConfig timer;
+  DMA_InitTypeDef dmaInit;
+  
+  UART_getPortInfo(port, &portInfo);
+  
+  /***** Configure the timeout (or inter-char timeout) timer for this port *****/
+  timer.appNotifyTimerExpired = &UART_notifyTimeout;  
+  timer.timer  = sUART.port[port].timer;
+  timer.value  = timeout;
+  timer.reload = 0;
+  sUART.port[port].icConfig = timer;
+  
+  /***** Configure DMA RX transfers *****/
+  DMA_StructInit(&dmaInit);
+  dmaInit.DMA_Channel = portInfo.rxChanNumDMA;
+  dmaInit.DMA_PeripheralBaseAddr = (uint32)&sUART.port[port].pUART->DR;
+  dmaInit.DMA_Memory0BaseAddr = (uint32)sUART.port[port].appConfig.appReceiveBuffer;
+  dmaInit.DMA_BufferSize = numBytes;
+  dmaInit.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  dmaInit.DMA_Priority = DMA_Priority_Medium;
+  dmaInit.DMA_FIFOMode = DMA_FIFOMode_Enable;
+
+  /***** Enable DMA RX transfers *****/
+  DMA_Init(portInfo.rxStreamNumDMA, &dmaInit);
+  DMA_ITConfig(portInfo.rxStreamNumDMA, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE, ENABLE);
+  DMA_ClearITPendingBit(portInfo.rxStreamNumDMA, DMA_IT_TCIF0 | DMA_IT_TEIF0 | DMA_IT_FEIF0);
+  NVIC_EnableIRQ(portInfo.rxCompleteIRQ);
+  DMA_Cmd(portInfo.rxStreamNumDMA, ENABLE, sUART.port[port].appConfig.appNotifyCommsEvent);
+  
+  sUART.port[port].commStatus.bytesToReceive  = numBytes;
+  sUART.port[port].commStatus.bytesReceived   = 0;
+  
+  sUART.port[port].pUART->CR1 |= USART_CR1_RXNEIE;  // Turn on the rx interrupt
+  sUART.port[port].pUART->CR1 |= USART_CR1_RE;      // Enable RX
+
+  if (TRUE == interChar)
+  {
+    timer.value = 0; // stop the timer
+    Time_startTimer(timer);
+    NVIC_EnableIRQ(portInfo.periph.irqNumber); // Wait for the first byte to start ICtimer
+  }
+  else
+  {
+    NVIC_DisableIRQ(portInfo.periph.irqNumber); // Ensure the IC interrupt is turned off
+    Time_startTimer(timer);
+  }
+
+  
+  return SUCCESS;
 }
 
 /**************************************************************************************************\
@@ -457,56 +435,20 @@ uint32 UART_stopReceive(UARTPort port)
   bytesReceived = sUART.port[port].commStatus.bytesToReceive -
                   portInfo.rxStreamNumDMA->NDTR;
   
-  DMA_DeInit(portInfo.rxStreamNumDMA);                 // Turn off the DMA
-  sUART.port[port].pUART->CR1 &=  (~USART_CR1_RXNEIE); // Turn off the rx interrupt
+  NVIC_DisableIRQ(portInfo.rxCompleteIRQ);
+  DMA_ITConfig(portInfo.rxStreamNumDMA, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE, DISABLE);
+  DMA_ClearITPendingBit(portInfo.rxStreamNumDMA, DMA_IT_TCIF0 | DMA_IT_TEIF0 | DMA_IT_FEIF0);
+  DMA_Cmd(portInfo.rxStreamNumDMA, DISABLE, sUART.port[port].appConfig.appNotifyCommsEvent);
+  DMA_DeInit(portInfo.rxStreamNumDMA);
+  
+  NVIC_DisableIRQ(portInfo.periph.irqNumber);
+  sUART.port[port].pUART->CR1 &= (~USART_CR1_RXNEIE);  // Turn off the rx interrupt
+  sUART.port[port].pUART->CR1 &= (~USART_CR1_RE);      // Disable RX
+  
   sUART.port[port].commStatus.bytesToReceive = 0;
   sUART.port[port].commStatus.bytesReceived  = 0;
-  sUART.port[port].pUART->CR1 &= (~USART_CR1_UE);      // Disable UART
-  sUART.port[port].pUART->CR1 |= USART_CR1_UE;         // Enable UART
   
   return bytesReceived;
-}
-
-/**************************************************************************************************\
-* FUNCTION    UART_receiveData
-* DESCRIPTION Reads characters from the indicated serial port
-* PARAMETERS  port: The port over which to receive
-              numBytes: The number of bytes at which to trigger the receive complete function
-* RETURNS     Nothing
-* NOTES       None
-\**************************************************************************************************/
-boolean UART_receiveData(UARTPort port, uint32 numBytes, uint32 timeout)
-{
-  PortInfo portInfo;
-  DMA_InitTypeDef dmaInit;
-  SoftTimerConfig timer = {TIME_SOFT_TIMER_USART1, 0, 0, &UART_notifyTimeout};
-  timer.timer = sUART.port[port].timer;
-  timer.value = timeout;
-  
-  UART_getPortInfo(port, &portInfo);
-//  DMA_DeInit(portInfo.rxStreamNumDMA);
-  
-  /***** Configure DMA RX transfers *****/
-  DMA_StructInit(&dmaInit);
-  dmaInit.DMA_Channel = portInfo.rxChanNumDMA;
-  dmaInit.DMA_PeripheralBaseAddr = (uint32)&sUART.port[port].pUART->DR;
-  dmaInit.DMA_Memory0BaseAddr = (uint32)sUART.port[port].appConfig.appReceiveBuffer;
-  dmaInit.DMA_BufferSize = numBytes;
-  dmaInit.DMA_MemoryInc = DMA_MemoryInc_Enable;
-  dmaInit.DMA_Priority = DMA_Priority_Medium;
-  dmaInit.DMA_FIFOMode = DMA_FIFOMode_Enable;
-
-  /***** Enable DMA RX transfers *****/
-  DMA_Init(portInfo.rxStreamNumDMA, &dmaInit);
-  DMA_ITConfig(portInfo.rxStreamNumDMA, DMA_IT_TC | DMA_IT_TE | DMA_IT_FE, ENABLE);
-  NVIC_EnableIRQ(portInfo.rxCompleteIRQ);
-  DMA_Cmd(portInfo.rxStreamNumDMA, ENABLE, sUART.port[port].appConfig.appNotifyCommsEvent);
-  
-  sUART.port[port].commStatus.bytesToReceive  = numBytes;
-  sUART.port[port].commStatus.bytesReceived   = 0;
-  
-  Time_startTimer(timer);
-  return SUCCESS;
 }
 
 /*************************************************************************************************\
@@ -543,4 +485,52 @@ static uint16 Uart_calcBaudRateRegister(BaudRate baud)
     default:
       return 0;
   }
+}
+
+/*****************************************************************************\
+* FUNCTION    UART_handleInterrupt
+* DESCRIPTION Generic handler for UART interrupts
+* PARAMETERS  port: The port on which the interrupt occurred
+* RETURNS     Nothing
+* NOTES       This should be broken up into multiple functions
+\*****************************************************************************/
+void UART_handleInterrupt(UARTPort port)
+{
+  Time_startTimer(sUART.port[port].icConfig);
+}
+
+/*****************************************************************************\
+* FUNCTION    UARTx_IRQHandler
+* DESCRIPTION Writes character to the indicated serial port
+* PARAMETERS  None
+* RETURNS     Nothing
+\*****************************************************************************/
+void USART1_IRQHandler(void)
+{
+  UART_handleInterrupt(USART_PORT1);
+}
+
+void USART2_IRQHandler(void)
+{
+  UART_handleInterrupt(USART_PORT2);
+}
+
+void USART3_IRQHandler(void)
+{
+  UART_handleInterrupt(USART_PORT3);
+}
+
+void UART4_IRQHandler(void)
+{
+  UART_handleInterrupt(UART_PORT4);
+}
+
+void UART5_IRQHandler(void)
+{
+  UART_handleInterrupt(UART_PORT5);
+}
+
+void USART6_IRQHandler(void)
+{
+  UART_handleInterrupt(USART_PORT6);
 }

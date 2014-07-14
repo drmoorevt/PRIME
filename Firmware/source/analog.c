@@ -347,6 +347,6 @@ void Analog_testAnalog(void)
     dataPort->tx.txBuffer[bytesToSend++] = '\r';
     dataPort->tx.txBuffer[bytesToSend++] = '\n';
   }
-  UART_sendData(UART_PORT5, bytesToSend);
+  UART_sendData(UART_PORT5, &dataPort->txBuffer[0], bytesToSend);
 */
 }

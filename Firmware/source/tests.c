@@ -18,7 +18,6 @@
 
 #define FILE_ID TESTS_C
 
-//#define TESTS_MAX_SAMPLES (8192)
 #define TESTS_MAX_SAMPLES (10240)
 
 typedef enum
@@ -168,13 +167,14 @@ uint16 Tests_test16(void *pArgs);
 uint16 Tests_test17(void *pArgs);
 
 void Tests_sendBinaryResults(Samples *adcBuffer);
-void Tests_sendHeaderInfo(void);
+boolean Tests_sendHeaderInfo(void);
 
 void Tests_notifyCommsEvent(CommsEvent event, uint32 arg)
 {
   switch (event)
   {
     case COMMS_EVENT_RX_COMPLETE:
+      UART_stopReceive(UART_PORT5);
       sTests.comms.receiving = FALSE;
       sTests.comms.bytesReceived = sTests.comms.bytesToReceive;
       break;
@@ -248,7 +248,8 @@ void Tests_receiveData(uint32 numBytes, uint32 timeout)
   sTests.comms.rxTimeout = FALSE;
   sTests.comms.bytesReceived = 0;
   sTests.comms.bytesToReceive = numBytes;
-  UART_receiveData(UART_PORT5, numBytes, timeout);
+  UART_receiveData(UART_PORT5, numBytes, timeout, TRUE);
+  while(sTests.comms.receiving);
 }
 
 /**************************************************************************************************\
@@ -260,7 +261,8 @@ void Tests_receiveData(uint32 numBytes, uint32 timeout)
 void Tests_sendData(uint16 numBytes)
 {
   sTests.comms.transmitting = TRUE;
-  UART_sendData(UART_PORT5, numBytes);
+  UART_sendData(UART_PORT5, sTests.comms.txBuffer, numBytes);
+  while(sTests.comms.transmitting);
 }
 
 /**************************************************************************************************\
@@ -279,8 +281,7 @@ uint8 Tests_getTestToRun(void)
   do
   {
     // Grab the test execution packet
-    Tests_receiveData(sizeof(sTests.comms.rxBuffer), 1000);
-    while (sTests.comms.receiving); // Wait for the packet, will either rxTimeout or txComplete
+    Tests_receiveData(sizeof(sTests.comms.rxBuffer), 10); // With either icTimeout or txComplete
     if ((sTests.comms.rxBuffer[0] != 'T') ||
         (sTests.comms.rxBuffer[1] != 'e') ||
         (sTests.comms.rxBuffer[2] != 's') ||
@@ -381,19 +382,16 @@ void Tests_run(void)
   //while(1)
   //{
   //  Tests_receiveData(1, 1000);
-  //  while (sTests.comms.receiving);
   //  if (sTests.comms.bytesReceived > 0)
   //  {
   //    sTests.comms.txBuffer[0] = sTests.comms.rxBuffer[0];
   //    Tests_sendData(1);
-  //    while (sTests.comms.transmitting);
   //  }
   //}
   //Util_copyMemory(&runMessage[0], &sTests.comms.txBuffer[0], sizeof(runMessage));
   //while (1)
   //{
   //  Tests_sendData(6);
-  //  while (sTests.comms.transmitting);
   //}
   switch (sTests.state)
   {
@@ -407,24 +405,22 @@ void Tests_run(void)
     case TEST_RUNNING:
       testFunctions[sTests.testToRun](&sTests.testArgs);
       // Notify user that test is complete and to expect sizeofTestData bytes
-  // Disable all interrupts (except for the adc trigger which will be enabled last)
-  DISABLE_SYSTICK_INTERRUPT();
-  NVIC_DisableIRQ(USART3_IRQn);
-  NVIC_DisableIRQ(UART4_IRQn);
-      Tests_sendHeaderInfo();
-      Tests_sendBinaryResults(&sTests.adc1);
-      Tests_sendBinaryResults(&sTests.adc2);
-      Tests_sendBinaryResults(&sTests.adc3);
-      Tests_sendBinaryResults(&sTests.periphState);
-  // Enable all previous interrupts
-  ENABLE_SYSTICK_INTERRUPT();
-  NVIC_EnableIRQ(USART3_IRQn);
-  NVIC_EnableIRQ(UART4_IRQn);
+      if (Tests_sendHeaderInfo())
+      {
+        while ((0x88 != sTests.comms.rxBuffer[0]) &&  // Binary result ACK
+               (0x54 != sTests.comms.rxBuffer[0]))    // Test reset request
+        {
+          Tests_sendBinaryResults(&sTests.adc1);
+          Tests_sendBinaryResults(&sTests.adc2);
+          Tests_sendBinaryResults(&sTests.adc3);
+          Tests_sendBinaryResults(&sTests.periphState);
+          Tests_receiveData(1, 0);
+        }
+      }
       // Advance the state machine to data retrieval stage
       sTests.state = TEST_COMPLETE;
       break;
     case TEST_COMPLETE:
-//      Tests_receiveData(11, 0); // Pick up 11 bytes of send command
       sTests.state = TEST_IDLE;
       break;
     default:
@@ -432,14 +428,16 @@ void Tests_run(void)
   }
 }
 
-void Tests_sendHeaderInfo(void)
+boolean Tests_sendHeaderInfo(void)
 {
-  uint8 txBufOffset = 0,
-                  i = 0;
+  uint8 i, txBufOffset = 0;
+  boolean tfAck = FALSE;
+  uint16 crc;
 
   // Fill in the total number of bytes for the Test and Channel headers
   sTests.testHeader.headerBytes  =  sizeof(TestHeader);
   sTests.testHeader.headerBytes +=  sizeof(ChanHeader) * sTests.testHeader.numChannels;
+  sTests.testHeader.headerBytes +=  sizeof(crc);
 
   // Always send the test header
   Util_copyMemory( (uint8*)&sTests.testHeader,
@@ -455,10 +453,20 @@ void Tests_sendHeaderInfo(void)
                     sizeof(ChanHeader));
     txBufOffset += sizeof(ChanHeader);
   }
+  crc = CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, sTests.comms.txBuffer, txBufOffset);
+  Util_copyMemory((uint8 *)&crc, &sTests.comms.txBuffer[txBufOffset], sizeof(crc));
+  txBufOffset += 2;
 
-  // Send the header out the UART
-  Tests_sendData(txBufOffset);
-  while(sTests.comms.transmitting);
+  while (FALSE == tfAck)
+  {
+    // Send the header + CRC out the UART
+    Tests_sendData(txBufOffset);
+    Tests_receiveData(1, 0); // Wait for the ack
+    if (sTests.comms.rxBuffer[0] == 0x54) // reset attempt
+      return FALSE;
+    tfAck = (0x11 == sTests.comms.rxBuffer[0]);
+  }
+  return tfAck;
 }
 
 void Tests_sendBinaryResults(Samples *adcBuffer)
@@ -471,8 +479,8 @@ void Tests_sendBinaryResults(Samples *adcBuffer)
     Util_copyMemory(pData, sTests.comms.txBuffer, bytesToTransmit);
     Tests_sendData(bytesToTransmit);
     pData+= bytesToTransmit;
-    while(sTests.comms.transmitting); // wait to send out our test buffer
   }
+  while(sTests.comms.transmitting);
 }
 
 /**************************************************************************************************\
@@ -1334,9 +1342,8 @@ uint16 Tests_test17(void *pArgs)
 
     // Send the header out the UART
     Tests_sendData(i);
-    while(sTests.comms.transmitting);
 
-    Time_delay(100000); // Wait 250ms for next sample
+    Time_delay(250000); // Wait 250ms for next sample
   }
 
   return SUCCESS;

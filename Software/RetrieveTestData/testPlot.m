@@ -16,6 +16,7 @@ function testPlot(data, time, labels, testName, xMax)
     ylabel(gAxes(2), 'Domain Current (mA)');
     xlabel('Time (ms)');
     title(testName);
-    hold off
+    hold off;
+    return;
 end
 

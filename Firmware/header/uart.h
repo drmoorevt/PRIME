@@ -71,7 +71,7 @@ void    UART_init(void);
 uint32  UART_stopReceive(UARTPort port);
 boolean UART_openPort(UARTPort port, AppCommConfig config);
 boolean UART_closePort(UARTPort port);
-boolean UART_sendData(UARTPort port, uint16 numBytes);
-boolean UART_receiveData(UARTPort port, uint32 numBytes, uint32 timeout);
+boolean UART_sendData(UARTPort port, uint8 *pSrc, uint16 numBytes);
+boolean UART_receiveData(UARTPort port, uint32 numBytes, uint32 timeout, boolean interChar);
 
 #endif // UART_H

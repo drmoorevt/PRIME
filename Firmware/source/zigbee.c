@@ -75,7 +75,7 @@ void ZigBee_receiveData(uint32 numBytes, uint32 timeout)
 {
   sZigBee.comms.receiving = TRUE;
   sZigBee.comms.rxTimeout = FALSE;
-  UART_receiveData(USART_PORT3, numBytes, timeout);
+  UART_receiveData(USART_PORT3, numBytes, timeout, FALSE);
 }
 
 /**************************************************************************************************\
@@ -87,7 +87,7 @@ void ZigBee_receiveData(uint32 numBytes, uint32 timeout)
 void ZigBee_sendData(uint16 numBytes)
 {
   sZigBee.comms.transmitting = TRUE;
-  UART_sendData(USART_PORT3, numBytes);
+  UART_sendData(USART_PORT3, sZigBee.comms.txBuffer, numBytes);
 }
 
 static void ZigBee_setup(boolean state);

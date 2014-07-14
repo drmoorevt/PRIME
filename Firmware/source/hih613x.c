@@ -34,10 +34,10 @@ typedef struct
 static const double HIH_POWER_PROFILES[HIH_PROFILE_MAX][HIH_STATE_MAX] =
 { // Idle, Data Ready, Transmitting, Waiting, Reading
   {3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile
-  {2.3, 2.3, 3.3, 2.3, 3.3},  // Low power idle/wait/ready profile HSRW
-  {2.3, 2.3, 2.3, 2.3, 3.3},  // Low power idle/wait/ready profile HSR,LSW
-  {2.3, 2.3, 3.3, 2.3, 2.3},  // Low power idle/ready/wait profile LSR,HSW
-  {2.3, 2.3, 2.3, 2.3, 2.3}   // Low power all, (may have comm errors)
+  {2.3, 2.3, 3.3, 2.3, 3.3},  // LP:IWRy HP:RW
+  {2.3, 2.3, 2.3, 2.3, 3.3},  // LP:IWRy HP:R LP:W
+  {2.3, 2.3, 3.3, 2.3, 2.3},  // LP:IWRy LP:R HP:W
+  {2.3, 2.3, 2.3, 2.3, 2.3}   // LP:IWRyRW
 };
 
 static struct

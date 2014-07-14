@@ -78,7 +78,7 @@ void Bluetooth_receiveData(uint32 numBytes, uint32 timeout)
 {
   sBluetooth.comms.receiving = TRUE;
   sBluetooth.comms.rxTimeout = FALSE;
-  UART_receiveData(UART_PORT4, numBytes, timeout);
+  UART_receiveData(UART_PORT4, numBytes, timeout, FALSE);
 }
 
 /**************************************************************************************************\
@@ -90,7 +90,7 @@ void Bluetooth_receiveData(uint32 numBytes, uint32 timeout)
 void Bluetooth_sendData(uint16 numBytes)
 {
   sBluetooth.comms.transmitting = TRUE;
-  UART_sendData(UART_PORT4, numBytes);
+  UART_sendData(UART_PORT4, sBluetooth.comms.txBuffer, numBytes);
 }
 
 static void Bluetooth_setup(boolean state);

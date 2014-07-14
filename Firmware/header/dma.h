@@ -4,6 +4,14 @@
 #include "stm32f2xx.h"
 #include "types.h"
 
+typedef enum
+{
+  DMA_RESULT_OK   = 0,
+  DMA_RECEIVE_OK  = 1,
+  DMA_TRANSMIT_OK = 2,
+  DMA_TIMEOUT     = 3
+} TransferResult;
+
 typedef struct
 {
   uint32_t DMA_Channel;            /*!< Specifies the channel used for the specified stream. 

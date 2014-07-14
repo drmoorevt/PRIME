@@ -1,14 +1,6 @@
 function [name, chans, data, time] = TestConsole(CommPort)
-    s = openFixtureComms(CommPort, 921600);
-    [name, chans, data, time] = runTest14(s, 100);
-    closeFixtureComms(s);
-    
-    % Parse the data, call individual parsers to calculate EDP
-    
-    %http://www.mathworks.com/help/matlab/creating_plots/plotting-with-two-y-axes.html
-    %stem3(time,chans,data)
-    
-    return
+    [name, chans, data, time] = runTest12(CommPort, 921600, 2);    
+    return;
     % End selection bypass
     
     while (1)
@@ -25,7 +17,7 @@ function [name, chans, data, time] = TestConsole(CommPort)
                 return;
             case 1
                 testNum = input('  Test to run: ');
-                rtd(s, testNum);
+                %rtd(s, testNum);
             otherwise
         end
     end
