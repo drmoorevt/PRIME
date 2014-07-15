@@ -4,8 +4,8 @@ function [title, channels, time, bitRes, numChannels, ...
     channels = {};
     time = {};
     dataBytes = 0;
-    % wait for the size of the header, timeout after 3 seconds
-    if (false == wfb(s, 2, 3000))
+    % wait for the size of the header, timeout after 1 second
+    if (false == wfb(s, 2, 1000))
         return;
     end
     sizeofHeader = fread(s, 1, 'uint16');

@@ -1,5 +1,9 @@
 function [name, chans, data, time] = TestConsole(CommPort)
-    [name, chans, data, time] = runTest12(CommPort, 921600, 2);    
+    numSweeps = 10;
+%    [name, chans, data, time] = runTest11(CommPort, 921600, numSweeps);
+%    [name, chans, data, time] = runTest12(CommPort, 921600, numSweeps);
+     [name, chans, data, time] = runTest13(CommPort, 921600, numSweeps);
+%    [name, chans, data, time] = runTest14(CommPort, 921600, numSweeps);
     return;
     % End selection bypass
     

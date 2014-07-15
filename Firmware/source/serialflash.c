@@ -70,7 +70,7 @@ typedef struct
 // Power profile voltage definitions, in SerialFlashPowerProfile / SerialFlashState order
 // SPI operation at 25(rd)/50(wr/all)MHz for 2.3 > Vcc > 3.6, 33(rd)/75(wr/all)MHz for 2.7 > Vcc > 3.6
 static const double SERIAL_FLASH_POWER_PROFILES[SERIAL_FLASH_PROFILE_MAX][SERIAL_FLASH_STATE_MAX] =
-{
+{ // Idle, Reading, Erasing, Writing, Waiting
   {3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile
   {2.3, 3.3, 3.3, 3.3, 2.3},  // Low power idle/wait profile
   {2.3, 3.3, 2.3, 2.3, 2.3},  // High Speed Read, Low all other states
