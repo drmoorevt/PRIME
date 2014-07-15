@@ -23,12 +23,12 @@ typedef enum
 
 typedef enum
 {
-  HIH_PROFILE_STANDARD           = 0,
-  HIH_PROFILE_LP_IDLE            = 1,
-  HIH_PROFILE_LP_IDLE_READY      = 2,
-  HIH_PROFILE_LP_IDLE_READY_WAIT = 3,
-  HIH_PROFILE_LP_ALL             = 4,
-  HIH_PROFILE_MAX                = 5
+  HIH_PROFILE_STANDARD    = 0,
+  HIH_PROFILE_LPIRyW_HSRW = 1,
+  HIH_PROFILE_LPIRyW_HSR  = 2,
+  HIH_PROFILE_LPIRyR_HSW  = 3,
+  HIH_PROFILE_LP_ALL      = 4,
+  HIH_PROFILE_MAX         = 5
 } HIHPowerProfile;
 
 void HIH613X_init(void);

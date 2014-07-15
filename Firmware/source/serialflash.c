@@ -76,7 +76,6 @@ static const double SERIAL_FLASH_POWER_PROFILES[SERIAL_FLASH_PROFILE_MAX][SERIAL
   {2.3, 3.3, 2.3, 2.3, 2.3},  // High Speed Read, Low all other states
   {2.3, 2.3, 2.3, 3.3, 2.3},  // High Speed write, Low all other states
   {2.3, 2.3, 2.3, 2.3, 2.3},  // Low power all profile
-  {2.3, 2.3, 2.3, 2.3, 1.8}   // Low power all, extreme low power wait profile
 };
 
 static struct

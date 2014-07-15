@@ -531,11 +531,11 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate, do
   sTests.testHeader.numChannels = 4;
   sTests.testHeader.bytesPerChan = TESTS_MAX_SAMPLES * 2;
   sTests.chanHeader[0].chanNum  = adc1Config.adcConfig.chan[0].chanNum;
-  sTests.chanHeader[0].bitRes   = (3.3 / 4096.0) * 2; // Voltage measurements are div2
+  sTests.chanHeader[0].bitRes   = (3.3 / 4096.0) * 2;  // Voltage measurements are div2
   sTests.chanHeader[1].chanNum  = adc2Config.adcConfig.chan[0].chanNum;
-  sTests.chanHeader[1].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[1].bitRes   = (3.3 / 4096.0) * 10; // (Gain = 100, R=1 ... 10mA/V)
   sTests.chanHeader[2].chanNum  = adc3Config.adcConfig.chan[0].chanNum;
-  sTests.chanHeader[2].bitRes   = (3.3 / 4096.0);
+  sTests.chanHeader[2].bitRes   = (3.3 / 4096.0);      // (Gain = 100, R=10 ... 1mA/V)
   sTests.chanHeader[3].chanNum  = sTests.periphState.channel;
   switch (sTests.testToRun)
   {
@@ -607,33 +607,27 @@ static void Tests_teardownSPITests(boolean testPassed)
       {
         case 0:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "EEPROM Standard Profile Passed");
+            sprintf(sTests.testHeader.title, "EEPROM PROFILE STANDARD Passed");
           else
-            sprintf(sTests.testHeader.title, "EEPROM Standard Profile Failed");
+            sprintf(sTests.testHeader.title, "EEPROM PROFILE STANDARD Failed");
           break;
         case 1:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "EEPROM LP Idle/Wait High-Speed Profile Passed");
+            sprintf(sTests.testHeader.title, "EEPROM PROFILE LPWa HSRW Passed");
           else
-            sprintf(sTests.testHeader.title, "EEPROM LP Idle/Wait High-Speed Profile Failed");
+            sprintf(sTests.testHeader.title, "EEPROM PROFILE LPWa HSRW Failed");
           break;
         case 2:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "EEPROM LP Idle/Wait Mid-Speed Profile Passed");
+            sprintf(sTests.testHeader.title, "EEPROM PROFILE LPWa MSRW Passed");
           else
-            sprintf(sTests.testHeader.title, "EEPROM LP Idle/Wait Mid-Speed Profile Failed");
+            sprintf(sTests.testHeader.title, "EEPROM PROFILE LPWa MSRW Failed");
           break;
         case 3:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "EEPROM LP Idle/Wait Low-Speed Profile Passed");
+            sprintf(sTests.testHeader.title, "EEPROM PROFILE LPWaRW Passed");
           else
-            sprintf(sTests.testHeader.title, "EEPROM LP Idle/Wait Low-Speed Profile Failed");
-          break;
-        case 4:
-          if (testPassed)
-            sprintf(sTests.testHeader.title, "EEPROM LPI, XLPW, LSRW, Profile Passed");
-          else
-            sprintf(sTests.testHeader.title, "EEPROM LPI, XLPW, LSRW, Profile Failed");
+            sprintf(sTests.testHeader.title, "EEPROM PROFILE LPWaRW Failed");
           break;
         default: break;
       }
@@ -643,39 +637,33 @@ static void Tests_teardownSPITests(boolean testPassed)
       {
         case 0:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "SerialFlash Standard Profile Passed");
+            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE STANDARD Passed");
           else
-            sprintf(sTests.testHeader.title, "SerialFlash Standard Profile Failed");
+            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE STANDARD Failed");
           break;
         case 1:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait HSRW Profile Passed");
+            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE LPWa HSRW Passed");
           else
-            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait HSRW Profile Failed");
+            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE LPWa HSRW Failed");
           break;
         case 2:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait HSR, LSW Profile Passed");
+            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE LPWaW HSR Passed");
           else
-            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait HSR, LSW Profile Failed");
+            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE LPWaW HSR Failed");
           break;
         case 3:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait LSR, HSW Profile Passed");
+            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE LPWaR HSW Passed");
           else
-            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait LSR, HSW Profile Failed");
+            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE LPWaR HSW Failed");
           break;
         case 4:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait LSRW Profile Passed");
+            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE LP ALL Passed");
           else
-            sprintf(sTests.testHeader.title, "SerialFlash LP Idle/Wait LSRW Profile Failed");
-          break;
-        case 5:
-          if (testPassed)
-            sprintf(sTests.testHeader.title, "SerialFlash LP Idle LSRW, HSW, XLPW Profile Passed");
-          else
-            sprintf(sTests.testHeader.title, "SerialFlash LP Idle LSRW, HSW, XLPW Profile Failed");
+            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE LP ALL Failed");
           break;
         default: break;
       }
@@ -685,39 +673,33 @@ static void Tests_teardownSPITests(boolean testPassed)
       {
         case 0:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "SDCard Standard Profile Passed");
+            sprintf(sTests.testHeader.title, "SDCard 3.3v ISR Profile Passed");
           else
-            sprintf(sTests.testHeader.title, "SDCard Standard Profile Failed");
+            sprintf(sTests.testHeader.title, "SDCard 3.3v ISR Profile Failed");
           break;
         case 1:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait HSRW Profile Passed");
+            sprintf(sTests.testHeader.title, "SDCard 3.0v ISR Profile Passed");
           else
-            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait HSRW Profile Failed");
+            sprintf(sTests.testHeader.title, "SDCard 3.0v ISR Profile Failed");
           break;
         case 2:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait HSR, LSW Profile Passed");
+            sprintf(sTests.testHeader.title, "SDCard 2.7v ISR Profile Passed");
           else
-            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait HSR, LSW Profile Failed");
+            sprintf(sTests.testHeader.title, "SDCard 2.7v ISR Profile Failed");
           break;
         case 3:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait LSR, HSW Profile Passed");
+            sprintf(sTests.testHeader.title, "SDCard 2.4v ISR Profile Passed");
           else
-            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait LSR, HSW Profile Failed");
+            sprintf(sTests.testHeader.title, "SDCard 2.4v ISR Profile Failed");
           break;
         case 4:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait LSRW Profile Passed");
+            sprintf(sTests.testHeader.title, "SDCard 2.1v ISR Profile Passed");
           else
-            sprintf(sTests.testHeader.title, "SDCard LP Idle/Wait LSRW Profile Failed");
-          break;
-        case 5:
-          if (testPassed)
-            sprintf(sTests.testHeader.title, "SDCard LP Idle LSRW, HSW, XLPW Profile Passed");
-          else
-            sprintf(sTests.testHeader.title, "SDCard LP Idle LSRW, HSW, XLPW Profile Failed");
+            sprintf(sTests.testHeader.title, "SDCard 2.1v ISR Profile Failed");
           break;
         default: break;
       }
@@ -727,39 +709,33 @@ static void Tests_teardownSPITests(boolean testPassed)
       {
         case 0:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "HIH61XX Standard Profile Passed");
+            sprintf(sTests.testHeader.title, "HIH PROFILE STANDARD Passed");
           else
-            sprintf(sTests.testHeader.title, "HIH61XX Standard Profile Failed");
+            sprintf(sTests.testHeader.title, "HIH PROFILE STANDARD Failed");
           break;
         case 1:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready Profile Passed");
+            sprintf(sTests.testHeader.title, "HIH PROFILE LPIRyW HSRW Passed");
           else
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready Profile Failed");
+            sprintf(sTests.testHeader.title, "HIH PROFILE LPIRyW HSRW Failed");
           break;
         case 2:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready, HSRW Profile Passed");
+            sprintf(sTests.testHeader.title, "HIH PROFILE LPIRyW HSR Passed");
           else
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready, HSRW Profile Failed");
+            sprintf(sTests.testHeader.title, "HIH PROFILE LPIRyW HSR Failed");
           break;
         case 3:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready HSR, LSW Profile Passed");
+            sprintf(sTests.testHeader.title, "HIH PROFILE LPIRyR HSW Passed");
           else
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready HSR, LSW Profile Failed");
+            sprintf(sTests.testHeader.title, "HIH PROFILE LPIRyR HSW Failed");
           break;
         case 4:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready LSR HSW Profile Passed");
+            sprintf(sTests.testHeader.title, "HIH PROFILE LP ALL Passed");
           else
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready LSR HSW Profile Failed");
-          break;
-        case 5:
-          if (testPassed)
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready LSRW Profile Passed");
-          else
-            sprintf(sTests.testHeader.title, "HIH61XX LP Idle/Wait/Ready LSRW Profile Failed");
+            sprintf(sTests.testHeader.title, "HIH PROFILE LP ALL Failed");
           break;
         default: break;
       }
@@ -1216,15 +1192,21 @@ uint16 Tests_test12(void *pArgs)
 \**************************************************************************************************/
 uint16 Tests_test13(void *pArgs)
 {
+  uint8 i;
   SDWriteResult writeResult;
   Test13Args *pTestArgs = pArgs;
 
   sTests.powerProfile = pTestArgs->profile;
   SDCard_setPowerProfile(pTestArgs->profile);
   Analog_setDomain(SPI_DOMAIN, TRUE, SDCard_getStateVoltage());
-  Time_delay(1000000);
-  SDCard_initDisk();  // disk must be initialized before we can test writes to it
-
+  Time_delay(500000);
+  for (i = 0; i < 5; i++)
+  {
+    Time_delay(500000);
+    if (SDCard_initDisk())  // disk must be initialized before we can test writes to it
+      break;
+  }
+  
   Tests_setupSPITests(SD_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate, SDCard_getStateVoltage());
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
   writeResult = SDCard_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);

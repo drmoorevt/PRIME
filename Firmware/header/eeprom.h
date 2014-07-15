@@ -22,11 +22,10 @@ typedef enum
 typedef enum
 {
   EEPROM_PROFILE_STANDARD     = 0,
-  EEPROM_PROFILE_LP_IDLE_WAIT = 1,
-  EEPROM_PROFILE_MP_RW_LP_IW  = 2,
-  EEPROM_PROFILE_LP_ALL       = 3,
-  EEPROM_PROFILE_LPI_XLP_WAIT = 4,
-  EEPROM_PROFILE_MAX          = 5
+  EEPROM_PROFILE_LPWa_HSRW    = 1,
+  EEPROM_PROFILE_LPWa_MSRW    = 2,
+  EEPROM_PROFILE_LPWaRW       = 3,
+  EEPROM_PROFILE_MAX          = 4
 } EEPROMPowerProfile;
 
 typedef enum

@@ -225,11 +225,11 @@ typedef struct
 // Power profile voltage definitions, in SDCardPowerProfile / SDCardState order
 static const double SDCARD_POWER_PROFILES[SDCARD_PROFILE_MAX][SDCARD_STATE_MAX] =
 { // Idle, Setup, Ready, Reading, Writing, Verifying
-  {3.3, 3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile
-  {2.0, 2.0, 2.0, 3.3, 3.3, 3.3},  // Low power idle, setup, ready, profile
-  {2.0, 2.0, 2.0, 2.7, 3.3, 3.3},  // Low power LPISR, LPR, HSWV
-  {2.0, 2.0, 2.0, 2.7, 2.7, 2.7},  // Low power all
-  {2.0, 2.0, 2.0, 2.0, 2.0, 2.0}   // XLP all
+  {3.3, 3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile: 3.3VISR
+  {3.0, 3.0, 3.0, 3.3, 3.3, 3.3},  // 3.0VISR
+  {2.7, 2.7, 2.7, 3.3, 3.3, 3.3},  // 2.7VISR
+  {2.4, 2.4, 2.4, 3.3, 3.3, 3.3},  // 2.4VISR
+  {2.1, 2.1, 2.1, 3.3, 3.3, 3.3}   // 2.1VISR
 };
 
 static struct
@@ -591,8 +591,8 @@ boolean SDCard_read(uint8 *pSrc, uint8 *pDest, uint16 length)
   block = (uint32)pSrc >> 9;
   offset = (uint32)pSrc & 0x0000001FF;
 
-  SDCard_setup(TRUE); // Turn on the SPI and control pins
   SDCard_setState(SDCARD_STATE_READING); // Set the state and voltage
+  SDCard_setup(TRUE); // Turn on the SPI and control pins
   readResult = SDCard_readBlock(block);
   SDCard_setup(FALSE); // Turn off the SPI and control pins
   SDCard_setState(SDCARD_STATE_READY); // Set the state and voltage
@@ -682,8 +682,8 @@ SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
   // Read in the block that contains the data which will be overwritten
   block = (uint32)pDest >> 9;
 
-  SDCard_setup(TRUE); // Turn on the SPI and control pins
   SDCard_setState(SDCARD_STATE_READING); // Set the state and voltage
+  SDCard_setup(TRUE); // Turn on the SPI and control pins
   readResult = SDCard_readBlock(block);
 
   // Copy the incoming data over top of whatever currently resides there

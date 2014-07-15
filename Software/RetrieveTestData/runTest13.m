@@ -1,13 +1,12 @@
 function [name, chans, data, time] = runTest13(CommPort, baudRate, numSweeps)
-    close all
     delete(instrfindall);
     s = openFixtureComms(CommPort, baudRate);
-    writeBuffer(1:128) = uint8(0);
     
     profIter = 1;
-    while (profIter < 2) % Won't run XLP test
+    while (profIter < 6)
         sweepIter = 1;
-        args = argGenTest13(1000, 2, 0, uint32(profIter - 1), writeBuffer, 0, 128);
+        writeBuffer(1:128) = uint8(profIter);
+        args = argGenTest13(6000, 2, 0, uint32(profIter - 1), writeBuffer, 0, 128);
         while sweepIter <= numSweeps
             fprintf('\nExecution %d/%d\n', sweepIter, numSweeps);
             success = false;
@@ -17,7 +16,9 @@ function [name, chans, data, time] = runTest13(CommPort, baudRate, numSweeps)
                 avgData = mean(data, 3);
                 sweepIter = sweepIter + 1;
             catch
+                closeFixtureComms(s);
                 delete(instrfindall);
+                pause(1);
                 s = openFixtureComms(CommPort, baudRate);
                 fwrite(s, uint8(hex2dec('54'))); % Attempt DUT reset
                 closeFixtureComms(s);
@@ -26,10 +27,10 @@ function [name, chans, data, time] = runTest13(CommPort, baudRate, numSweeps)
                 s = openFixtureComms(CommPort, baudRate);
             end
         end
-        filename = sprintf('./results/Test14-Profile%d-%dSweeps.mat', ...
+        filename = sprintf('./results/Test13-Profile%d-%dSweeps.mat', ...
                            profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time')
-        testPlot(avgData(:,:,profIter), time, chans, name, 8);
+        testPlot(avgData(:,:,profIter), time, chans, name, 18);
         profIter = profIter + 1;
     end
 end

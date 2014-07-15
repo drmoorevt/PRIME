@@ -44,18 +44,18 @@ function [title,channels,results,time,dataBytes] = execTest(s, test, args)
     i = 3;
     while (testBytes == 0)
         try
-            %if (s.BytesAvailable > 0)
-            %    fread(s, s.BytesAvailable); % Clear out the serial port!
-            %end
             [results, testBytes] = rtd(s, bitRes, numChannels, dataBytes);
             if (testBytes == dataBytes)   % Success, send ACK and proceed
                 fwrite(s, uint8(hex2dec('88')));
                 break;
             end
         catch
+            pause(0.100);
+            if (s.BytesAvailable > 0)
+                fread(s, s.BytesAvailable); % Clear out the serial port!
+            end
             if (i > 0) % Header retrieval failure, send NAK and retry
                 i = i - 1;
-                pause(0.100);
                 fprintf('Data retrieval failure: retrying\n');
                 fwrite(s, uint8(hex2dec('99')));
             else           % Test failure, quit

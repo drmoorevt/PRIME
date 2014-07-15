@@ -42,8 +42,7 @@ static const double EEPROM_POWER_PROFILES[EEPROM_PROFILE_MAX][EEPROM_STATE_MAX] 
   {3.3, 3.3, 3.3, 3.3},  // Standard profile, high speed high voltage
   {1.8, 3.3, 3.3, 1.8},  // Low power wait/idle profile
   {1.8, 2.5, 2.5, 1.8},  // Low power wait/idle, mid r/w profile
-  {1.8, 1.8, 1.8, 1.8},  // Low power all profile
-  {1.8, 1.8, 1.8, 1.5},  // Extreme low power wait profile
+  {1.8, 1.8, 1.8, 1.8}  // Low power all profile
 };
 
 static struct

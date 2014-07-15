@@ -1,10 +1,9 @@
 function [name, chans, data, time] = runTest14(CommPort, baudRate, numSweeps)
-    close all
     delete(instrfindall);
     s = openFixtureComms(CommPort, baudRate);
     
     profIter = 1;
-    while (profIter < 6) % Won't run XLP test
+    while (profIter < 6)
         sweepIter = 1;
         args = argGenTest14(1000, 5, 0, uint32(profIter - 1), 1, 1, 0);
         while sweepIter <= numSweeps
@@ -16,7 +15,9 @@ function [name, chans, data, time] = runTest14(CommPort, baudRate, numSweeps)
                 avgData = mean(data, 3);
                 sweepIter = sweepIter + 1;
             catch
+                closeFixtureComms(s);
                 delete(instrfindall);
+                pause(1);
                 s = openFixtureComms(CommPort, baudRate);
                 fwrite(s, uint8(hex2dec('54'))); % Attempt DUT reset
                 closeFixtureComms(s);

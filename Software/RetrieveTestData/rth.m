@@ -4,7 +4,7 @@ function [title, channels, time, bitRes, numChannels, ...
     channels = {};
     time = {};
     dataBytes = 0;
-    % wait for the size of the header, timeout after 1 second
+    % wait for the size of the header, timeout after 2 seconds
     if (false == wfb(s, 2, 1000))
         return;
     end

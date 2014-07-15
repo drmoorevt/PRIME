@@ -18,13 +18,11 @@ typedef enum
 typedef enum
 {
   SERIAL_FLASH_PROFILE_STANDARD        = 0,
-  SERIAL_FLASH_PROFILE_LP_WAIT         = 1,
-  SERIAL_FLASH_PROFILE_HS_READ         = 2,
-  SERIAL_FLASH_PROFILE_HS_RW           = 3,
+  SERIAL_FLASH_PROFILE_LPWa_HSRW       = 1,
+  SERIAL_FLASH_PROFILE_LPWaW_HSR       = 2,
+  SERIAL_FLASH_PROFILE_LPWaR_HSW       = 3,
   SERIAL_FLASH_PROFILE_LP_ALL          = 4,
-  SERIAL_FLASH_PROFILE_XLP_WAIT        = 5,
-  SERIAL_FLASH_PROFILE_LP_ALL_XLP_WAIT = 6,
-  SERIAL_FLASH_PROFILE_MAX             = 7
+  SERIAL_FLASH_PROFILE_MAX             = 5
 } SerialFlashPowerProfile;
 
 typedef enum
