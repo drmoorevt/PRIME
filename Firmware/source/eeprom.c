@@ -39,10 +39,10 @@ typedef enum
 // SPI operation at 20MHz for 4.5 < Vcc < 5.5, 10MHz for 2.5 < Vcc < 5.5, 2MHz for 1.8 < Vcc < 2.5
 static const double EEPROM_POWER_PROFILES[EEPROM_PROFILE_MAX][EEPROM_STATE_MAX] =
 { // Idle, Reading, Writing, Waiting
-  {3.3, 3.3, 3.3, 3.3},  // Standard profile, high speed high voltage
-  {1.8, 3.3, 3.3, 1.8},  // Low power wait/idle profile
-  {1.8, 2.5, 2.5, 1.8},  // Low power wait/idle, mid r/w profile
-  {1.8, 1.8, 1.8, 1.8}  // Low power all profile
+  {3.3, 3.3, 3.3, 3.3}, // Standard profile
+  {2.5, 3.3, 3.3, 2.5}, // 25VIW
+  {1.8, 3.3, 3.3, 1.8}, // 18VIW
+  {1.4, 3.3, 3.3, 1.4}  // 14VIW
 };
 
 static struct

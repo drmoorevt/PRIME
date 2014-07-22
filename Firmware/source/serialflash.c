@@ -72,10 +72,10 @@ typedef struct
 static const double SERIAL_FLASH_POWER_PROFILES[SERIAL_FLASH_PROFILE_MAX][SERIAL_FLASH_STATE_MAX] =
 { // Idle, Reading, Erasing, Writing, Waiting
   {3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile
-  {2.3, 3.3, 3.3, 3.3, 2.3},  // Low power idle/wait profile
-  {2.3, 3.3, 2.3, 2.3, 2.3},  // High Speed Read, Low all other states
-  {2.3, 2.3, 2.3, 3.3, 2.3},  // High Speed write, Low all other states
-  {2.3, 2.3, 2.3, 2.3, 2.3},  // Low power all profile
+  {3.0, 3.3, 3.3, 3.3, 3.0},  // 30VIW
+  {2.7, 3.3, 3.3, 3.3, 2.7},  // 27VIW
+  {2.3, 3.3, 3.3, 3.3, 2.3},  // 23VIW
+  {2.1, 3.3, 3.3, 3.3, 2.1},  // 21VIW
 };
 
 static struct
@@ -401,7 +401,7 @@ SerialFlashResult SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
       numToWrite = length;
 
     // Determine the which subsector we'll be manipulating and the data destination in local cache
-    pSubSector = (uint8 *)(((uint32)pDest >> 12) & 0x000001FF);
+    pSubSector = (uint8 *)(((uint32)pDest  >> 0) & 0x001FF000);
     pCacheDest = (uint8 *)((((uint32)pDest >> 0) & 0x00000FFF) + pCache);
 
     for (retries = 3; retries > 0; retries--)

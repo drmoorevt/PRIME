@@ -5,9 +5,10 @@ function [name, chans, data, time] = runTest11(CommPort, baudRate, numSweeps)
     profIter = 1;
     while (profIter < 5)
         sweepIter = 1;
-        writeBuffer(1:128) = uint8(profIter);
-        args = argGenTest11(1000, 1, 0, uint32(profIter - 1), writeBuffer, 0, 128);
         while sweepIter <= numSweeps
+            address = uint32((2^16)*rand/128)*128;
+            writeBuffer(1:128) = uint8(rand(1,128)*128);
+            args = argGenTest11(1000, 1, 0, uint32(profIter - 1), writeBuffer, address, 128);
             fprintf('\nExecution %d/%d\n', sweepIter, numSweeps);
             success = false;
             try
