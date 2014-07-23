@@ -1,6 +1,6 @@
 % power data is (value:state:profile) over the length of time
 % energy data (value:state:profile) but scalar
-function [inAvePower, outAvePower, inEnergy, outEnergy] = analyzeTest(name, chans, data, time)
+function [inEnergy, outEnergy, inEnergyDelta, outEnergyDelta] = analyzeTest(data, time)
     % determine the input and output power for the test
     % data is (values, (v/i/state), [nothing] -- 1, profile,
     data = data(:,:,1,:);
@@ -22,12 +22,13 @@ function [inAvePower, outAvePower, inEnergy, outEnergy] = analyzeTest(name, chan
         outEnergy(i,:)   = outAvePower(i,:) .* stateDuration;
         stateStartIdx = stateEndIdx;
         i = i + 1;
-    end    
-    totalInEnergy  = sum(inEnergy);
-    totalOutEnergy = sum(outEnergy);
+    end
+    inEnergy(i,:)  = sum(inEnergy);
+    outEnergy(i,:) = sum(outEnergy);
 
-    % Calculate normalized energy savings per profile
-    deltaInEnergy  = 100 * (1 - (totalInEnergy  ./ totalInEnergy(1)))
-    deltaOutEnergy = 100 * (1 - (totalOutEnergy ./ totalOutEnergy(1)))
-    
+    % Calculate normalized energy savings per state per profile
+    for i = 1:length(inEnergy(1,:))
+      inEnergyDelta(:,i)  = 100 * (1 - (inEnergy(:,i) ./ inEnergy(:,1)));
+      outEnergyDelta(:,i) = 100 * (1 - (outEnergy(:,i) ./ outEnergy(:,1)));
+    end
 end
