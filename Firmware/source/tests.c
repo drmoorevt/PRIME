@@ -533,9 +533,9 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate, do
   sTests.chanHeader[0].chanNum  = adc1Config.adcConfig.chan[0].chanNum;
   sTests.chanHeader[0].bitRes   = (3.3 / 4096.0) * 2;  // Voltage measurements are div2
   sTests.chanHeader[1].chanNum  = adc2Config.adcConfig.chan[0].chanNum;
-  sTests.chanHeader[1].bitRes   = (3.3 / 4096.0) * 10; // (Gain = 100, R=1 ... 10mA/V)
+  sTests.chanHeader[1].bitRes   = (3.3 / 4096.0) * (1000.0 / 26.0); // (Gain = 20, R=1.3)
   sTests.chanHeader[2].chanNum  = adc3Config.adcConfig.chan[0].chanNum;
-  sTests.chanHeader[2].bitRes   = (3.3 / 4096.0);      // (Gain = 100, R=10 ... 1mA/V)
+  sTests.chanHeader[2].bitRes   = (3.3 / 4096.0) * (1000.0 / 26.0); // (Gain = 20, R=1.3)
   sTests.chanHeader[3].chanNum  = sTests.periphState.channel;
   switch (sTests.testToRun)
   {
