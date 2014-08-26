@@ -35,7 +35,7 @@ typedef enum
   OP_READ_STATUS  = 0x05
 } EEPROMCommand;
 
-// Power profile voltage definitions, in SerialFlashPowerProfile / SerialFlashState order
+// Power profile voltage definitions, in EEPROMPowerProfile / EEPROMState order
 // SPI operation at 20MHz for 4.5 < Vcc < 5.5, 10MHz for 2.5 < Vcc < 5.5, 2MHz for 1.8 < Vcc < 2.5
 static const double EEPROM_POWER_PROFILES[EEPROM_PROFILE_MAX][EEPROM_STATE_MAX] =
 { // Idle, Reading, Writing, Waiting
