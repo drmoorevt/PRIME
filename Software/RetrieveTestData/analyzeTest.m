@@ -1,6 +1,7 @@
 % power data is (value:state:profile) over the length of time
 % energy data (value:state:profile) but scalar
 function [inEnergy, outEnergy, inEnergyDelta, outEnergyDelta] = analyzeTest(data, time)
+    format long g
     % determine the input and output power for the test
     % data is (values, (v/i/state), [nothing] -- 1, profile,
     data = data(:,:,1,:);
@@ -23,6 +24,8 @@ function [inEnergy, outEnergy, inEnergyDelta, outEnergyDelta] = analyzeTest(data
         stateStartIdx = stateEndIdx;
         i = i + 1;
     end
+    inEnergy  = inEnergy  .* 1000; % convert to microjoules
+    outEnergy = outEnergy .* 1000; % convert to microjoules
     inEnergy(i,:)  = sum(inEnergy);
     outEnergy(i,:) = sum(outEnergy);
 
