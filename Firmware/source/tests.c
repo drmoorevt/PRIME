@@ -166,6 +166,7 @@ uint16 Tests_test15(void *pArgs);
 uint16 Tests_test16(void *pArgs);
 uint16 Tests_test17(void *pArgs);
 
+void Tests_sendData(uint16 numBytes);
 void Tests_sendBinaryResults(Samples *adcBuffer);
 boolean Tests_sendHeaderInfo(void);
 
@@ -244,12 +245,33 @@ void Tests_init(void)
 \**************************************************************************************************/
 void Tests_receiveData(uint32 numBytes, uint32 timeout)
 {
+  /* The following spiVoltage variable and code executed while waiting for bytes allows the user to
+     adjust the SPI voltage up, down and centered about 3.3V by pressing the push-buttons. This is
+     really only applicable after startup and while waiting for tests to begin -- DON'T HOLD BUTTONS
+     DURING TESTS */
+  static double spiVoltage = 3.22734099999;
+  
   sTests.comms.receiving = TRUE;
   sTests.comms.rxTimeout = FALSE;
   sTests.comms.bytesReceived = 0;
   sTests.comms.bytesToReceive = numBytes;
   UART_receiveData(UART_PORT5, numBytes, timeout, TRUE);
-  while(sTests.comms.receiving);
+  while(sTests.comms.receiving)
+  {
+    if ((GPIOC->IDR & 0x0000E000) != 0x0000E000)
+    {
+      Time_delay(100);
+      if (!(GPIOC->IDR & 0x00008000))
+        spiVoltage -= 0.000001;
+      if (!(GPIOC->IDR & 0x00004000))
+        spiVoltage  = 3.3000000;
+      if (!(GPIOC->IDR & 0x00002000))
+        spiVoltage += 0.000001;
+      Analog_setDomain(SPI_DOMAIN, TRUE, spiVoltage);
+      sprintf((char *)&sTests.comms.txBuffer[0], "%f\r\n", spiVoltage);
+      Tests_sendData(10);
+    }
+  }
 }
 
 /**************************************************************************************************\
@@ -393,6 +415,9 @@ void Tests_run(void)
   //{
   //  Tests_sendData(6);
   //}
+  
+  // SDCard_test();
+  
   switch (sTests.state)
   {
     case TEST_IDLE:  // Clear test data and setup listening for commands on the comm port
@@ -600,9 +625,14 @@ static void Tests_teardownSPITests(boolean testPassed)
   // Return domain to initial state
   Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Disable the SPI domain
 
+  sprintf(sTests.chanHeader[0].title, "Domain Voltage (V)");
+  sprintf(sTests.chanHeader[1].title, "Domain Input Current (mA)");
+  sprintf(sTests.chanHeader[2].title, "Domain Output Current (mA)");
+  
   switch (sTests.testToRun)
   {
     case 11:
+      sprintf(sTests.chanHeader[3].title, "EEPROM State");
       switch (sTests.powerProfile)
       {
         case 0:
@@ -633,6 +663,7 @@ static void Tests_teardownSPITests(boolean testPassed)
       }
       break;
     case 12:
+      sprintf(sTests.chanHeader[3].title, "SerialFlash State");
       switch (sTests.powerProfile)
       {
         case 0:
@@ -669,6 +700,7 @@ static void Tests_teardownSPITests(boolean testPassed)
       }
       break;
     case 13:
+      sprintf(sTests.chanHeader[3].title, "SDCard State");
       switch (sTests.powerProfile)
       {
         case 0:
@@ -705,6 +737,7 @@ static void Tests_teardownSPITests(boolean testPassed)
       }
       break;
     case 14:
+      sprintf(sTests.chanHeader[3].title, "HIH6130 State");
       switch (sTests.powerProfile)
       {
         case 0:
@@ -736,11 +769,6 @@ static void Tests_teardownSPITests(boolean testPassed)
       break;
     default: break;
   }
-
-  sprintf(sTests.chanHeader[0].title, "Domain Voltage (V)");
-  sprintf(sTests.chanHeader[1].title, "Domain Input Current (mA)");
-  sprintf(sTests.chanHeader[2].title, "Domain Output Current (mA)");
-  sprintf(sTests.chanHeader[3].title, "EEPROM State");
 }
 
 /**************************************************************************************************\
@@ -752,7 +780,7 @@ static void Tests_teardownSPITests(boolean testPassed)
 \**************************************************************************************************/
 uint16 Tests_test00(void *pArgs)
 {
-  return 0;
+  return SUCCESS;
 }
 
 /**************************************************************************************************\
@@ -763,7 +791,7 @@ uint16 Tests_test00(void *pArgs)
 * NOTES       Basic sampling test based on pushbutton switches
 \**************************************************************************************************/
 uint16 Tests_test01(void *pArgs)
-{
+{/*
   Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
   Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
   Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
@@ -782,7 +810,8 @@ uint16 Tests_test01(void *pArgs)
     Util_spinWait(2000000);
     while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
     Analog_testAnalog();
-  }
+  }*/
+  return SUCCESS;
 }
 
 /**************************************************************************************************\
@@ -793,13 +822,14 @@ uint16 Tests_test01(void *pArgs)
 * NOTES       Testing DAC output on port 2
 \**************************************************************************************************/
 uint16 Tests_test02(void *pArgs)
-{
+{/*
   float outVolts;
   while(1)
   {
     for (outVolts=0.0; outVolts < 3.3; outVolts+=.001)
       DAC_setVoltage(DAC_PORT2, outVolts);
-  }
+  }*/
+  return SUCCESS;
 }
 
 /**************************************************************************************************\
@@ -810,7 +840,7 @@ uint16 Tests_test02(void *pArgs)
 * NOTES       This test attempts to
 \**************************************************************************************************/
 uint16 Tests_test03(void *pArgs)
-{
+{/*
   uint32 i;
   // All pins connected to this domain set to inputs to prevent leakage
   HIH613X_setup(FALSE);
@@ -835,7 +865,7 @@ uint16 Tests_test03(void *pArgs)
   while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
 
   Tests_teardownSPITests(TRUE);
-
+*/
   return SUCCESS;
 }
 
@@ -847,7 +877,7 @@ uint16 Tests_test03(void *pArgs)
 * NOTES       Tests writing to EEPROM
 \**************************************************************************************************/
 uint16 Tests_test04(void *pArgs)
-{
+{/*
   uint8 txBuffer[128];
   uint8 rxBuffer[128];
 
@@ -866,7 +896,7 @@ uint16 Tests_test04(void *pArgs)
 
   Util_fillMemory(rxBuffer, sizeof(rxBuffer), 0x00);
   EEPROM_read(0, rxBuffer, sizeof(rxBuffer));
-
+*/
   return SUCCESS;
 }
 
@@ -878,7 +908,7 @@ uint16 Tests_test04(void *pArgs)
 * NOTES       Tests writing to Serial Flash
 \**************************************************************************************************/
 uint16 Tests_test05(void *pArgs)
-{
+{/*
   uint8 txBuffer[128];
   uint8 rxBuffer[128];
 
@@ -897,7 +927,7 @@ uint16 Tests_test05(void *pArgs)
 
   Util_fillMemory(rxBuffer, sizeof(rxBuffer), 0x00);
   SerialFlash_read(0, rxBuffer, sizeof(rxBuffer));
-
+*/
   return SUCCESS;
 }
 
@@ -909,7 +939,7 @@ uint16 Tests_test05(void *pArgs)
 * NOTES       Tests writing to the SDCard
 \**************************************************************************************************/
 uint16 Tests_test06(void *pArgs)
-{
+{/*
   uint8 txBuffer[128];
   uint8 rxBuffer[128];
 
@@ -930,7 +960,7 @@ uint16 Tests_test06(void *pArgs)
 
   Util_fillMemory(rxBuffer, sizeof(rxBuffer), 0x00);
   SDCard_read(0, rxBuffer, sizeof(rxBuffer));
-
+*/
   return SUCCESS;
 }
 
@@ -966,7 +996,7 @@ uint16 Tests_test08(void *pArgs)
 * NOTES       None
 \**************************************************************************************************/
 uint16 Tests_test09(void *pArgs)
-{
+{/*
   AppADCConfig adc1Config = {0};
   AppADCConfig adc2Config = {0};
   AppADCConfig adc3Config = {0};
@@ -1017,7 +1047,7 @@ uint16 Tests_test09(void *pArgs)
 
   // Complete the samples
   while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-
+*/
   return SUCCESS;
 }
 
@@ -1193,10 +1223,9 @@ uint16 Tests_test13(void *pArgs)
   sTests.powerProfile = pTestArgs->profile;
   SDCard_setPowerProfile(pTestArgs->profile);
   Analog_setDomain(SPI_DOMAIN, TRUE, SDCard_getStateVoltage());
-  Time_delay(500000);
   for (i = 0; i < 5; i++)
   {
-    Time_delay(500000);
+    Time_delay(300000);
     if (SDCard_initDisk())  // disk must be initialized before we can test writes to it
       break;
   }
@@ -1266,7 +1295,7 @@ uint16 Tests_test16(void *pArgs)
 * NOTES       This test attempts basic operation of the HIH_6130_021
 \**************************************************************************************************/
 uint16 Tests_test17(void *pArgs)
-{
+{/*
   uint8  i;
   HIHStatus sensorStatus;
   int16  temperature, humidity;
@@ -1321,6 +1350,6 @@ uint16 Tests_test17(void *pArgs)
 
     Time_delay(250000); // Wait 250ms for next sample
   }
-
+*/
   return SUCCESS;
 }

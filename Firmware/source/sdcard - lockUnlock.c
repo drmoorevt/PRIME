@@ -13,9 +13,9 @@
 #define SD_SELECT_PIN   (GPIO_Pin_4)
 
 #define SD_MAX_WAIT_BUS_BYTES   (65535)
-#define SD_MAX_WAIT_INIT_BYTES  (65535) // (4095)
-#define SD_MAX_WAIT_WRITE_BYTES (65536) // (4095)
-#define SD_MAX_WAIT_RESP_BYTES  (65536) // (4096) // (255)
+#define SD_MAX_WAIT_INIT_BYTES  (4095)
+#define SD_MAX_WAIT_WRITE_BYTES (4095)
+#define SD_MAX_WAIT_RESP_BYTES  (255)
 
 #define SELECT_CHIP_SD()    do { GPIOB->BSRRH |= 0x00000010; Time_delay(1); } while (0)
 #define DESELECT_CHIP_SD()  do { GPIOB->BSRRL |= 0x00000010; Time_delay(1); } while (0)
@@ -245,7 +245,6 @@ static struct
   uint32          postReadWaitClocks;
   uint32          preWriteWaitClocks;
   uint32          postWriteWaitClocks;
-  boolean         isSDHC;
   boolean         isInitialized;
 } sSDCard;
 
@@ -285,13 +284,12 @@ boolean SDCard_setup(boolean state)
   
   // Set up the SPI transaction with respect to domain voltage
   if (sSDCard.vDomain[sSDCard.state] >= SD_HIGH_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_7500000);
+    SPI_setup(state, SPI_CLOCK_RATE_1625000);
   else if (sSDCard.vDomain[sSDCard.state] >= SD_LOW_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_3250000);
+    SPI_setup(state, SPI_CLOCK_RATE_1625000);
   else
     SPI_setup(state, SPI_CLOCK_RATE_1625000); // Voltage too low, attempt at very low speed
   
-//  SPI_setup(state, SPI_CLOCK_RATE_406250); // Voltage too low, attempt at very low speed
   return (sSDCard.vDomain[sSDCard.state] >= SD_LOW_SPEED_VMIN);
 }
 
@@ -468,64 +466,53 @@ boolean SDCard_initDisk(void)
   do
   {
     success = FALSE; // Early breaks in the following sequence will result in a failure
-    
-    trys = 0;
-    do
-    {
-      cmdResp = SDCard_sendCommand(GO_IDLE_STATE, 0x00000000, SD_MAX_WAIT_RESP_BYTES); // R1 reply
-      if (cmdResp.idleState == 1)
-        break;
-    } while (trys++ < SD_MAX_WAIT_INIT_BYTES);
-    if (trys >= SD_MAX_WAIT_INIT_BYTES)
+    cmdResp = SDCard_sendCommand(GO_IDLE_STATE, 0x00000000, SD_MAX_WAIT_RESP_BYTES); // R1 reply
+    if (cmdResp.idleState != 1)
       break;
 
-    trys = 0;
-    do
-    {
-      cmdResp = SDCard_sendCommand(SEND_IF_COND, 0x000001AA, SD_MAX_WAIT_RESP_BYTES);  // R1+R7 Reply
-      SPI_read((uint8 *)&ifCondResp, sizeof(ifCondResp)); // Get that R7
-      Util_swap32((uint32*)&ifCondResp); // Now flip it around...
-      if ((cmdResp.idleState == 1) && (ifCondResp.echoBack == 0xAA) && (ifCondResp.voltageOk == 1))
-        break;
-    } while (trys++ < SD_MAX_WAIT_INIT_BYTES);
-    if (trys >= SD_MAX_WAIT_INIT_BYTES)
-      break;
-    
-    trys = 0;
-    do
-    {
-      cmdResp = SDCard_sendCommand(SEND_OP_COND_SDC, 0x40000000, SD_MAX_WAIT_RESP_BYTES); // R1+R3 Reply
-      if (cmdResp.idleState == 0)
-        break;
-    } while (trys++ < SD_MAX_WAIT_INIT_BYTES); // Continue until non-idle
-    if (trys >= SD_MAX_WAIT_INIT_BYTES)
+    cmdResp = SDCard_sendCommand(SEND_IF_COND, 0x000001AA, SD_MAX_WAIT_RESP_BYTES);  // R1+R7 Reply
+    SPI_read((uint8 *)&ifCondResp, sizeof(ifCondResp)); // Get that R7
+    Util_swap32((uint32*)&ifCondResp); // Now flip it around...
+    if ((cmdResp.idleState != 1) || (ifCondResp.echoBack != 0xAA) || (ifCondResp.voltageOk != 1))
       break;
 
-    trys = 0;
     do
     {
-      cmdResp = SDCard_sendCommand(READ_OCR, 0x00000000, SD_MAX_WAIT_RESP_BYTES);
-      SPI_read((uint8 *)&ocrResp, sizeof(ocrResp)); // Expect the next bytes to be ocrResp
-      Util_swap32((uint32*)&ocrResp); // Now flip it around...
-      if ((cmdResp.idleState == 0) && (ocrResp.powerUpStatus != 0))
+      cmdResp = SDCard_sendCommand(SEND_OP_COND_SDC, 0x40000000, SD_MAX_WAIT_RESP_BYTES);
+    } while ((cmdResp.idleState) && (trys++ < SD_MAX_WAIT_INIT_BYTES)); // Continue until non-idle
+    if ((cmdResp.idleState != 0) || (trys >= SD_MAX_WAIT_INIT_BYTES))
+      break;
+
+    cmdResp = SDCard_sendCommand(READ_OCR, 0x00000000, SD_MAX_WAIT_RESP_BYTES);
+    SPI_read((uint8 *)&ocrResp, sizeof(ocrResp)); // Expect the next bytes to be ocrResp
+    Util_swap32((uint32*)&ocrResp); // Now flip it around...
+    if ((cmdResp.idleState != 0) || (ocrResp.powerUpStatus == 0))
+      break;
+
+    cmdResp = SDCard_sendCommand(CARD_STATUS, 0x00000000, SD_MAX_WAIT_RESP_BYTES);  // R1+R2 Reply
+    SPI_read((uint8 *)&cardStatusResp, sizeof(cardStatusResp));
+    if (cmdResp.idleState != 0)
+      break;
+    else if (*(uint8 *)&cardStatusResp > 0)
+    {
+      if (cardStatusResp.cardLocked)
       {
-        sSDCard.isSDHC = ocrResp.capacityStatus;
-        break;
+        //cmdResp = SDCard_sendCommand(LOCK_UNLOCK, 0x00000000, SD_MAX_WAIT_RESP_BYTES);
+        //SPI_read((uint8 *)&cardStatusResp, sizeof(cardStatusResp));
+        //cmdResp = SDCard_sendCommand(LOCK_UNLOCK, 0x00000001, SD_MAX_WAIT_RESP_BYTES);
+        //SPI_read((uint8 *)&cardStatusResp, sizeof(cardStatusResp));
+        cmdResp = SDCard_sendCommand(LOCK_UNLOCK, 0x00000002, SD_MAX_WAIT_RESP_BYTES);
+        SPI_read((uint8 *)&cardStatusResp, sizeof(cardStatusResp));
+        //cmdResp = SDCard_sendCommand(LOCK_UNLOCK, 0x00000008, SD_MAX_WAIT_RESP_BYTES);
+        //SPI_read((uint8 *)&cardStatusResp, sizeof(cardStatusResp));
+        cmdResp = SDCard_sendCommand(CARD_STATUS, 0x00000000, SD_MAX_WAIT_RESP_BYTES);  // R1+R2 Reply
+        SPI_read((uint8 *)&cardStatusResp, sizeof(cardStatusResp));
+        if (cardStatusResp.cardLocked)
+          break;
       }
-    } while (trys++ < SD_MAX_WAIT_INIT_BYTES);
-    if (trys >= SD_MAX_WAIT_INIT_BYTES)
-      break;
-
-    trys = 0;
-    do
-    {
-      cmdResp = SDCard_sendCommand(CARD_STATUS, 0x00000000, SD_MAX_WAIT_RESP_BYTES);  // R1+R2 Reply
-      SPI_read((uint8 *)&cardStatusResp, sizeof(cardStatusResp));
-      if ((cmdResp.idleState == 0) && (*(uint8 *)&cardStatusResp == 0))
+      else
         break;
-    } while (trys++ < SD_MAX_WAIT_INIT_BYTES);
-    if (trys >= SD_MAX_WAIT_INIT_BYTES)
-      break;
+    }
 
     success = TRUE; // If we have made it here then the sequence was successful
   } while(FALSE);
@@ -622,7 +609,7 @@ boolean SDCard_read(uint8 *pSrc, uint8 *pDest, uint16 length)
   if (sSDCard.state != SDCARD_STATE_READY) // Card must be initialized first
     return FALSE;
 
-  block = (sSDCard.isSDHC) ? (uint32)pSrc >> 9 : (uint32)pSrc;
+  block = (uint32)pSrc >> 9;
   offset = (uint32)pSrc & 0x0000001FF;
 
   SDCard_setState(SDCARD_STATE_READING); // Set the state and voltage
@@ -674,7 +661,7 @@ static SDCommandResult SDCard_writeBlock(uint32 block)
   SDCommandResponseR2 cardStatusRespR2;
   SDCommandResult dataResp;
 
-  //Util_swap32(&block);
+  Util_swap32(&block);
 
   SELECT_CHIP_SD();
   sSDCard.preWriteWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_BUS_BYTES);
@@ -714,7 +701,7 @@ SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
     return SD_WRITE_RESULT_NOT_READY;
 
   // Read in the block that contains the data which will be overwritten
-  block = (sSDCard.isSDHC) ? ((uint32)pDest >> 9) : ((uint32)pDest & 0xFFFFFE00);
+  block = (uint32)pDest >> 9;
 
   SDCard_setState(SDCARD_STATE_READING); // Set the state and voltage
   SDCard_setup(TRUE); // Turn on the SPI and control pins
