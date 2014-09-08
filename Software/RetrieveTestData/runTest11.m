@@ -3,7 +3,7 @@ function [name, chans, data, time] = runTest11(CommPort, baudRate, numSweeps)
     s = openFixtureComms(CommPort, baudRate);
     
     profIter = 1;
-    while (profIter < 5)
+    while (profIter < 5) % 4 profiles: (profIter = 1,2,3,4) = 0,1,2,3
         sweepIter = 1;
         while sweepIter <= numSweeps
             address = uint32((2^16)*rand/128)*128;
@@ -32,6 +32,6 @@ function [name, chans, data, time] = runTest11(CommPort, baudRate, numSweeps)
                            profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time')
         testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), 10);
-        profIter = profIter + 1;
+        profIter = profIter + 2;
     end
 end

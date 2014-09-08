@@ -1,14 +1,15 @@
-function [name, chans, data, time] = runTest13(CommPort, baudRate, numSweeps)
+function [name, chans, data, time] = runTest13(CommPort, baudRate, numSweeps, writeWait)
     delete(instrfindall);
     s = openFixtureComms(CommPort, baudRate);
     
     profIter = 1;
-    while (profIter < 6)
+    while (profIter < 5) % 2.1V profile never works
         sweepIter = 1;
         while sweepIter <= numSweeps
             address = uint32((2^29)*rand/4096)*4096;
             writeBuffer(1:128) = uint8(rand(1,128)*128);
-            args = argGenTest13(6000, 2, 0, uint32(profIter - 1), writeBuffer, address, 128);
+            args = argGenTest13(45000, 25, 0, uint32(profIter - 1), ... 
+                                writeBuffer, address, 128, writeWait);
             fprintf('\nExecution %d/%d\n', sweepIter, numSweeps);
             success = false;
             try
@@ -31,7 +32,7 @@ function [name, chans, data, time] = runTest13(CommPort, baudRate, numSweeps)
         filename = sprintf('./results/Test13-Profile%d-%dSweeps.mat', ...
                            profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time')
-        testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), 18);
-        profIter = profIter + 1;
+        testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), 250);
+        profIter = profIter + 2;
     end
 end
