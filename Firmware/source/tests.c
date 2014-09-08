@@ -100,6 +100,7 @@ typedef struct
   uint8 writeBuffer[128];
   uint8 *pDest               __attribute__((packed));
   uint16 writeLength         __attribute__((packed));
+  uint16 writeWait           __attribute__((packed));
 } Test13Args;
 
 typedef struct
@@ -1232,7 +1233,7 @@ uint16 Tests_test13(void *pArgs)
   
   Tests_setupSPITests(SD_CHANNEL_OVERLOAD, pTestArgs->commonArgs.sampleRate, SDCard_getStateVoltage());
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
-  writeResult = SDCard_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
+  writeResult = SDCard_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength, pTestArgs->writeWait);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);
   Tests_teardownSPITests(SD_WRITE_RESULT_OK == writeResult);
 

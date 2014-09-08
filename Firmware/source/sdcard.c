@@ -225,12 +225,12 @@ typedef struct
 
 // Power profile voltage definitions, in SDCardPowerProfile / SDCardState order
 static const double SDCARD_POWER_PROFILES[SDCARD_PROFILE_MAX][SDCARD_STATE_MAX] =
-{ // Idle, Setup, Ready, Reading, Writing, Verifying
-  {3.3, 3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile: 3.3VISR
-  {3.0, 3.0, 3.0, 3.3, 3.3, 3.3},  // 3.0VISR
-  {2.7, 2.7, 2.7, 3.3, 3.3, 3.3},  // 2.7VISR
-  {2.4, 2.4, 2.4, 3.3, 3.3, 3.3},  // 2.4VISR
-  {2.1, 2.1, 2.1, 3.3, 3.3, 3.3}   // 2.1VISR
+{ // Idle, Setup, Ready, Reading, Writing, Waiting, Verifying
+  {3.3, 3.3, 3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile: 3.3VISRW
+  {3.0, 3.3, 3.0, 3.3, 3.3, 3.0, 3.3},  // 3.0VISRW
+  {2.7, 3.3, 2.7, 3.3, 3.3, 2.7, 3.3},  // 2.7VISRW
+  {2.4, 3.3, 2.4, 3.3, 3.3, 2.4, 3.3},  // 2.4VISRW
+  {2.1, 3.3, 2.1, 3.3, 3.3, 2.1, 3.3}   // 2.1VISRW
 };
 
 static struct
@@ -668,7 +668,7 @@ static SDCommandResult SDCard_sendDataBlock(uint8 token)
 * PARAMETERS  block - The block number to write
 * RETURNS     SDCARD_RESPONSE_OK if the write succeeds, various SDCommandResults otherwise
 \**************************************************************************************************/
-static SDCommandResult SDCard_writeBlock(uint32 block)
+static SDCommandResult SDCard_writeBlock(uint32 block, uint16 writeDelay)
 {
   SDCommandResponseR1 cardStatusRespR1, writeBlockRespR1;
   SDCommandResponseR2 cardStatusRespR2;
@@ -680,6 +680,18 @@ static SDCommandResult SDCard_writeBlock(uint32 block)
   sSDCard.preWriteWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_BUS_BYTES);
   writeBlockRespR1 = SDCard_sendCommand(WRITE_BLOCK, block, SD_MAX_WAIT_RESP_BYTES); // Result == 0
   dataResp = SDCard_sendDataBlock(START_SINGLE_BLOCK_TOKEN);
+  
+  if (writeDelay > 0)
+  {
+    SDCard_setState(SDCARD_STATE_WAITING); // Set the state and voltage
+    SDCard_setup(FALSE); // Turn on the SPI and control pins
+    Time_delay(writeDelay * 1000); // us --> ms
+    SDCard_setup(TRUE); // Turn on the SPI and control pins
+    SDCard_setState(SDCARD_STATE_WRITING); // Set the state and voltage
+    Time_delay(1000); // us --> ms
+    SELECT_CHIP_SD();
+  }
+  
   sSDCard.writeWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_WRITE_BYTES); // Wait for bus release
   cardStatusRespR1 = SDCard_sendCommand(CARD_STATUS, 0x00000000, SD_MAX_WAIT_RESP_BYTES);
   SPI_read((uint8 *)&cardStatusRespR2, sizeof(cardStatusRespR2));
@@ -702,7 +714,7 @@ static SDCommandResult SDCard_writeBlock(uint32 block)
 *             length - number of bytes to write
 * RETURNS     TRUE if the write succeeds, FALSE otherwise
 \**************************************************************************************************/
-SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
+SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length, uint16 writeDelay)
 {
   uint8 verify;
   uint32 block, offset;
@@ -726,7 +738,7 @@ SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 
   // Write the new contents of the block to the SDCard
   SDCard_setState(SDCARD_STATE_WRITING); // Set the state and voltage
-  writeResult = SDCard_writeBlock(block);
+  writeResult = SDCard_writeBlock(block, writeDelay);
 
   // Verify that the source data now resides in the block
   SDCard_setState(SDCARD_STATE_VERIFYING); // Set the state and voltage
@@ -802,7 +814,7 @@ void SDCard_test(void)
     while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
     if ((GPIOC->IDR & 0x00008000) == 0)
     {
-      SDCard_write(buffer, (uint8 *)128, sizeof(buffer));
+      SDCard_write(buffer, (uint8 *)128, sizeof(buffer), 0);
     }
     else if ((GPIOC->IDR & 0x00004000) == 0)
     {
