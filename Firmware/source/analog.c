@@ -20,23 +20,23 @@
 #define DESELECT_DOMLEN() do { GPIOE->BSRRL |= 0x00000004; } while (0)
 
 const DomainConfig DEFAULT_CONFIGURATION[NUM_ANALOG_DOMAINS] = {
-//Regulator,   inAmp,  outAmp,     r1,     r2,     rf,  vMax, vMin,  rIn, rOut
-  {TPS62240, MAX4378, MAX4378, 360000, 180000, 144000,   3.3,  1.8, 10.0, 10.0}, // MCU_DOMAIN
-  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 10.0, 10.0}, // ANALOG_DOMAIN
-  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 10.0, 10.0}, // SRAM_DOMAIN
-  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 10.0, 10.0}, // SPI_DOMAIN
-  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 10.0, 10.0}, // ENERGY_DOMAIN
-  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 10.0, 10.0}, // COMMS_DOMAIN
-  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 10.0, 10.0}, // IO_DOMAIN
-  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 10.0, 10.0}, // BUCK_DOMAIN7
-  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 10.0, 10.0}, // BOOST_DOMAIN0
-  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 10.0, 10.0}, // BOOST_DOMAIN1
-  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 10.0, 10.0}, // BOOST_DOMAIN2
-  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 10.0, 10.0}, // BOOST_DOMAIN3
-  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 10.0, 10.0}, // BOOST_DOMAIN4
-  {LM2623,   MAX4378, MAX4378, 180000,  75000,  22000,  12.0,  0.6, 10.0, 10.0}, // BOOST_DOMAIN5
-  {LM2623,   MAX4378, MAX4378, 180000,  75000,  22000,  12.0,  0.6, 10.0, 10.0}, // BOOST_DOMAIN6
-  {LM2623,   MAX4378, MAX4378, 180000,  75000,  22000,  12.0,  0.6, 10.0, 10.0}, // BOOST_DOMAIN7
+//Regulator,   inAmp,  outAmp,     r1,     r2,     rf,  vMax, vMin, vOfst, rIn, rOut
+  {TPS62240, MAX4378, MAX4378, 360000, 180000, 144000,   3.3,  1.8, 0.065, 10.0, 10.0}, // MCU_DOMAIN
+  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 0.065, 10.0, 10.0}, // ANALOG_DOMAIN
+  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 0.065, 10.0, 10.0}, // SRAM_DOMAIN
+  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 0.065, 10.0, 10.0}, // SPI_DOMAIN
+  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 0.065, 10.0, 10.0}, // ENERGY_DOMAIN
+  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 0.065, 10.0, 10.0}, // COMMS_DOMAIN
+  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 0.065, 10.0, 10.0}, // IO_DOMAIN
+  {TPS62240, MAX4378, MAX4378, 360000,  75000, 144000,   3.6,  0.6, 0.065, 10.0, 10.0}, // BUCK_DOMAIN7
+  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 0.065, 10.0, 10.0}, // BOOST_DOMAIN0
+  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 0.065, 10.0, 10.0}, // BOOST_DOMAIN1
+  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 0.065, 10.0, 10.0}, // BOOST_DOMAIN2
+  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 0.065, 10.0, 10.0}, // BOOST_DOMAIN3
+  {LM2623,   MAX4378, MAX4378, 125000,  75000,  60000,   5.7,  2.0, 0.065, 10.0, 10.0}, // BOOST_DOMAIN4
+  {LM2623,   MAX4378, MAX4378, 180000,  75000,  22000,  12.0,  0.6, 0.065, 10.0, 10.0}, // BOOST_DOMAIN5
+  {LM2623,   MAX4378, MAX4378, 180000,  75000,  22000,  12.0,  0.6, 0.065, 10.0, 10.0}, // BOOST_DOMAIN6
+  {LM2623,   MAX4378, MAX4378, 180000,  75000,  22000,  12.0,  0.6, 0.065, 10.0, 10.0}, // BOOST_DOMAIN7
 };
 
 // Static structures
@@ -251,8 +251,9 @@ static double Analog_getFeedbackVoltage(VoltageDomain domain, double vDomain)
   double r1 = sAnalog.domainConfig[domain].r1,
          r2 = sAnalog.domainConfig[domain].r2,
          rf = sAnalog.domainConfig[domain].rf,
-         vRef = Analog_getReferenceVoltage(sAnalog.domainConfig[domain].regulator);
-  return (rf * (vRef * (1/r1 + 1/r2 + 1/rf) - vDomain * (1/r1)));
+         vRef = Analog_getReferenceVoltage(sAnalog.domainConfig[domain].regulator),
+         vAct = vDomain - sAnalog.domainConfig[domain].vOffset;
+  return (rf * (vRef * (1/r1 + 1/r2 + 1/rf) - vAct * (1/r1)));
 }
 
 /*************************************************************************************************\

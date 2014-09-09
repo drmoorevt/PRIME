@@ -47,6 +47,7 @@ typedef struct
   double rf;
   double vMax;
   double vMin;
+  double vOffset;
   double rInputSense;
   double rOutputSense;
 } DomainConfig;
