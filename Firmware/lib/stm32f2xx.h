@@ -2,7 +2,7 @@
   ******************************************************************************
   * @file    stm32f2xx.h
   * @author  MCD Application Team
-  * @version V1.1.3
+  * @version V1.1.3         modified by Keil (added USB definitions, corrected RCC_APB1RSTR_SPI#RST)
   * @date    05-March-2012
   * @brief   CMSIS Cortex-M3 Device Peripheral Access Layer Header File. 
   *          This file contains all the peripheral register's definitions, bits 
@@ -12,7 +12,7 @@
   *          is using in the C source code, usually in main.c. This file contains:
   *           - Configuration section that allows to select:
   *              - The device used in the target application
-  *              - To use or not the peripheral’s drivers in application code(i.e. 
+  *              - To use or not the peripheral’s drivers in application code(i.e.
   *                code will be based on direct access to peripheral’s registers 
   *                rather than drivers API), this option is controlled by 
   *                "#define USE_STDPERIPH_DRIVER"
@@ -39,8 +39,8 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   *
-  ******************************************************************************  
-  */ 
+  ******************************************************************************
+  */
 
 /** @addtogroup CMSIS
   * @{
@@ -83,7 +83,9 @@
    In this case, these drivers will not be included and the application code will 
    be based on direct access to peripherals registers 
    */
-  /*#define USE_STDPERIPH_DRIVER*/
+  #ifdef _RTE_
+  #define USE_STDPERIPH_DRIVER
+  #endif
 #endif /* USE_STDPERIPH_DRIVER */
 
 /**
@@ -106,7 +108,7 @@
 #endif /* HSE_STARTUP_TIMEOUT */
 
 #if !defined  (HSI_VALUE)   
-#define HSI_VALUE            ((uint32_t)16000000) /*!< Value of the Internal oscillator in Hz*/
+  #define HSI_VALUE    ((uint32_t)16000000) /*!< Value of the Internal oscillator in Hz*/
 #endif /* HSI_VALUE */
 
 /**
@@ -134,8 +136,8 @@
  */
 #define __CM3_REV                 0x0200  /*!< Core Revision r2p0                            */
 #define __MPU_PRESENT             1       /*!< STM32F2XX provides an MPU                     */
-#define __NVIC_PRIO_BITS          4 /*!< STM32F2XX uses 4 Bits for the Priority Levels */
-#define __Vendor_SysTickConfig    0 /*!< Set to 1 if different SysTick Config is used */
+#define __NVIC_PRIO_BITS          4       /*!< STM32F2XX uses 4 Bits for the Priority Levels */
+#define __Vendor_SysTickConfig    0       /*!< Set to 1 if different SysTick Config is used  */
 
 /**
  * @brief STM32F2XX Interrupt Number Definition, according to the selected device 
@@ -5849,8 +5851,8 @@ typedef struct
 #define  RCC_APB1RSTR_TIM13RST               ((uint32_t)0x00000080)
 #define  RCC_APB1RSTR_TIM14RST               ((uint32_t)0x00000100)
 #define  RCC_APB1RSTR_WWDGEN                 ((uint32_t)0x00000800)
-#define  RCC_APB1RSTR_SPI2RST                ((uint32_t)0x00008000)
-#define  RCC_APB1RSTR_SPI3RST                ((uint32_t)0x00010000)
+#define  RCC_APB1RSTR_SPI2RST                ((uint32_t)0x00004000)
+#define  RCC_APB1RSTR_SPI3RST                ((uint32_t)0x00008000)
 #define  RCC_APB1RSTR_USART2RST              ((uint32_t)0x00020000)
 #define  RCC_APB1RSTR_USART3RST              ((uint32_t)0x00040000)
 #define  RCC_APB1RSTR_UART4RST               ((uint32_t)0x00080000)
@@ -7306,17 +7308,17 @@ typedef struct
 #define  DBGMCU_CR_TRACE_MODE_1              ((uint32_t)0x00000080)/*!<Bit 1 */
 
 /********************  Bit definition for DBGMCU_APB1_FZ register  ************/
-#define  DBGMCU_APB1_FZ_DBG_TIM2_STOP        ((uint32_t)0x00000001)
-#define  DBGMCU_APB1_FZ_DBG_TIM3_STOP        ((uint32_t)0x00000002)
-#define  DBGMCU_APB1_FZ_DBG_TIM4_STOP        ((uint32_t)0x00000004)
-#define  DBGMCU_APB1_FZ_DBG_TIM5_STOP        ((uint32_t)0x00000008)
-#define  DBGMCU_APB1_FZ_DBG_TIM6_STOP        ((uint32_t)0x00000010)
-#define  DBGMCU_APB1_FZ_DBG_TIM7_STOP        ((uint32_t)0x00000020)
-#define  DBGMCU_APB1_FZ_DBG_TIM12_STOP       ((uint32_t)0x00000040)
-#define  DBGMCU_APB1_FZ_DBG_TIM13_STOP       ((uint32_t)0x00000080)
-#define  DBGMCU_APB1_FZ_DBG_TIM14_STOP       ((uint32_t)0x00000100)
-#define  DBGMCU_APB1_FZ_DBG_RTC_STOP         ((uint32_t)0x00000400)
-#define  DBGMCU_APB1_FZ_DBG_WWDG_STOP        ((uint32_t)0x00000800)
+#define  DBGMCU_APB1_FZ_DBG_TIM2_STOP            ((uint32_t)0x00000001)
+#define  DBGMCU_APB1_FZ_DBG_TIM3_STOP            ((uint32_t)0x00000002)
+#define  DBGMCU_APB1_FZ_DBG_TIM4_STOP            ((uint32_t)0x00000004)
+#define  DBGMCU_APB1_FZ_DBG_TIM5_STOP            ((uint32_t)0x00000008)
+#define  DBGMCU_APB1_FZ_DBG_TIM6_STOP            ((uint32_t)0x00000010)
+#define  DBGMCU_APB1_FZ_DBG_TIM7_STOP            ((uint32_t)0x00000020)
+#define  DBGMCU_APB1_FZ_DBG_TIM12_STOP           ((uint32_t)0x00000040)
+#define  DBGMCU_APB1_FZ_DBG_TIM13_STOP           ((uint32_t)0x00000080)
+#define  DBGMCU_APB1_FZ_DBG_TIM14_STOP           ((uint32_t)0x00000100)
+#define  DBGMCU_APB1_FZ_DBG_RTC_STOP             ((uint32_t)0x00000400)
+#define  DBGMCU_APB1_FZ_DBG_WWDG_STOP            ((uint32_t)0x00000800)
 #define  DBGMCU_APB1_FZ_DBG_IWDG_STOP            ((uint32_t)0x00001000)
 #define  DBGMCU_APB1_FZ_DBG_I2C1_SMBUS_TIMEOUT   ((uint32_t)0x00200000)
 #define  DBGMCU_APB1_FZ_DBG_I2C2_SMBUS_TIMEOUT   ((uint32_t)0x00400000)
