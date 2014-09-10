@@ -155,6 +155,25 @@ void Util_swap32(uint32 *pToSwap)
 }
 
 /**************************************************************************************************\
+* FUNCTION     Util_reverseBytes
+* DESCRIPTION  Swaps the upper and lower byte of a uint16
+* PARAMETERS   pToRev: pointer to the LSB of the word to swap
+*              numBytes: The number of bytes to swap
+* RETURNS      Nothing
+* NOTES        Used for changing endianness
+\**************************************************************************************************/
+void Util_reverseBytes(uint8 *pToRev, uint8 numBytes)
+{
+  uint8 i, temp;
+  for (i = 0, numBytes -= 1; i < numBytes; i++, numBytes--)
+  {
+    temp = pToRev[i];
+    pToRev[i] = pToRev[numBytes];
+    pToRev[numBytes] = temp;
+  }
+}
+
+/**************************************************************************************************\
 * FUNCTION     Util_uint16ToASCII
 * DESCRIPTION  Converts a uint16 to a 5-byte character array
 * PARAMETERS   inVal: The value to convert
