@@ -301,6 +301,9 @@ static struct
   SDResponseBlock respBlock;
   CardIdReg       sdCardId;
   CardStatusReg   sdCardStatus;
+  uint32          capacityMult;
+  uint32          cardCapacity;
+
   uint32          blockLen;
   uint32          cmdWaitClocks;
   uint32          writeWaitClocks;
@@ -606,8 +609,13 @@ boolean SDCard_initDisk(void)
       Util_reverseBytes(&sSDCard.respBlock.arg.reference[4],  8);
       Util_reverseBytes(&sSDCard.respBlock.arg.reference[12], 4);
       Util_copyMemory(&sSDCard.respBlock.arg.reference[0], (uint8 *)&sSDCard.sdCardStatus, sizeof(sSDCard.sdCardStatus));
+      sSDCard.blockLen =     (1 << (sSDCard.sdCardStatus.readBlockLen));
+      sSDCard.capacityMult = (1 << (sSDCard.sdCardStatus.deviceSizeMultiple + 2));
+      sSDCard.cardCapacity = (sSDCard.capacityMult * sSDCard.blockLen) *
+                             (sSDCard.sdCardStatus.deviceSize + 1);
     }
-    sSDCard.blockLen = 512; // Reset the block length to default
+    else
+      sSDCard.blockLen = 512; // Reset the block length to default
 
     success = TRUE; // If we have made it here then the sequence was successful
   } while(FALSE);
@@ -760,7 +768,8 @@ static SDCommandResult SDCard_writeBlock(uint32 block, uint16 writeDelay)
   SDCommandResponseR2 cardStatusRespR2;
   SDCommandResult dataResp;
 
-  //Util_swap32(&block);
+  Util_swap32(&block);
+  block &= 0xFFFFFE00;
 
   SELECT_CHIP_SD();
   sSDCard.preWriteWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_BUS_BYTES);
@@ -770,6 +779,7 @@ static SDCommandResult SDCard_writeBlock(uint32 block, uint16 writeDelay)
   /***** None of this will work until we can clock SDCards during the wait period!!! *****/
   if (writeDelay > 0)
   {
+    sSDCard.writeWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_WRITE_BYTES); // try 100 clocks...
     SDCard_setState(SDCARD_STATE_WAITING); // Set the state and voltage
     SDCard_setup(FALSE); // Turn on the SPI and control pins
     Time_delay(writeDelay * 1000); // us --> ms
@@ -840,7 +850,7 @@ SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length, uint16 writ
     return SD_WRITE_RESULT_READ_FAILED;
   else if (writeResult != SDCARD_RESPONSE_OK)
     return SD_WRITE_RESULT_WRITE_FAILED;
-  else if ((verifyResult != SDCARD_RESPONSE_OK) && (verify != 0))
+  else if ((verifyResult != SDCARD_RESPONSE_OK) || (verify != 0))
     return SD_WRITE_RESULT_VERIFY_FAILED;
   else
     return SD_WRITE_RESULT_OK;
