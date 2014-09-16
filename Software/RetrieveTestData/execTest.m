@@ -13,7 +13,7 @@ function [title,channels,results,time,dataBytes] = execTest(s, test, args)
     fwrite(s, testCommand);
     
     % Retrieve and acknowledge the test header
-    i = 3;
+    i = 5;
     while (dataBytes == 0)
         try
             if (s.BytesAvailable > 0)

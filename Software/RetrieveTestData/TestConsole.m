@@ -1,11 +1,18 @@
 function [name, chans, data, time] = TestConsole(CommPort)
     close all
     
-    numSweeps = 2048;
-    %[name, chans, data, time] = runTest11(CommPort, 921600, numSweeps);
-    %[name, chans, data, time] = runTest12(CommPort, 921600, numSweeps);
-    [name, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 0);
-    %[name, chans, data, time] = runTest14(CommPort, 921600, numSweeps);
+    numSweeps = 5;
+    eeFails = 0;
+    sfFails = 0;
+    sdFails = 0;
+    htFails = 0;
+    
+    %[eeFails, chans, data, time] = runTest11(CommPort, 921600, numSweeps);
+    %[sfFails, chans, data, time] = runTest12(CommPort, 921600, numSweeps);
+     [sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 50);
+    %[htFails, chans, data, time] = runTest14(CommPort, 921600, numSweeps);
+    
+    fprintf('Dev\tFails\nEE:\t%d\nSF:\t%d\nSD:\t%d\nHT:\t%d\n', eeFails, sfFails, sdFails, htFails);
     
     return;
     % End selection bypass
