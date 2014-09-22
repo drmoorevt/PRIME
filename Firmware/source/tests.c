@@ -653,13 +653,13 @@ static void Tests_teardownSPITests(boolean testPassed)
             sprintf(sTests.testHeader.title, "EEPROM PROFILE 18VIW Passed");
           else
             sprintf(sTests.testHeader.title, "EEPROM PROFILE 18VIW Failed");
-          break;
+          break;/*
         case 3:
           if (testPassed)
             sprintf(sTests.testHeader.title, "EEPROM PROFILE 14VIW Passed");
           else
             sprintf(sTests.testHeader.title, "EEPROM PROFILE 14VIW Failed");
-          break;
+          break;*/
         default: break;
       }
       break;
@@ -690,13 +690,13 @@ static void Tests_teardownSPITests(boolean testPassed)
             sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 23VIW Passed");
           else
             sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 23VIW Failed");
-          break;
+          break;/*
         case 4:
           if (testPassed)
             sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 21VIW Passed");
           else
             sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 21VIW Failed");
-          break;
+          break;*/
         default: break;
       }
       break;
@@ -727,13 +727,13 @@ static void Tests_teardownSPITests(boolean testPassed)
             sprintf(sTests.testHeader.title, "SDCARD PROFILE 24VISR Passed");
           else
             sprintf(sTests.testHeader.title, "SDCARD PROFILE 24VISR Failed");
-          break;
+          break;/*
         case 4:
           if (testPassed)
             sprintf(sTests.testHeader.title, "SDCARD PROFILE 21VISR Passed");
           else
             sprintf(sTests.testHeader.title, "SDCARD PROFILE 21VISR Failed");
-          break;
+          break;*/
         default: break;
       }
       break;
@@ -758,13 +758,13 @@ static void Tests_teardownSPITests(boolean testPassed)
             sprintf(sTests.testHeader.title, "HIH PROFILE 25VIRyTW Passed");
           else
             sprintf(sTests.testHeader.title, "HIH PROFILE 25VIRyTW Failed");
-          break;
+          break;/*
         case 3:
           if (testPassed)
             sprintf(sTests.testHeader.title, "HIH PROFILE 23VIRyTW Passed");
           else
             sprintf(sTests.testHeader.title, "HIH PROFILE 23VIRyTW Failed");
-          break;
+          break;*/
         default: break;
       }
       break;

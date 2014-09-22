@@ -12,10 +12,11 @@
 
 #define SD_SELECT_PIN   (GPIO_Pin_4)
 
-#define SD_MAX_WAIT_BUS_BYTES   (65535)
-#define SD_MAX_WAIT_INIT_BYTES  (65535) // (4095)
-#define SD_MAX_WAIT_WRITE_BYTES (65536) // (4095)
-#define SD_MAX_WAIT_RESP_BYTES  (65536) // (4096) // (255)
+#define SD_MAX_WAIT_PRE_WRITE_BYTES (10)
+#define SD_MAX_WAIT_BUS_BYTES       (65535)
+#define SD_MAX_WAIT_INIT_BYTES      (65535) // (4095)
+#define SD_MAX_WAIT_WRITE_BYTES     (65536) // (4095)
+#define SD_MAX_WAIT_RESP_BYTES      (65536) // (4096) // (255)
 
 #define SELECT_CHIP_SD()    do { GPIOB->BSRRH |= 0x00000010; Time_delay(1); } while (0)
 #define DESELECT_CHIP_SD()  do { GPIOB->BSRRL |= 0x00000010; Time_delay(1); } while (0)
@@ -775,11 +776,10 @@ static SDCommandResult SDCard_writeBlock(uint32 block, uint16 writeDelay)
   sSDCard.preWriteWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_BUS_BYTES);
   writeBlockRespR1 = SDCard_sendCommand(WRITE_BLOCK, block, SD_MAX_WAIT_RESP_BYTES); // Result == 0
   dataResp = SDCard_sendDataBlock(START_SINGLE_BLOCK_TOKEN);
+  sSDCard.preWriteWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_PRE_WRITE_BYTES);
   
-  /***** None of this will work until we can clock SDCards during the wait period!!! *****/
   if (writeDelay > 0)
   {
-    sSDCard.writeWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_WRITE_BYTES); // try 100 clocks...
     SDCard_setState(SDCARD_STATE_WAITING); // Set the state and voltage
     SDCard_setup(FALSE); // Turn on the SPI and control pins
     Time_delay(writeDelay * 1000); // us --> ms
@@ -788,7 +788,6 @@ static SDCommandResult SDCard_writeBlock(uint32 block, uint16 writeDelay)
     Time_delay(1000); // us --> ms
     SELECT_CHIP_SD();
   }
-  /***** End none-of-this-will-work *****/
   
   sSDCard.writeWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_WRITE_BYTES); // Wait for bus release
   cardStatusRespR1 = SDCard_sendCommand(CARD_STATUS, 0x00000000, SD_MAX_WAIT_RESP_BYTES);
