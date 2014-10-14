@@ -306,6 +306,7 @@ static struct
   uint32          cardCapacity;
 
   uint32          blockLen;
+  uint32          cardBlockLen;
   uint32          cmdWaitClocks;
   uint32          writeWaitClocks;
   uint32          preReadWaitClocks;
@@ -610,13 +611,12 @@ boolean SDCard_initDisk(void)
       Util_reverseBytes(&sSDCard.respBlock.arg.reference[4],  8);
       Util_reverseBytes(&sSDCard.respBlock.arg.reference[12], 4);
       Util_copyMemory(&sSDCard.respBlock.arg.reference[0], (uint8 *)&sSDCard.sdCardStatus, sizeof(sSDCard.sdCardStatus));
-      sSDCard.blockLen =     (1 << (sSDCard.sdCardStatus.readBlockLen));
+      sSDCard.cardBlockLen =     (1 << (sSDCard.sdCardStatus.readBlockLen));
       sSDCard.capacityMult = (1 << (sSDCard.sdCardStatus.deviceSizeMultiple + 2));
-      sSDCard.cardCapacity = (sSDCard.capacityMult * sSDCard.blockLen) *
+      sSDCard.cardCapacity = (sSDCard.capacityMult * sSDCard.cardBlockLen) *
                              (sSDCard.sdCardStatus.deviceSize + 1);
     }
-    else
-      sSDCard.blockLen = 512; // Reset the block length to default
+    sSDCard.blockLen = 512; // Reset the block length to default
 
     success = TRUE; // If we have made it here then the sequence was successful
   } while(FALSE);
