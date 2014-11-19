@@ -88,7 +88,7 @@ void TIM1_UP_TIM10_IRQHandler(void)
 
 /**************************************************************************************************\
 * FUNCTION      Time_initTimer2
-*  DESCRIPTION    Initializes timer2
+* DESCRIPTION    Initializes timer2
 * PARAMETERS    reloadValue: The automatic reload value, when reached an IRQ is triggered
 * RETURN        none
 \**************************************************************************************************/

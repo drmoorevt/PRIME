@@ -63,7 +63,7 @@ void SPI_write(const uint8 *pBytes, uint32 numBytes)
   while(numBytes--)
     SPI_TX(*pBytes++);
   
-	while(SPI2->SR & SPI_SR_BSY); // Wait for tx to complete
+  while(SPI2->SR & SPI_SR_BSY); // Wait for tx to complete
 }
 
 /*****************************************************************************\
