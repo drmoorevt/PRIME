@@ -133,7 +133,7 @@
           <Target>
             <UseTarget>1</UseTarget>
             <LoadApplicationAtStartup>1</LoadApplicationAtStartup>
-            <RunToMain>1</RunToMain>
+            <RunToMain>0</RunToMain>
             <RestoreBreakpoints>1</RestoreBreakpoints>
             <RestoreWatchpoints>1</RestoreWatchpoints>
             <RestoreMemoryDisplay>1</RestoreMemoryDisplay>
@@ -360,9 +360,9 @@
             <useXO>0</useXO>
             <VariousControls>
               <MiscControls></MiscControls>
-              <Define>HSE_VALUE=4000000</Define>
+              <Define>HSE_VALUE=4000000,__CC_ARM</Define>
               <Undefine></Undefine>
-              <IncludePath></IncludePath>
+              <IncludePath>..\header;..\lib\STM32_USB_OTG_Driver\inc;..\lib\STM32_USB_Device_Library\Core\inc;..\lib\STM32_USB_Device_Library\Class\cdc\inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -476,11 +476,6 @@
               <FilePath>..\header\util.h</FilePath>
             </File>
             <File>
-              <FileName>sdcard.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\header\sdcard.h</FilePath>
-            </File>
-            <File>
               <FileName>i2c.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\header\i2c.h</FilePath>
@@ -509,6 +504,11 @@
               <FileName>bluetooth.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\header\bluetooth.h</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_cdc_vcp.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\usbd_cdc_vcp.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -671,19 +671,9 @@
               <FilePath>..\source\main.c</FilePath>
             </File>
             <File>
-              <FileName>serialflash.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\source\serialflash.c</FilePath>
-            </File>
-            <File>
               <FileName>spi.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\spi.c</FilePath>
-            </File>
-            <File>
-              <FileName>tests.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\source\tests.c</FilePath>
             </File>
             <File>
               <FileName>time.c</FileName>
@@ -699,11 +689,6 @@
               <FileName>util.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\util.c</FilePath>
-            </File>
-            <File>
-              <FileName>sdcard.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\source\sdcard.c</FilePath>
             </File>
             <File>
               <FileName>i2c.c</FileName>
@@ -726,14 +711,54 @@
               <FilePath>..\source\dma.c</FilePath>
             </File>
             <File>
-              <FileName>zigbee.c</FileName>
+              <FileName>usbd_cdc_vcp.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\source\zigbee.c</FilePath>
+              <FilePath>..\source\usbd_cdc_vcp.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>USB Driver</GroupName>
+          <Files>
+            <File>
+              <FileName>usb_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\lib\STM32_USB_OTG_Driver\src\usb_core.c</FilePath>
             </File>
             <File>
-              <FileName>bluetooth.c</FileName>
+              <FileName>usb_dcd.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\source\bluetooth.c</FilePath>
+              <FilePath>..\lib\STM32_USB_OTG_Driver\src\usb_dcd.c</FilePath>
+            </File>
+            <File>
+              <FileName>usb_dcd_int.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\lib\STM32_USB_OTG_Driver\src\usb_dcd_int.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>USB Device</GroupName>
+          <Files>
+            <File>
+              <FileName>usbd_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\lib\STM32_USB_Device_Library\Core\src\usbd_core.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_ioreq.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\lib\STM32_USB_Device_Library\Core\src\usbd_ioreq.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_req.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\lib\STM32_USB_Device_Library\Core\src\usbd_req.c</FilePath>
+            </File>
+            <File>
+              <FileName>usbd_cdc_core.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\lib\STM32_USB_Device_Library\Class\cdc\src\usbd_cdc_core.c</FilePath>
             </File>
           </Files>
         </Group>

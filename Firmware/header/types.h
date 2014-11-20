@@ -7,7 +7,9 @@
 #define FALSE 0
 #define TRUE  1
 
-#define NULL ((void *)0)
+#ifndef NULL
+  #define NULL ((void *)0)
+#endif
 
 typedef uint8_t  boolean;
 typedef uint8_t  uint8;
