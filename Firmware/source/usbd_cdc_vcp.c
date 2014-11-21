@@ -594,12 +594,12 @@ void USBD_USR_DeviceDisconnected (void)
 
 __ALIGN_BEGIN USB_OTG_CORE_HANDLE    USB_OTG_dev __ALIGN_END ;
 
-void USBD_initVCP(void)
+void USBVCP_init(void)
 {
   USBD_Init(&USB_OTG_dev, USB_OTG_FS_CORE_ID, &USR_desc, &USBD_CDC_cb, &USR_cb);
 }
 
-boolean USBD_send(uint8 *pSrc, uint16 numBytes)
+boolean USBVCP_send(uint8 *pSrc, uint16 numBytes)
 {
   VCP_DataTx(pSrc, numBytes);
   return TRUE;

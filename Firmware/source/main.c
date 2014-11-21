@@ -59,14 +59,14 @@ int main(void)
 //  USBD_initVCP();
 //  ZigBee_init();
   
-  USBD_initVCP();
+  USBVCP_init();
   Time_delay(1000000);
   
   while(1)
   {
     //for (i=0; i<12000000; i++);
     sprintf(danString, "Hello Dan! %016lu\r\n", (uint32)SysTick->VAL);
-    USBD_send((uint8*)&danString, 32);
+    USBVCP_send((uint8*)&danString, 32);
     //__disable_irq();
     //Time_delay(250000);
     //__enable_irq();
