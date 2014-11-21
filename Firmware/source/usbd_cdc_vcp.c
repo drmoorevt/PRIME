@@ -1,16 +1,9 @@
-#ifdef USB_OTG_HS_INTERNAL_DMA_ENABLED 
-#pragma     data_alignment = 4 
-#endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */
-
-/* Includes ------------------------------------------------------------------*/
-#include "usbd_cdc_vcp.h"
 #include "gpio.h"
+#include "misc.h"
 #include "time.h"
+#include "usbd_cdc_vcp.h"
 
-#include "uart.h"
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
+#define FILE_ID USBVCP_C
 
 static struct
 {
@@ -19,64 +12,16 @@ static struct
   USBD_DEVICE             *pDevice;
   USBD_Class_cb_TypeDef   *class_cb;
   USBD_Usr_cb_TypeDef     *usr_cb;
-  struct
-  {
-    uint32 bytesReceived;
-    uint32 bytesToReceive;
-    boolean portOpen;
-    boolean receiving;
-    boolean rxTimeout;
-    boolean transmitting;
-    __attribute__((aligned)) uint8 rxBuffer[256];
-    __attribute__((aligned)) uint8 txBuffer[256];
-  } comms;
 } sUSBD;
 
-void USBD_notifyCommsEvent(CommsEvent event, uint32 arg)
+typedef struct
 {
-  switch (event)
-  {
-    case COMMS_EVENT_RX_COMPLETE:
-      UART_stopReceive(UART_PORT5);
-      sUSBD.comms.receiving = FALSE;
-      sUSBD.comms.bytesReceived = sUSBD.comms.bytesToReceive;
-      break;
-    case COMMS_EVENT_RX_TIMEOUT:
-      sUSBD.comms.bytesReceived = arg;
-      sUSBD.comms.receiving = FALSE;
-      sUSBD.comms.rxTimeout = TRUE;
-      break;
-    case COMMS_EVENT_RX_INTERRUPT:
-      break;
-    case COMMS_EVENT_TX_COMPLETE:
-      sUSBD.comms.transmitting = FALSE;
-      break;
-    default:
-      break;
-  }
-}
+  uint32_t bitrate;
+  uint8_t  format;
+  uint8_t  paritytype;
+  uint8_t  datatype;
+} LINE_CODING;
 
-AppCommConfig comm5 = { {UART_BAUDRATE_921600, UART_FLOWCONTROL_NONE, TRUE, TRUE},
-                         &sUSBD.comms.rxBuffer[0],
-                         &sUSBD.comms.txBuffer[0],
-                         &USBD_notifyCommsEvent };
-
-/**************************************************************************************************\
-* FUNCTION    Tests_sendData
-* DESCRIPTION Sends the specified number of bytes out the UART configured for tests
-* PARAMETERS  numBytes: The number of bytes from the txBuffer to send out
-* RETURNS     Nothing (uses callbacks via the UART notifyXXX mechanism)
-\**************************************************************************************************/
-void USBD_sendData(uint16 numBytes)
-{
-  sUSBD.comms.transmitting = TRUE;
-  UART_sendData(UART_PORT5, sUSBD.comms.txBuffer, numBytes);
-}
-
-/* Private typedef -----------------------------------------------------------*/
-/* Private define ------------------------------------------------------------*/
-/* Private macro -------------------------------------------------------------*/
-/* Private variables ---------------------------------------------------------*/
 LINE_CODING linecoding =
   {
     115200, /* baud rate*/
@@ -85,8 +30,7 @@ LINE_CODING linecoding =
     0x08    /* nb. of bits 8*/
   };
 
-/* These are external variables imported from CDC core to be used for IN 
-   transfer management. */
+/* These are external variables imported from CDC core to be used for IN  transfer management. */
 extern uint8_t  APP_Rx_Buffer []; /* Write CDC received data in this buffer.
                                      These data will be sent over USB IN endpoint
                                      in the CDC core functions. */
@@ -100,7 +44,6 @@ static uint16_t VCP_DeInit   (void);
 static uint16_t VCP_Ctrl     (uint32_t Cmd, uint8_t* Buf, uint32_t Len);
 static uint16_t VCP_DataTx   (uint8_t* Buf, uint32_t Len);
 static uint16_t VCP_DataRx   (uint8_t* Buf, uint32_t Len);
-
 static uint16_t VCP_COMConfig(uint8_t Conf);
 
 CDC_IF_Prop_TypeDef VCP_fops = 
@@ -112,17 +55,15 @@ CDC_IF_Prop_TypeDef VCP_fops =
   VCP_DataRx
 };
 
-/* Private functions ---------------------------------------------------------*/
-/**
-  * @brief  VCP_Init
-  *         Initializes the Media on the STM32
-  * @param  None
-  * @retval Result of the opeartion (USBD_OK in all cases)
-  */
+/*************************************************************************************************\
+* FUNCTION    VCP_init
+* DESCRIPTION Called immediately after configuration of the USB controller
+* PARAMETERS  None
+* RETURNS     Nothing
+* NOTES       None
+\*************************************************************************************************/
 static uint16_t VCP_Init(void)
 {
-  sprintf((char *)&sUSBD.comms.txBuffer[0], "VCPInit\r\n");
-  USBD_sendData(9);
   return USBD_OK;
 }
 
@@ -134,8 +75,6 @@ static uint16_t VCP_Init(void)
   */
 static uint16_t VCP_DeInit(void)
 {
-  sprintf((char *)&sUSBD.comms.txBuffer[0], "VCPDeInit\r\n");
-  USBD_sendData(11);
   return USBD_OK;
 }
 
@@ -345,11 +284,6 @@ __ALIGN_BEGIN uint8_t USBD_DeviceQualifierDesc[USB_LEN_DEV_QUALIFIER_DESC] __ALI
   0x00,
 };
 
-#ifdef USB_OTG_HS_INTERNAL_DMA_ENABLED
-  #if defined ( __ICCARM__ ) /*!< IAR Compiler */
-    #pragma data_alignment=4   
-  #endif
-#endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */
 /* USB Standard Device Descriptor */
 __ALIGN_BEGIN uint8_t USBD_LangIDDesc[USB_SIZ_STRING_LANGID] __ALIGN_END =
 {
@@ -358,22 +292,6 @@ __ALIGN_BEGIN uint8_t USBD_LangIDDesc[USB_SIZ_STRING_LANGID] __ALIGN_END =
      LOBYTE(USBD_LANGID_STRING),
      HIBYTE(USBD_LANGID_STRING), 
 };
-/**
-  * @}
-  */ 
-
-
-/** @defgroup USBD_DESC_Private_FunctionPrototypes
-  * @{
-  */ 
-/**
-  * @}
-  */ 
-
-
-/** @defgroup USBD_DESC_Private_Functions
-  * @{
-  */ 
 
 /**
 * @brief  USBD_USR_DeviceDescriptor 
@@ -395,7 +313,7 @@ uint8_t *  USBD_USR_DeviceDescriptor( uint8_t speed , uint16_t *length)
 * @param  length : pointer to data length variable
 * @retval pointer to descriptor buffer
 */
-uint8_t *  USBD_USR_LangIDStrDescriptor( uint8_t speed , uint16_t *length)
+uint8_t *USBD_USR_LangIDStrDescriptor( uint8_t speed , uint16_t *length)
 {
   *length =  sizeof(USBD_LangIDDesc);  
   return USBD_LangIDDesc;
@@ -531,95 +449,6 @@ void USB_OTG_BSP_Init(USB_OTG_CORE_HANDLE *pdev)
   RCC->AHB2ENR |= RCC_AHB2ENR_OTGFSEN;
 }
 
-typedef struct
-{
-  uint8_t NVIC_IRQChannel;                    /*!< Specifies the IRQ channel to be enabled or disabled.
-                                                   This parameter can be an enumerator of @ref IRQn_Type 
-                                                   enumeration (For the complete STM32 Devices IRQ Channels
-                                                   list, please refer to stm32f2xx.h file) */
-
-  uint8_t NVIC_IRQChannelPreemptionPriority;  /*!< Specifies the pre-emption priority for the IRQ channel
-                                                   specified in NVIC_IRQChannel. This parameter can be a value
-                                                   between 0 and 15 as described in the table @ref MISC_NVIC_Priority_Table
-                                                   A lower priority value indicates a higher priority */
-
-  uint8_t NVIC_IRQChannelSubPriority;         /*!< Specifies the subpriority level for the IRQ channel specified
-                                                   in NVIC_IRQChannel. This parameter can be a value
-                                                   between 0 and 15 as described in the table @ref MISC_NVIC_Priority_Table
-                                                   A lower priority value indicates a higher priority */
-
-  FunctionalState NVIC_IRQChannelCmd;         /*!< Specifies whether the IRQ channel defined in NVIC_IRQChannel
-                                                   will be enabled or disabled. 
-                                                   This parameter can be set either to ENABLE or DISABLE */   
-} NVIC_InitTypeDef;
-
-#define AIRCR_VECTKEY_MASK    ((uint32_t)0x05FA0000)
-void NVIC_PriorityGroupConfig(uint32_t NVIC_PriorityGroup)
-{  
-  /* Set the PRIGROUP[10:8] bits according to NVIC_PriorityGroup value */
-  SCB->AIRCR = AIRCR_VECTKEY_MASK | NVIC_PriorityGroup;
-}
-
-/**
-  * @brief  Initializes the NVIC peripheral according to the specified
-  *         parameters in the NVIC_InitStruct.
-  * @note   To configure interrupts priority correctly, the NVIC_PriorityGroupConfig()
-  *         function should be called before. 
-  * @param  NVIC_InitStruct: pointer to a NVIC_InitTypeDef structure that contains
-  *         the configuration information for the specified NVIC peripheral.
-  * @retval None
-  */
-void NVIC_Init(NVIC_InitTypeDef* NVIC_InitStruct)
-{
-  uint8_t tmppriority = 0x00, tmppre = 0x00, tmpsub = 0x0F;    
-  if (NVIC_InitStruct->NVIC_IRQChannelCmd != DISABLE)
-  {
-    /* Compute the Corresponding IRQ Priority --------------------------------*/    
-    tmppriority = (0x700 - ((SCB->AIRCR) & (uint32_t)0x700))>> 0x08;
-    tmppre = (0x4 - tmppriority);
-    tmpsub = tmpsub >> tmppriority;
-
-    tmppriority = NVIC_InitStruct->NVIC_IRQChannelPreemptionPriority << tmppre;
-    tmppriority |=  (uint8_t)(NVIC_InitStruct->NVIC_IRQChannelSubPriority & tmpsub);
-        
-    tmppriority = tmppriority << 0x04;
-        
-    NVIC->IP[NVIC_InitStruct->NVIC_IRQChannel] = tmppriority;
-    
-    /* Enable the Selected IRQ Channels --------------------------------------*/
-    NVIC->ISER[NVIC_InitStruct->NVIC_IRQChannel >> 0x05] =
-      (uint32_t)0x01 << (NVIC_InitStruct->NVIC_IRQChannel & (uint8_t)0x1F);
-  }
-  else
-  {
-    /* Disable the Selected IRQ Channels -------------------------------------*/
-    NVIC->ICER[NVIC_InitStruct->NVIC_IRQChannel >> 0x05] =
-      (uint32_t)0x01 << (NVIC_InitStruct->NVIC_IRQChannel & (uint8_t)0x1F);
-  }
-}
-
-#define NVIC_PriorityGroup_0         ((uint32_t)0x700) /*!< 0 bits for pre-emption priority
-                                                            4 bits for subpriority */
-#define NVIC_PriorityGroup_1         ((uint32_t)0x600) /*!< 1 bits for pre-emption priority
-                                                            3 bits for subpriority */
-#define NVIC_PriorityGroup_2         ((uint32_t)0x500) /*!< 2 bits for pre-emption priority
-                                                            2 bits for subpriority */
-#define NVIC_PriorityGroup_3         ((uint32_t)0x400) /*!< 3 bits for pre-emption priority
-                                                            1 bits for subpriority */
-#define NVIC_PriorityGroup_4         ((uint32_t)0x300) /*!< 4 bits for pre-emption priority
-                                                            0 bits for subpriority */
-
-#define IS_NVIC_PRIORITY_GROUP(GROUP) (((GROUP) == NVIC_PriorityGroup_0) || \
-                                       ((GROUP) == NVIC_PriorityGroup_1) || \
-                                       ((GROUP) == NVIC_PriorityGroup_2) || \
-                                       ((GROUP) == NVIC_PriorityGroup_3) || \
-                                       ((GROUP) == NVIC_PriorityGroup_4))
-
-#define IS_NVIC_PREEMPTION_PRIORITY(PRIORITY)  ((PRIORITY) < 0x10)
-
-#define IS_NVIC_SUB_PRIORITY(PRIORITY)  ((PRIORITY) < 0x10)
-
-#define IS_NVIC_OFFSET(OFFSET)  ((OFFSET) < 0x000FFFFF)
 /**
 * @brief  USB_OTG_BSP_EnableInterrupt
 *         Enabele USB Global interrupt
@@ -691,8 +520,7 @@ USBD_Usr_cb_TypeDef USR_cb =
 */
 void USBD_USR_Init(void)
 {
-  sprintf((char *)&sUSBD.comms.txBuffer[0], "DeviceInit\r\n");
-  USBD_sendData(12);
+	
 }
 
 /**
@@ -703,8 +531,7 @@ void USBD_USR_Init(void)
 */
 void USBD_USR_DeviceReset(uint8_t speed )
 {
-  sprintf((char *)&sUSBD.comms.txBuffer[0], "DeviceReset\r\n");
-  USBD_sendData(13);
+	
 }
 
 
@@ -716,8 +543,7 @@ void USBD_USR_DeviceReset(uint8_t speed )
 */
 void USBD_USR_DeviceConfigured (void)
 {
-  sprintf((char *)&sUSBD.comms.txBuffer[0], "DeviceConfigured\r\n");
-  USBD_sendData(18);
+	
 }
 
 /**
@@ -728,8 +554,7 @@ void USBD_USR_DeviceConfigured (void)
 */
 void USBD_USR_DeviceSuspended(void)
 {
-  sprintf((char *)&sUSBD.comms.txBuffer[0], "DeviceSuspended\r\n");
-  USBD_sendData(17);
+	
 }
 
 
@@ -741,8 +566,7 @@ void USBD_USR_DeviceSuspended(void)
 */
 void USBD_USR_DeviceResumed(void)
 {
-  sprintf((char *)&sUSBD.comms.txBuffer[0], "DeviceResumed\r\n");
-  USBD_sendData(15);
+	
 }
 
 
@@ -754,8 +578,7 @@ void USBD_USR_DeviceResumed(void)
 */
 void USBD_USR_DeviceConnected (void)
 {
-  sprintf((char *)&sUSBD.comms.txBuffer[0], "DeviceConnected\r\n");
-  USBD_sendData(17);
+	
 }
 
 /**
@@ -766,25 +589,13 @@ void USBD_USR_DeviceConnected (void)
 */
 void USBD_USR_DeviceDisconnected (void)
 {
-  sprintf((char *)&sUSBD.comms.txBuffer[0], "DeviceDisconnected\r\n");
-  USBD_sendData(20);
+	
 }
 
 __ALIGN_BEGIN USB_OTG_CORE_HANDLE    USB_OTG_dev __ALIGN_END ;
 
 void USBD_initVCP(void)
 {
-  UART_openPort(UART_PORT5, comm5);
-  sUSBD.comms.portOpen = TRUE;
-  
-  sUSBD.coreID             = USB_OTG_FS_CORE_ID;
-  sUSBD.dev.dev.usr_device = &USR_desc;
-  sUSBD.dev.dev.usr_cb     = &USR_cb;
-  sUSBD.dev.dev.class_cb   = &USBD_CDC_cb;
-
-  sprintf((char *)&sUSBD.comms.txBuffer[0], "\r\nInitVCP\r\n");
-  USBD_sendData(11);
-  
   USBD_Init(&USB_OTG_dev, USB_OTG_FS_CORE_ID, &USR_desc, &USBD_CDC_cb, &USR_cb);
 }
 

@@ -19,7 +19,9 @@
 //static __INLINE void __enable_irq()               { __ASM volatile ("cpsie i"); }
 //static __INLINE void __disable_irq()              { __ASM volatile ("cpsid i"); }
 
-char danString[] = "Hello Dan!\r\n";
+#include <stdio.h>
+#include <string.h>
+char danString[32];
 
 void Main_init(void)
 {
@@ -40,11 +42,11 @@ int main(void)
 {
   volatile uint32 i;
   
-  Main_init();
   Time_init();
   ADC_init();
   DAC_init();
   Analog_init();
+  Main_init();	// depends on Analog_init
   UART_init();
 //  Bluetooth_init();
   HIH613X_init();
@@ -63,7 +65,8 @@ int main(void)
   while(1)
   {
     //for (i=0; i<12000000; i++);
-    USBD_send((uint8*)&danString, 12);
+    sprintf(danString, "Hello Dan! %016lu\r\n", (uint32)SysTick->VAL);
+    USBD_send((uint8*)&danString, 32);
     //__disable_irq();
     //Time_delay(250000);
     //__enable_irq();

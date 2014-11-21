@@ -53,20 +53,6 @@
 #define VBUS_SENSING_ENABLED
 #define USE_DEVICE_MODE
 
-
-
-
-
-
-
-typedef struct
-{
-  uint32_t bitrate;
-  uint8_t  format;
-  uint8_t  paritytype;
-  uint8_t  datatype;
-} LINE_CODING;
-
 void USBD_initVCP(void);
 boolean USBD_send(uint8 *pSrc, uint16 numBytes);
 
