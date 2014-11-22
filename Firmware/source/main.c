@@ -11,7 +11,7 @@
 //#include "serialflash.h"
 #include "spi.h"
 #include "tests.h"
-#include "usbd_cdc_vcp.h"
+#include "usbvcp.h"
 #include "util.h"
 #include "uart.h"
 //#include "zigbee.h"
@@ -58,9 +58,7 @@ int main(void)
 //  Tests_init();
 //  USBD_initVCP();
 //  ZigBee_init();
-  
   USBVCP_init();
-  Time_delay(1000000);
   
   while(1)
   {

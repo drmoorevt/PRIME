@@ -1,55 +1,7 @@
-/**
-  ******************************************************************************
-  * @file    misc.h
-  * @author  MCD Application Team
-  * @version V1.1.2
-  * @date    05-March-2012 
-  * @brief   This file contains all the functions prototypes for the miscellaneous
-  *          firmware library functions (add-on to CMSIS functions).
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; COPYRIGHT 2012 STMicroelectronics</center></h2>
-  *
-  * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
-  * You may not use this file except in compliance with the License.
-  * You may obtain a copy of the License at:
-  *
-  *        http://www.st.com/software_license_agreement_liberty_v2
-  *
-  * Unless required by applicable law or agreed to in writing, software 
-  * distributed under the License is distributed on an "AS IS" BASIS, 
-  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  * See the License for the specific language governing permissions and
-  * limitations under the License.
-  *
-  ******************************************************************************
-  */
-
-/* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __MISC_H
 #define __MISC_H
 
-#ifdef __cplusplus
- extern "C" {
-#endif
-
-/* Includes ------------------------------------------------------------------*/
 #include "stm32f2xx.h"
-
-/** @addtogroup STM32F2xx_StdPeriph_Driver
-  * @{
-  */
-
-/** @addtogroup MISC
-  * @{
-  */
-
-/* Exported types ------------------------------------------------------------*/
-
-/** 
-  * @brief  NVIC Init Structure definition  
-  */
 
 typedef struct
 {
@@ -72,28 +24,10 @@ typedef struct
                                                    will be enabled or disabled. 
                                                    This parameter can be set either to ENABLE or DISABLE */   
 } NVIC_InitTypeDef;
- 
-/* Exported constants --------------------------------------------------------*/
-
-/** @defgroup MISC_Exported_Constants
-  * @{
-  */
-
-/** @defgroup MISC_Vector_Table_Base 
-  * @{
-  */
 
 #define NVIC_VectTab_RAM             ((uint32_t)0x20000000)
 #define NVIC_VectTab_FLASH           ((uint32_t)0x08000000)
 #define IS_NVIC_VECTTAB(VECTTAB) (((VECTTAB) == NVIC_VectTab_RAM) || \
-                                  ((VECTTAB) == NVIC_VectTab_FLASH))
-/**
-  * @}
-  */
-
-/** @defgroup MISC_System_Low_Power 
-  * @{
-  */
 
 #define NVIC_LP_SEVONPEND            ((uint8_t)0x10)
 #define NVIC_LP_SLEEPDEEP            ((uint8_t)0x04)
@@ -101,13 +35,6 @@ typedef struct
 #define IS_NVIC_LP(LP) (((LP) == NVIC_LP_SEVONPEND) || \
                         ((LP) == NVIC_LP_SLEEPDEEP) || \
                         ((LP) == NVIC_LP_SLEEPONEXIT))
-/**
-  * @}
-  */
-
-/** @defgroup MISC_Preemption_Priority_Group 
-  * @{
-  */
 
 #define NVIC_PriorityGroup_0         ((uint32_t)0x700) /*!< 0 bits for pre-emption priority
                                                             4 bits for subpriority */
@@ -132,47 +59,10 @@ typedef struct
 
 #define IS_NVIC_OFFSET(OFFSET)  ((OFFSET) < 0x000FFFFF)
 
-/**
-  * @}
-  */
-
-/** @defgroup MISC_SysTick_clock_source 
-  * @{
-  */
-
-#define SysTick_CLKSource_HCLK_Div8    ((uint32_t)0xFFFFFFFB)
-#define SysTick_CLKSource_HCLK         ((uint32_t)0x00000004)
-#define IS_SYSTICK_CLK_SOURCE(SOURCE) (((SOURCE) == SysTick_CLKSource_HCLK) || \
-                                       ((SOURCE) == SysTick_CLKSource_HCLK_Div8))
-/**
-  * @}
-  */
-
-/**
-  * @}
-  */
-
-/* Exported macro ------------------------------------------------------------*/
-/* Exported functions --------------------------------------------------------*/
-
 void NVIC_PriorityGroupConfig(uint32_t NVIC_PriorityGroup);
 void NVIC_Init(NVIC_InitTypeDef* NVIC_InitStruct);
 void NVIC_SetVectorTable(uint32_t NVIC_VectTab, uint32_t Offset);
 void NVIC_SystemLPConfig(uint8_t LowPowerMode, FunctionalState NewState);
 void SysTick_CLKSourceConfig(uint32_t SysTick_CLKSource);
 
-#ifdef __cplusplus
-}
-#endif
-
 #endif /* __MISC_H */
-
-/**
-  * @}
-  */
-
-/**
-  * @}
-  */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

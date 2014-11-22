@@ -1,7 +1,16 @@
 #include "gpio.h"
 #include "misc.h"
 #include "time.h"
-#include "usbd_cdc_vcp.h"
+#include "usbvcp.h"
+
+#include "usb_core.h"
+#include "usb_regs.h"
+#include "usb_dcd_int.h"
+
+#include "usbd_req.h"
+#include "usbd_usr.h"
+#include "usbd_cdc_core.h"
+#include "usbd_desc.h"
 
 #define FILE_ID USBVCP_C
 
@@ -14,37 +23,47 @@ static struct
   USBD_Usr_cb_TypeDef     *usr_cb;
 } sUSBD;
 
+USBD_Usr_cb_TypeDef USR_cb =
+{
+  USBD_USR_Init,
+  USBD_USR_DeviceReset,
+  USBD_USR_DeviceConfigured,
+  USBD_USR_DeviceSuspended,
+  USBD_USR_DeviceResumed,
+  USBD_USR_DeviceConnected,
+  USBD_USR_DeviceDisconnected,
+};
+
 typedef struct
 {
-  uint32_t bitrate;
-  uint8_t  format;
-  uint8_t  paritytype;
-  uint8_t  datatype;
+  uint32 bitrate;
+  uint8  format;
+  uint8  paritytype;
+  uint8  datatype;
 } LINE_CODING;
 
 LINE_CODING linecoding =
   {
-    115200, /* baud rate*/
+    115200 * 8, /* baud rate*/
     0x00,   /* stop bits-1*/
     0x00,   /* parity - none*/
     0x08    /* nb. of bits 8*/
   };
 
 /* These are external variables imported from CDC core to be used for IN  transfer management. */
-extern uint8_t  APP_Rx_Buffer []; /* Write CDC received data in this buffer.
+extern uint8  APP_Rx_Buffer []; /* Write CDC received data in this buffer.
                                      These data will be sent over USB IN endpoint
                                      in the CDC core functions. */
-extern uint32_t APP_Rx_ptr_in;    /* Increment this pointer or roll it back to
+extern uint32 APP_Rx_ptr_in;    /* Increment this pointer or roll it back to
                                      start address when writing received data
                                      in the buffer APP_Rx_Buffer. */
 
 /* Private function prototypes -----------------------------------------------*/
-static uint16_t VCP_Init     (void);
-static uint16_t VCP_DeInit   (void);
-static uint16_t VCP_Ctrl     (uint32_t Cmd, uint8_t* Buf, uint32_t Len);
-static uint16_t VCP_DataTx   (uint8_t* Buf, uint32_t Len);
-static uint16_t VCP_DataRx   (uint8_t* Buf, uint32_t Len);
-static uint16_t VCP_COMConfig(uint8_t Conf);
+static uint16 VCP_Init     (void);
+static uint16 VCP_DeInit   (void);
+static uint16 VCP_Ctrl     (uint32 Cmd, uint8* Buf, uint32 Len);
+static uint16 VCP_DataTx   (uint8* Buf, uint32 Len);
+static uint16 VCP_DataRx   (uint8* Buf, uint32 Len);
 
 CDC_IF_Prop_TypeDef VCP_fops = 
 {
@@ -62,7 +81,7 @@ CDC_IF_Prop_TypeDef VCP_fops =
 * RETURNS     Nothing
 * NOTES       None
 \*************************************************************************************************/
-static uint16_t VCP_Init(void)
+static uint16 VCP_Init(void)
 {
   return USBD_OK;
 }
@@ -73,7 +92,7 @@ static uint16_t VCP_Init(void)
   * @param  None
   * @retval Result of the opeartion (USBD_OK in all cases)
   */
-static uint16_t VCP_DeInit(void)
+static uint16 VCP_DeInit(void)
 {
   return USBD_OK;
 }
@@ -87,7 +106,7 @@ static uint16_t VCP_DeInit(void)
   * @param  Len: Number of data to be sent (in bytes)
   * @retval Result of the opeartion (USBD_OK in all cases)
   */
-static uint16_t VCP_Ctrl (uint32_t Cmd, uint8_t* Buf, uint32_t Len)
+static uint16 VCP_Ctrl (uint32 Cmd, uint8* Buf, uint32 Len)
 { 
   switch (Cmd)
   {
@@ -112,19 +131,17 @@ static uint16_t VCP_Ctrl (uint32_t Cmd, uint8_t* Buf, uint32_t Len)
     break;
 
   case SET_LINE_CODING:
-    linecoding.bitrate = (uint32_t)(Buf[0] | (Buf[1] << 8) | (Buf[2] << 16) | (Buf[3] << 24));
+    linecoding.bitrate = (uint32)(Buf[0] | (Buf[1] << 8) | (Buf[2] << 16) | (Buf[3] << 24));
     linecoding.format = Buf[4];
     linecoding.paritytype = Buf[5];
     linecoding.datatype = Buf[6];
-    /* Set the new configuration */
-    VCP_COMConfig(OTHER_CONFIG);
     break;
 
   case GET_LINE_CODING:
-    Buf[0] = (uint8_t)(linecoding.bitrate);
-    Buf[1] = (uint8_t)(linecoding.bitrate >> 8);
-    Buf[2] = (uint8_t)(linecoding.bitrate >> 16);
-    Buf[3] = (uint8_t)(linecoding.bitrate >> 24);
+    Buf[0] = (uint8)(linecoding.bitrate);
+    Buf[1] = (uint8)(linecoding.bitrate >> 8);
+    Buf[2] = (uint8)(linecoding.bitrate >> 16);
+    Buf[3] = (uint8)(linecoding.bitrate >> 24);
     Buf[4] = linecoding.format;
     Buf[5] = linecoding.paritytype;
     Buf[6] = linecoding.datatype; 
@@ -153,17 +170,8 @@ static uint16_t VCP_Ctrl (uint32_t Cmd, uint8_t* Buf, uint32_t Len)
   * @param  Len: Number of data to be sent (in bytes)
   * @retval Result of the opeartion: USBD_OK if all operations are OK else VCP_FAIL
   */
-static uint16_t VCP_DataTx (uint8_t* Buf, uint32_t Len)
+static uint16 VCP_DataTx (uint8* Buf, uint32 Len)
 {
-  uint32 i;
-  for (i = 0; i < Len; i++)
-  {
-    APP_Rx_Buffer[APP_Rx_ptr_in++] = Buf[i];
-
-    /* To avoid buffer overflow */
-    if(APP_Rx_ptr_in == APP_RX_DATA_SIZE)
-      APP_Rx_ptr_in = 0;
-  }
   return USBD_OK;
 }
 
@@ -174,7 +182,7 @@ static uint16_t VCP_DataTx (uint8_t* Buf, uint32_t Len)
   *           
   *         @note
   *         This function will block any OUT packet reception on USB endpoint 
-  *         untill exiting this function. If you exit this function before transfer
+  *         until exiting this function. If you exit this function before transfer
   *         is complete on CDC interface (ie. using DMA controller) it will result 
   *         in receiving more data while previous ones are still not sent.
   *                 
@@ -182,48 +190,27 @@ static uint16_t VCP_DataTx (uint8_t* Buf, uint32_t Len)
   * @param  Len: Number of data received (in bytes)
   * @retval Result of the opeartion: USBD_OK if all operations are OK else VCP_FAIL
   */
-static uint16_t VCP_DataRx (uint8_t* Buf, uint32_t Len)
+static uint16 VCP_DataRx (uint8* Buf, uint32 Len)
 {
   return USBD_OK;
 }
 
-/**
-  * @brief  VCP_COMConfig
-  *         Configure the COM Port with default values or values received from host.
-  * @param  Conf: can be DEFAULT_CONFIG to set the default configuration or OTHER_CONFIG
-  *         to set a configuration received from the host.
-  * @retval None.
-  */
-static uint16_t VCP_COMConfig(uint8_t Conf)
-{
-  return USBD_OK;
-}
-
-#include "usbd_core.h"
-#include "usbd_desc.h"
-#include "usbd_req.h"
-#include "usbd_conf.h"
-#include "usb_regs.h"
+/********************************USBD_CDC_STUFF*****************************************/
 
 #define USBD_VID                        0x0483
-
 #define USBD_PID                        0x5740
-
 #define USBD_LANGID_STRING              0x409
-#define USBD_MANUFACTURER_STRING        "STMicroelectronics"
-
+#define USBD_MANUFACTURER_STRING        "Lab304"
 #define USBD_PRODUCT_HS_STRING          "STM32 Virtual ComPort in HS mode"
 #define USBD_SERIALNUMBER_HS_STRING     "00000000050B"
-
-#define USBD_PRODUCT_FS_STRING          "STM32 Virtual ComPort in FS Mode"
+#define USBD_PRODUCT_FS_STRING          "PEGMA Virtual ComPort in FS Mode"
 #define USBD_SERIALNUMBER_FS_STRING     "00000000050C"
-
 #define USBD_CONFIGURATION_HS_STRING    "VCP Config"
 #define USBD_INTERFACE_HS_STRING        "VCP Interface"
-
 #define USBD_CONFIGURATION_FS_STRING    "VCP Config"
 #define USBD_INTERFACE_FS_STRING        "VCP Interface"
 
+// Prototypes for the USB Device Description
 USBD_DEVICE USR_desc =
 {
   USBD_USR_DeviceDescriptor,
@@ -236,13 +223,8 @@ USBD_DEVICE USR_desc =
   
 };
 
-#ifdef USB_OTG_HS_INTERNAL_DMA_ENABLED
-  #if defined ( __ICCARM__ ) /*!< IAR Compiler */
-    #pragma data_alignment=4   
-  #endif
-#endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */
 /* USB Standard Device Descriptor */
-__ALIGN_BEGIN uint8_t USBD_DeviceDesc[USB_SIZ_DEVICE_DESC] __ALIGN_END =
+__ALIGN_BEGIN uint8 USBD_DeviceDesc[USB_SIZ_DEVICE_DESC] __ALIGN_END =
   {
     0x12,                       /*bLength */
     USB_DEVICE_DESCRIPTOR_TYPE, /*bDescriptorType*/
@@ -264,13 +246,9 @@ __ALIGN_BEGIN uint8_t USBD_DeviceDesc[USB_SIZ_DEVICE_DESC] __ALIGN_END =
     USBD_CFG_MAX_NUM            /*bNumConfigurations*/
   } ; /* USB_DeviceDescriptor */
 
-#ifdef USB_OTG_HS_INTERNAL_DMA_ENABLED
-  #if defined ( __ICCARM__ ) /*!< IAR Compiler */
-    #pragma data_alignment=4   
-  #endif
-#endif /* USB_OTG_HS_INTERNAL_DMA_ENABLED */
+
 /* USB Standard Device Descriptor */
-__ALIGN_BEGIN uint8_t USBD_DeviceQualifierDesc[USB_LEN_DEV_QUALIFIER_DESC] __ALIGN_END =
+__ALIGN_BEGIN uint8 USBD_DeviceQualifierDesc[USB_LEN_DEV_QUALIFIER_DESC] __ALIGN_END =
 {
   USB_LEN_DEV_QUALIFIER_DESC,
   USB_DESC_TYPE_DEVICE_QUALIFIER,
@@ -285,7 +263,7 @@ __ALIGN_BEGIN uint8_t USBD_DeviceQualifierDesc[USB_LEN_DEV_QUALIFIER_DESC] __ALI
 };
 
 /* USB Standard Device Descriptor */
-__ALIGN_BEGIN uint8_t USBD_LangIDDesc[USB_SIZ_STRING_LANGID] __ALIGN_END =
+__ALIGN_BEGIN uint8 USBD_LangIDDesc[USB_SIZ_STRING_LANGID] __ALIGN_END =
 {
      USB_SIZ_STRING_LANGID,         
      USB_DESC_TYPE_STRING,       
@@ -300,7 +278,7 @@ __ALIGN_BEGIN uint8_t USBD_LangIDDesc[USB_SIZ_STRING_LANGID] __ALIGN_END =
 * @param  length : pointer to data length variable
 * @retval pointer to descriptor buffer
 */
-uint8_t *  USBD_USR_DeviceDescriptor( uint8_t speed , uint16_t *length)
+uint8 *  USBD_USR_DeviceDescriptor( uint8 speed , uint16 *length)
 {
   *length = sizeof(USBD_DeviceDesc);
   return USBD_DeviceDesc;
@@ -313,7 +291,7 @@ uint8_t *  USBD_USR_DeviceDescriptor( uint8_t speed , uint16_t *length)
 * @param  length : pointer to data length variable
 * @retval pointer to descriptor buffer
 */
-uint8_t *USBD_USR_LangIDStrDescriptor( uint8_t speed , uint16_t *length)
+uint8 *USBD_USR_LangIDStrDescriptor( uint8 speed , uint16 *length)
 {
   *length =  sizeof(USBD_LangIDDesc);  
   return USBD_LangIDDesc;
@@ -327,10 +305,8 @@ uint8_t *USBD_USR_LangIDStrDescriptor( uint8_t speed , uint16_t *length)
 * @param  length : pointer to data length variable
 * @retval pointer to descriptor buffer
 */
-uint8_t *  USBD_USR_ProductStrDescriptor( uint8_t speed , uint16_t *length)
+uint8 *  USBD_USR_ProductStrDescriptor( uint8 speed , uint16 *length)
 {
- 
-  
   if(speed == 0)
   {   
     USBD_GetString (USBD_PRODUCT_HS_STRING, USBD_StrDesc, length);
@@ -349,7 +325,7 @@ uint8_t *  USBD_USR_ProductStrDescriptor( uint8_t speed , uint16_t *length)
 * @param  length : pointer to data length variable
 * @retval pointer to descriptor buffer
 */
-uint8_t *  USBD_USR_ManufacturerStrDescriptor( uint8_t speed , uint16_t *length)
+uint8 *  USBD_USR_ManufacturerStrDescriptor( uint8 speed , uint16 *length)
 {
   USBD_GetString (USBD_MANUFACTURER_STRING, USBD_StrDesc, length);
   return USBD_StrDesc;
@@ -362,7 +338,7 @@ uint8_t *  USBD_USR_ManufacturerStrDescriptor( uint8_t speed , uint16_t *length)
 * @param  length : pointer to data length variable
 * @retval pointer to descriptor buffer
 */
-uint8_t *  USBD_USR_SerialStrDescriptor( uint8_t speed , uint16_t *length)
+uint8 *  USBD_USR_SerialStrDescriptor( uint8 speed , uint16 *length)
 {
   if(speed  == USB_OTG_SPEED_HIGH)
   {    
@@ -382,7 +358,7 @@ uint8_t *  USBD_USR_SerialStrDescriptor( uint8_t speed , uint16_t *length)
 * @param  length : pointer to data length variable
 * @retval pointer to descriptor buffer
 */
-uint8_t *  USBD_USR_ConfigStrDescriptor( uint8_t speed , uint16_t *length)
+uint8 *  USBD_USR_ConfigStrDescriptor( uint8 speed , uint16 *length)
 {
   if(speed  == USB_OTG_SPEED_HIGH)
   {  
@@ -403,7 +379,7 @@ uint8_t *  USBD_USR_ConfigStrDescriptor( uint8_t speed , uint16_t *length)
 * @param  length : pointer to data length variable
 * @retval pointer to descriptor buffer
 */
-uint8_t *  USBD_USR_InterfaceStrDescriptor( uint8_t speed , uint16_t *length)
+uint8 *  USBD_USR_InterfaceStrDescriptor( uint8 speed , uint16 *length)
 {
   if(speed == 0)
   {
@@ -416,197 +392,47 @@ uint8_t *  USBD_USR_InterfaceStrDescriptor( uint8_t speed , uint16_t *length)
   return USBD_StrDesc;  
 }
 
-// Pin Definitions
-#define USB_VBUS      (GPIO_Pin_9) // PortA 
-#define USB_LED_ID   (GPIO_Pin_10) // PortA USBLED on schematic, functionally the ID pin as well
-#define USBD_DATANEG (GPIO_Pin_11) // PortA
-#define USBD_DATAPOS (GPIO_Pin_12) // PortA
+void USBD_USR_Init(void) { }
+void USBD_USR_DeviceReset(uint8 speed ){ }
+void USBD_USR_DeviceConfigured (void) { }
+void USBD_USR_DeviceSuspended(void) { }
+void USBD_USR_DeviceResumed(void) { }
+void USBD_USR_DeviceConnected (void) { }
+void USBD_USR_DeviceDisconnected(void) { }
 
-void USB_OTG_BSP_Init(USB_OTG_CORE_HANDLE *pdev)
-{
-  GPIO_InitTypeDef USBDVBusCtrl = {USB_VBUS, GPIO_Mode_IN, GPIO_Speed_100MHz, 
-                                   GPIO_OType_OD, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM};
-  
-  GPIO_InitTypeDef USBDLedIdCtrl = {USB_LED_ID, GPIO_Mode_AF, GPIO_Speed_100MHz, 
-                                    GPIO_OType_OD, GPIO_PuPd_UP, GPIO_AF_OTGFSHS};
-
-  GPIO_InitTypeDef USBDDataCtrl = {(USBD_DATANEG | USBD_DATAPOS), GPIO_Mode_AF, GPIO_Speed_100MHz,
-                                    GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_OTGFSHS};
-
-  NVIC_DisableIRQ(OTG_FS_IRQn);
-
-  RCC->AHB2RSTR |= RCC_AHB2RSTR_OTGFSRST;
-  RCC->AHB2RSTR &= (~RCC_AHB2RSTR_OTGFSRST);
-  Time_delay(1000);
-
-  GPIO_setPortClock(GPIOA, TRUE);
-  
-  GPIO_configurePins(GPIOA, &USBDVBusCtrl);
-  GPIO_configurePins(GPIOA, &USBDLedIdCtrl);
-  GPIO_configurePins(GPIOA, &USBDDataCtrl);
-
-  RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
-  RCC->AHB2ENR |= RCC_AHB2ENR_OTGFSEN;
-}
-
-/**
-* @brief  USB_OTG_BSP_EnableInterrupt
-*         Enabele USB Global interrupt
-* @param  None
-* @retval None
-*/
-void USB_OTG_BSP_EnableInterrupt(USB_OTG_CORE_HANDLE *pdev)
-{
-  NVIC_InitTypeDef NVIC_InitStructure; 
-  NVIC_PriorityGroupConfig(NVIC_PriorityGroup_1);
-  NVIC_InitStructure.NVIC_IRQChannel = OTG_FS_IRQn;  
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 1;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);  
-}
-/**
-* @brief  USB_OTG_BSP_uDelay
-*         This function provides delay time in micro sec
-* @param  usec : Value of delay required in micro sec
-* @retval None
-*/
-void USB_OTG_BSP_uDelay (const uint32_t usec)
-{
-  uint32_t count = 0;
-  const uint32_t utime = (120 * usec / 7);
-  do
-  {
-    if ( ++count > utime )
-    {
-      return ;
-    }
-  }
-  while (1);
-}
-
-
-/**
-* @brief  USB_OTG_BSP_mDelay
-*          This function provides delay time in milli sec
-* @param  msec : Value of delay required in milli sec
-* @retval None
-*/
-void USB_OTG_BSP_mDelay (const uint32_t msec)
-{
-  USB_OTG_BSP_uDelay(msec * 1000);   
-}
-
-#include "usbd_cdc_core.h"
-#include "usbd_usr.h"
-#include "usbd_desc.h"
-
-USBD_Usr_cb_TypeDef USR_cb =
-{
-  USBD_USR_Init,
-  USBD_USR_DeviceReset,
-  USBD_USR_DeviceConfigured,
-  USBD_USR_DeviceSuspended,
-  USBD_USR_DeviceResumed,
-  USBD_USR_DeviceConnected,
-  USBD_USR_DeviceDisconnected,    
-};
-
-/**
-* @brief  USBD_USR_Init 
-*         Displays the message on LCD for host lib initialization
-* @param  None
-* @retval None
-*/
-void USBD_USR_Init(void)
-{
-	
-}
-
-/**
-* @brief  USBD_USR_DeviceReset 
-*         Displays the message on LCD on device Reset Event
-* @param  speed : device speed
-* @retval None
-*/
-void USBD_USR_DeviceReset(uint8_t speed )
-{
-	
-}
-
-
-/**
-* @brief  USBD_USR_DeviceConfigured
-*         Displays the message on LCD on device configuration Event
-* @param  None
-* @retval Staus
-*/
-void USBD_USR_DeviceConfigured (void)
-{
-	
-}
-
-/**
-* @brief  USBD_USR_DeviceSuspended 
-*         Displays the message on LCD on device suspend Event
-* @param  None
-* @retval None
-*/
-void USBD_USR_DeviceSuspended(void)
-{
-	
-}
-
-
-/**
-* @brief  USBD_USR_DeviceResumed 
-*         Displays the message on LCD on device resume Event
-* @param  None
-* @retval None
-*/
-void USBD_USR_DeviceResumed(void)
-{
-	
-}
-
-
-/**
-* @brief  USBD_USR_DeviceConnected
-*         Displays the message on LCD on device connection Event
-* @param  None
-* @retval Staus
-*/
-void USBD_USR_DeviceConnected (void)
-{
-	
-}
-
-/**
-* @brief  USBD_USR_DeviceDisonnected
-*         Displays the message on LCD on device disconnection Event
-* @param  None
-* @retval Staus
-*/
-void USBD_USR_DeviceDisconnected (void)
-{
-	
-}
-
-__ALIGN_BEGIN USB_OTG_CORE_HANDLE    USB_OTG_dev __ALIGN_END ;
-
+/**************************************************************************************************\
+* FUNCTION    USBVCP_init
+* DESCRIPTION Initializes the USB Virtual Com Port
+* PARAMETERS  None
+* RETURNS     None
+\**************************************************************************************************/
 void USBVCP_init(void)
 {
-  USBD_Init(&USB_OTG_dev, USB_OTG_FS_CORE_ID, &USR_desc, &USBD_CDC_cb, &USR_cb);
+  USBD_Init(&sUSBD.dev, USB_OTG_FS_CORE_ID, &USR_desc, &USBD_CDC_cb, &USR_cb);
 }
 
-boolean USBVCP_send(uint8 *pSrc, uint16 numBytes)
+/**************************************************************************************************\
+* FUNCTION    USBVCP_send
+* DESCRIPTION Sends the specified data out the Virtual Com Port
+* PARAMETERS  pSrc: The source buffer to send
+*             numBytes: The number of bytes to send
+* RETURNS     TRUE if the bytes are queued to be sent out the buffer, FALSE otherwise
+\**************************************************************************************************/
+boolean USBVCP_send(uint8 *pSrc, uint32 numBytes)
 {
-  VCP_DataTx(pSrc, numBytes);
+  uint32 i;
+  for (i = 0; i < numBytes; i++)
+  {
+    APP_Rx_Buffer[APP_Rx_ptr_in++] = pSrc[i];
+
+    /* To avoid buffer overflow */
+    if(APP_Rx_ptr_in == APP_RX_DATA_SIZE)
+      APP_Rx_ptr_in = 0;
+  }
   return TRUE;
 }
 
-extern uint32_t USBD_OTG_ISR_Handler (USB_OTG_CORE_HANDLE *pdev);
 void OTG_FS_IRQHandler(void)
 {
-  USBD_OTG_ISR_Handler(&USB_OTG_dev);
+  USBD_OTG_ISR_Handler(&sUSBD.dev);
 }
