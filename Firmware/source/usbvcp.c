@@ -34,22 +34,6 @@ USBD_Usr_cb_TypeDef USR_cb =
   USBD_USR_DeviceDisconnected,
 };
 
-typedef struct
-{
-  uint32 bitrate;
-  uint8  format;
-  uint8  paritytype;
-  uint8  datatype;
-} LINE_CODING;
-
-LINE_CODING linecoding =
-{
-  115200 * 8, /* baud rate*/
-  0x00,   /* stop bits-1*/
-  0x00,   /* parity - none*/
-  0x08    /* nb. of bits 8*/
-};
-
 /* These are external variables imported from CDC core to be used for IN  transfer management. */
 extern uint8  APP_Rx_Buffer []; /* Write CDC received data in this buffer.
                                      These data will be sent over USB IN endpoint
@@ -110,6 +94,8 @@ static uint16 VCP_DeInit(void)
 \*************************************************************************************************/
 static uint16 VCP_Ctrl(uint32 Cmd, uint8* Buf, uint32 Len)
 { 
+
+  VCPLineCoding linecoding =  {115200 * 8, 0x00, 0x00, 0x08};
   switch (Cmd)
   {
     case SEND_ENCAPSULATED_COMMAND: /* Not  needed for this driver */ break;
