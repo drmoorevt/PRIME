@@ -39,7 +39,7 @@ function tightPlot2(name,chans,time,data1,data2,xMax, y2Max)
     ylim(gAxes(2), [0, y2Max]);
     ylabel(gAxes(1), chans(1));
     ylabel(gAxes(2), 'Domain Current (mA)');
-    t2 = title(name(3));
+    t2 = title(name(4));
     set(t2,{'FontSize'},{10.0})
     set(gAxes(1), 'ytick', [0; .5; 4]);
     set(gAxes(2), 'ytick', [0; .5; 4]);
