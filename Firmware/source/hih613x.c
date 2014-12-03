@@ -10,7 +10,7 @@
 
 #define FILE_ID HIH613X_C
 
-#define HIHALM_PIN      (GPIO_Pin_3) // Labeled as HIHALM -- (pin pulled, used as I2CBBSCL)
+#define HIHALM_PIN      (GPIO_Pin_3) // Labeled as HIHALM -- (pin pulled, used as I2CBBSDA)
 #define HIH_I2C_ADDRESS (0x27)
 #define HIH_MEASURE_CMD (HIH_I2C_ADDRESS << 1)
 #define HIH_READ_CMD    (HIH_MEASURE_CMD  + 1)

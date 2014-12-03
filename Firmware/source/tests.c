@@ -219,10 +219,8 @@ TestFunction testFunctions[] = { &Tests_test00,
 
 void Tests_init(void)
 {
-  AppCommConfig comm5 = { {UART_BAUDRATE_921600, UART_FLOWCONTROL_NONE, TRUE, TRUE},
-                           &sTests.comms.rxBuffer[0],
-                           &sTests.comms.txBuffer[0],
-                           &Tests_notifyCommsEvent };
+  USBVCPCommConfig usbComm = {&sTests.comms.rxBuffer[0], &sTests.comms.txBuffer[0],
+                              &Tests_notifyCommsEvent };
   Util_fillMemory(&sTests, sizeof(sTests), 0x00);
   Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
   Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
@@ -232,7 +230,7 @@ void Tests_init(void)
   Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Disable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  UART_openPort(UART_PORT5, comm5);
+  USBVCP_openPort(usbComm);
   sTests.comms.portOpen = TRUE;
 }
 

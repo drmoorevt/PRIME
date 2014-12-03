@@ -133,7 +133,7 @@
           <Target>
             <UseTarget>1</UseTarget>
             <LoadApplicationAtStartup>1</LoadApplicationAtStartup>
-            <RunToMain>0</RunToMain>
+            <RunToMain>1</RunToMain>
             <RestoreBreakpoints>1</RestoreBreakpoints>
             <RestoreWatchpoints>1</RestoreWatchpoints>
             <RestoreMemoryDisplay>1</RestoreMemoryDisplay>
@@ -170,7 +170,7 @@
             <Capability>1</Capability>
             <DriverSelection>4103</DriverSelection>
           </Flash1>
-          <bUseTDR>1</bUseTDR>
+          <bUseTDR>0</bUseTDR>
           <Flash2>STLink\ST-LINKIII-KEIL_SWO.dll</Flash2>
           <Flash3>"" ()</Flash3>
           <Flash4></Flash4>
@@ -362,7 +362,7 @@
               <MiscControls></MiscControls>
               <Define>HSE_VALUE=4000000,__CC_ARM</Define>
               <Undefine></Undefine>
-              <IncludePath>..\header;..\lib\STM32_USB_OTG_Driver\inc;..\lib\STM32_USB_Device_Library\Core\inc;..\lib\STM32_USB_Device_Library\Class\cdc\inc</IncludePath>
+              <IncludePath>..\header;..\lib\STM32_USB_Config;..\lib\STM32_USB_OTG_Driver\inc;..\lib\STM32_USB_Device_Library\Core\inc;..\lib\STM32_USB_Device_Library\Class\cdc\inc</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -416,9 +416,24 @@
               <FilePath>..\header\analog.h</FilePath>
             </File>
             <File>
+              <FileName>bluetooth.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\bluetooth.h</FilePath>
+            </File>
+            <File>
+              <FileName>crc.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\crc.h</FilePath>
+            </File>
+            <File>
               <FileName>dac.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\header\dac.h</FilePath>
+            </File>
+            <File>
+              <FileName>dma.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\dma.h</FilePath>
             </File>
             <File>
               <FileName>eeprom.h</FileName>
@@ -436,9 +451,24 @@
               <FilePath>..\header\hih613x.h</FilePath>
             </File>
             <File>
+              <FileName>i2c.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\i2c.h</FilePath>
+            </File>
+            <File>
+              <FileName>i2cbb.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\i2cbb.h</FilePath>
+            </File>
+            <File>
               <FileName>main.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\header\main.h</FilePath>
+            </File>
+            <File>
+              <FileName>misc.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\misc.h</FilePath>
             </File>
             <File>
               <FileName>serialflash.h</FileName>
@@ -471,44 +501,19 @@
               <FilePath>..\header\uart.h</FilePath>
             </File>
             <File>
+              <FileName>usbvcp.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\usbvcp.h</FilePath>
+            </File>
+            <File>
               <FileName>util.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\header\util.h</FilePath>
             </File>
             <File>
-              <FileName>i2c.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\header\i2c.h</FilePath>
-            </File>
-            <File>
-              <FileName>i2cbb.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\header\i2cbb.h</FilePath>
-            </File>
-            <File>
-              <FileName>crc.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\header\crc.h</FilePath>
-            </File>
-            <File>
-              <FileName>dma.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\header\dma.h</FilePath>
-            </File>
-            <File>
               <FileName>zigbee.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\header\zigbee.h</FilePath>
-            </File>
-            <File>
-              <FileName>bluetooth.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\header\bluetooth.h</FilePath>
-            </File>
-            <File>
-              <FileName>usbd_cdc_vcp.h</FileName>
-              <FileType>5</FileType>
-              <FilePath>..\header\usbd_cdc_vcp.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -646,9 +651,19 @@
               <FilePath>..\source\analog.c</FilePath>
             </File>
             <File>
+              <FileName>crc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\crc.c</FilePath>
+            </File>
+            <File>
               <FileName>dac.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\dac.c</FilePath>
+            </File>
+            <File>
+              <FileName>dma.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\dma.c</FilePath>
             </File>
             <File>
               <FileName>eeprom.c</FileName>
@@ -656,19 +671,34 @@
               <FilePath>..\source\eeprom.c</FilePath>
             </File>
             <File>
-              <FileName>hih613x.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\source\hih613x.c</FilePath>
-            </File>
-            <File>
               <FileName>gpio.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\gpio.c</FilePath>
             </File>
             <File>
+              <FileName>hih613x.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\hih613x.c</FilePath>
+            </File>
+            <File>
+              <FileName>i2c.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\i2c.c</FilePath>
+            </File>
+            <File>
+              <FileName>i2cbb.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\i2cbb.c</FilePath>
+            </File>
+            <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\main.c</FilePath>
+            </File>
+            <File>
+              <FileName>misc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\misc.c</FilePath>
             </File>
             <File>
               <FileName>spi.c</FileName>
@@ -686,34 +716,29 @@
               <FilePath>..\source\uart.c</FilePath>
             </File>
             <File>
+              <FileName>usbvcp.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\usbvcp.c</FilePath>
+            </File>
+            <File>
               <FileName>util.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\util.c</FilePath>
             </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>USB Config</GroupName>
+          <Files>
             <File>
-              <FileName>i2c.c</FileName>
+              <FileName>usb_bsp.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\source\i2c.c</FilePath>
+              <FilePath>..\lib\STM32_USB_Config\usb_bsp.c</FilePath>
             </File>
             <File>
-              <FileName>i2cbb.c</FileName>
+              <FileName>usbd_desc.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\source\i2cbb.c</FilePath>
-            </File>
-            <File>
-              <FileName>crc.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\source\crc.c</FilePath>
-            </File>
-            <File>
-              <FileName>dma.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\source\dma.c</FilePath>
-            </File>
-            <File>
-              <FileName>usbd_cdc_vcp.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\source\usbd_cdc_vcp.c</FilePath>
+              <FilePath>..\lib\STM32_USB_Config\usbd_desc.c</FilePath>
             </File>
           </Files>
         </Group>
