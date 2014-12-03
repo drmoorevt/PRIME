@@ -1,32 +1,25 @@
 #include "stm32f2xx.h"
 #include "adc.h"
 #include "analog.h"
-//#include "bluetooth.h"
+#include "bluetooth.h"
 #include "dac.h"
 #include "eeprom.h"
 #include "gpio.h"
 #include "hih613x.h"
 #include "i2cbb.h"
-//#include "sdcard.h"
-//#include "serialflash.h"
+#include "sdcard.h"
+#include "serialflash.h"
 #include "spi.h"
 #include "sram.h"
 #include "tests.h"
 #include "usbvcp.h"
 #include "util.h"
 #include "uart.h"
-//#include "zigbee.h"
-
-//static __INLINE void __enable_irq()               { __ASM volatile ("cpsie i"); }
-//static __INLINE void __disable_irq()              { __ASM volatile ("cpsid i"); }
-
-#include <stdio.h>
-#include <string.h>
-char danString[32];
+#include "zigbee.h"
 
 void Main_init(void)
 {
-  while (RCC->CR != 0x0F038F83)
+  while (RCC->CR != 0x0F038F83) // Ensure that the PLL is functioning
     SystemInit();
   
   Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
@@ -41,38 +34,28 @@ void Main_init(void)
 
 int main(void)
 {
-  volatile uint32 i;
-  
   Time_init();
   ADC_init();
   DAC_init();
   Analog_init();
   Main_init();	// depends on Analog_init
   UART_init();
-//  Bluetooth_init();
+  Bluetooth_init();
   HIH613X_init();
   EEPROM_init();
-//  SerialFlash_init();
-//  SDCard_init();
+  SerialFlash_init();
+  SDCard_init();
   SPI_init();
+  SRAM_init();
   I2CBB_init();
-//  Tests_init();
-//  USBD_initVCP();
-//  ZigBee_init();
+  Tests_init();
+  USBVCP_init();
+  ZigBee_init();
   USBVCP_init();
   
-  i = 0x64000000;
   while(1)
   {
-    *(uint16_t *) (i++) = 0xAADD; // break point here
-    //for (i=0; i<12000000; i++);
-//    sprintf(danString, "Hello Dan! %016lu\r\n", (uint32)SysTick->VAL);
-//    USBVCP_send((uint8*)&danString, 32);
-    //__disable_irq();
-    //Time_delay(250000);
-    //__enable_irq();
-    //Time_delay(1000000);
-    
-    //Tests_run();
+    SRAM_test();
   }
+  Tests_run();
 }

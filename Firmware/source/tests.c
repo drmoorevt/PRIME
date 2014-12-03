@@ -11,6 +11,7 @@
 #include "spi.h"
 #include "time.h"
 #include "uart.h"
+#include "usbvcp.h"
 #include "util.h"
 #include <string.h>
 #include <stdlib.h>
@@ -18,7 +19,8 @@
 
 #define FILE_ID TESTS_C
 
-#define TESTS_MAX_SAMPLES (10240)
+//#define TESTS_MAX_SAMPLES (10240)
+#define TESTS_MAX_SAMPLES (10000)
 
 typedef enum
 {
@@ -171,7 +173,7 @@ void Tests_sendData(uint16 numBytes);
 void Tests_sendBinaryResults(Samples *adcBuffer);
 boolean Tests_sendHeaderInfo(void);
 
-void Tests_notifyCommsEvent(CommsEvent event, uint32 arg)
+void Tests_notifyCommsEvent(USBVCPEvent event, uint32 arg)
 {
   switch (event)
   {

@@ -133,7 +133,7 @@
           <Target>
             <UseTarget>1</UseTarget>
             <LoadApplicationAtStartup>1</LoadApplicationAtStartup>
-            <RunToMain>1</RunToMain>
+            <RunToMain>0</RunToMain>
             <RestoreBreakpoints>1</RestoreBreakpoints>
             <RestoreWatchpoints>1</RestoreWatchpoints>
             <RestoreMemoryDisplay>1</RestoreMemoryDisplay>
@@ -347,7 +347,7 @@
             <Optim>1</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
-            <OneElfS>0</OneElfS>
+            <OneElfS>1</OneElfS>
             <Strict>0</Strict>
             <EnumInt>0</EnumInt>
             <PlainCh>0</PlainCh>
@@ -441,6 +441,11 @@
               <FilePath>..\header\eeprom.h</FilePath>
             </File>
             <File>
+              <FileName>fsmc.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\fsmc.h</FilePath>
+            </File>
+            <File>
               <FileName>gpio.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\header\gpio.h</FilePath>
@@ -471,6 +476,16 @@
               <FilePath>..\header\misc.h</FilePath>
             </File>
             <File>
+              <FileName>rcc.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\rcc.h</FilePath>
+            </File>
+            <File>
+              <FileName>sdcard.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\sdcard.h</FilePath>
+            </File>
+            <File>
               <FileName>serialflash.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\header\serialflash.h</FilePath>
@@ -479,6 +494,11 @@
               <FileName>spi.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\header\spi.h</FilePath>
+            </File>
+            <File>
+              <FileName>sram.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\sram.h</FilePath>
             </File>
             <File>
               <FileName>tests.h</FileName>
@@ -651,6 +671,11 @@
               <FilePath>..\source\analog.c</FilePath>
             </File>
             <File>
+              <FileName>bluetooth.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\bluetooth.c</FilePath>
+            </File>
+            <File>
               <FileName>crc.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\crc.c</FilePath>
@@ -669,6 +694,11 @@
               <FileName>eeprom.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\eeprom.c</FilePath>
+            </File>
+            <File>
+              <FileName>fsmc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\fsmc.c</FilePath>
             </File>
             <File>
               <FileName>gpio.c</FileName>
@@ -701,9 +731,34 @@
               <FilePath>..\source\misc.c</FilePath>
             </File>
             <File>
+              <FileName>rcc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\rcc.c</FilePath>
+            </File>
+            <File>
+              <FileName>sdcard.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\sdcard.c</FilePath>
+            </File>
+            <File>
+              <FileName>serialflash.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\serialflash.c</FilePath>
+            </File>
+            <File>
               <FileName>spi.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\spi.c</FilePath>
+            </File>
+            <File>
+              <FileName>sram.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\sram.c</FilePath>
+            </File>
+            <File>
+              <FileName>tests.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\tests.c</FilePath>
             </File>
             <File>
               <FileName>time.c</FileName>
@@ -724,6 +779,11 @@
               <FileName>util.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\util.c</FilePath>
+            </File>
+            <File>
+              <FileName>zigbee.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\zigbee.c</FilePath>
             </File>
           </Files>
         </Group>

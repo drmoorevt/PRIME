@@ -19,7 +19,8 @@ typedef enum
   TIME_SOFT_TIMER_XBEE                = 11, // generic xbee timer
   TIME_SOFT_TIMER_XBEE_READ           = 12, // xbee read timeout
   TIME_SOFT_TIMER_ONE_SECOND          = 13, // One second timer
-  TIME_SOFT_TIMER_MAX                 = 14
+  TIME_SOFT_TIMER_USB                 = 14, // USB receive timer
+  TIME_SOFT_TIMER_MAX                 = 15
 } SoftTimer;
 
 typedef enum

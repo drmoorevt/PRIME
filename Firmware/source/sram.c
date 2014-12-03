@@ -1,54 +1,31 @@
 #include "stm32f2xx.h"
+#include "fsmc.h"
 #include "gpio.h"
+#include "rcc.h"
 #include "sram.h"
 
 #define FILE_ID SRAM_C
 
-#define SPI_MSCK_PIN (GPIO_Pin_13)
-#define SPI_MISO_PIN (GPIO_Pin_14)
-#define SPI_MOSI_PIN (GPIO_Pin_15)
-
-#define SPI_TX(x)    do { SPI2->DR = x; while(!(SPI2->SR&SPI_SR_TXE)); } while(0)
-
 /**************************************************************************************************\
-* FUNCTION     SPI_init
-* DESCRIPTION  Initializes SPI support
+* FUNCTION     SRAM_init
+* DESCRIPTION  Initializes SRAM via FSMC support
 * PARAMETERS   none
 * RETURNS      nothing
 \**************************************************************************************************/
-void SPI_init(void)
+void SRAM_init(void)
 {
-  SPI_setup(FALSE, SPI_CLOCK_RATE_1625000);
+  SRAM_setup(SRAM_STATE_ENABLED);
 }
 
 /**************************************************************************************************\
-* FUNCTION     SPI_setup
+* FUNCTION     SRAM_setup
 * DESCRIPTION
 * PARAMETERS   none
 * RETURNS      TRUE
 \**************************************************************************************************/
-boolean SPI_setup(boolean state, SPIClockRate rate)
+boolean SRAM_setup(SRAMState state)
 {
-//  GPIO_InitTypeDef spiPortB  = {(SPI_MSCK_PIN | SPI_MISO_PIN | SPI_MOSI_PIN), GPIO_Mode_AF,
-//                                GPIO_Speed_25MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM};
-
-  GPIO_InitTypeDef spiPortB  = {(SPI_MSCK_PIN | SPI_MISO_PIN | SPI_MOSI_PIN), GPIO_Mode_AF,
-                                GPIO_Speed_100MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM};
-  spiPortB.GPIO_Mode    = (state == TRUE) ? GPIO_Mode_AF   : GPIO_Mode_IN;
-  spiPortB.GPIO_AltFunc = (state == TRUE) ? GPIO_AF_SPI1_2 : GPIO_AF_SYSTEM;
-
-  RCC->APB2RSTR |=  (RCC_APB1RSTR_SPI2RST);  // Reset the SPI peripheral
-  RCC->APB2RSTR &=  (~RCC_APB1RSTR_SPI2RST); // Release the SPI peripheral from reset
-  RCC->APB1ENR  |= (RCC_APB1ENR_SPI2EN);     // Enable SPI peripheral clocks
-  SPI2->CR1  = (SPI_CR1_SPE | SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI | (rate << 3));
-  SPI2->CR2 = (0x00000000);
-
-  GPIO_configurePins(GPIOB, &spiPortB);
-  return TRUE;
-}
-
-void SRAM_Init(void)
-{
+  
   FSMC_NORSRAMInitTypeDef  FSMC_NORSRAMInitStructure;
   FSMC_NORSRAMTimingInitTypeDef  p;
   GPIO_InitTypeDef GPIO_InitStructure;
@@ -60,82 +37,39 @@ void SRAM_Init(void)
   /* Enable FSMC clock */
   RCC_AHB3PeriphClockCmd(RCC_AHB3Periph_FSMC, ENABLE);
 
+  /* General pin configuration */
+  GPIO_InitStructure.GPIO_Mode    = GPIO_Mode_AF;
+  GPIO_InitStructure.GPIO_Speed   = GPIO_Speed_100MHz;
+  GPIO_InitStructure.GPIO_OType   = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_PuPd    = GPIO_PuPd_NOPULL;
+  GPIO_InitStructure.GPIO_AltFunc = GPIO_AF_FSMC;
+  
   /* GPIOD configuration */
-  GPIO_PinAFConfig(GPIOD, GPIO_PinSource0, GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOD, GPIO_PinSource1, GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOD, GPIO_PinSource4, GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOD, GPIO_PinSource5, GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOD, GPIO_PinSource8, GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOD, GPIO_PinSource9, GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOD, GPIO_PinSource10, GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOD, GPIO_PinSource11, GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOD, GPIO_PinSource12, GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOD, GPIO_PinSource14, GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOD, GPIO_PinSource15, GPIO_AF_FSMC);
-
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_4 |
-    GPIO_Pin_5 | GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11 |
-    GPIO_Pin_12 | GPIO_Pin_14 | GPIO_Pin_15;
-
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
-  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_100MHz;
-  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
-
-  GPIO_Init(GPIOD, &GPIO_InitStructure);
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0  | GPIO_Pin_1  | GPIO_Pin_4  |
+                                GPIO_Pin_5  | GPIO_Pin_8  | GPIO_Pin_9  | 
+                                GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12 | 
+                                GPIO_Pin_14 | GPIO_Pin_15;
+  GPIO_configurePins(GPIOD, &GPIO_InitStructure);
 
   /* GPIOE configuration */
-  GPIO_PinAFConfig(GPIOE, GPIO_PinSource0 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOE, GPIO_PinSource1 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOE, GPIO_PinSource7 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOE, GPIO_PinSource8 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOE, GPIO_PinSource9 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOE, GPIO_PinSource10 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOE, GPIO_PinSource11 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOE, GPIO_PinSource12 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOE, GPIO_PinSource13 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOE, GPIO_PinSource14 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOE, GPIO_PinSource15 , GPIO_AF_FSMC);
-
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0  | GPIO_Pin_1  | GPIO_Pin_7  | GPIO_Pin_8  |
-                                GPIO_Pin_9  | GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12 |
-                                GPIO_Pin_13 | GPIO_Pin_14 | GPIO_Pin_15;
-
-  GPIO_Init(GPIOE, &GPIO_InitStructure);
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0  | GPIO_Pin_1  | GPIO_Pin_7  | 
+                                GPIO_Pin_8  | GPIO_Pin_9  | GPIO_Pin_10 | 
+                                GPIO_Pin_11 | GPIO_Pin_12 | GPIO_Pin_13 | 
+                                GPIO_Pin_14 | GPIO_Pin_15;
+  GPIO_configurePins(GPIOE, &GPIO_InitStructure);
 
   /* GPIOF configuration */
-  GPIO_PinAFConfig(GPIOF, GPIO_PinSource0 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOF, GPIO_PinSource1 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOF, GPIO_PinSource2 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOF, GPIO_PinSource3 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOF, GPIO_PinSource4 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOF, GPIO_PinSource5 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOF, GPIO_PinSource12 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOF, GPIO_PinSource13 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOF, GPIO_PinSource14 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOF, GPIO_PinSource15 , GPIO_AF_FSMC);
-
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0  | GPIO_Pin_1  | GPIO_Pin_2  |
                                 GPIO_Pin_3  | GPIO_Pin_4  | GPIO_Pin_5  |
                                 GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 |
                                 GPIO_Pin_15;
-
-  GPIO_Init(GPIOF, &GPIO_InitStructure);
+  GPIO_configurePins(GPIOF, &GPIO_InitStructure);
 
   /* GPIOG configuration */
-  GPIO_PinAFConfig(GPIOG, GPIO_PinSource0 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOG, GPIO_PinSource1 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOG, GPIO_PinSource2 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOG, GPIO_PinSource3 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOG, GPIO_PinSource4 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOG, GPIO_PinSource5 , GPIO_AF_FSMC);
-  GPIO_PinAFConfig(GPIOG, GPIO_PinSource9 , GPIO_AF_FSMC);
-
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0  | GPIO_Pin_1  | GPIO_Pin_2  |
-                                GPIO_Pin_3  |
-                                GPIO_Pin_4  | GPIO_Pin_5  |GPIO_Pin_9;
-
-  GPIO_Init(GPIOG, &GPIO_InitStructure);
+                                GPIO_Pin_3  | GPIO_Pin_4  | GPIO_Pin_5  |
+                                GPIO_Pin_9;
+  GPIO_configurePins(GPIOG, &GPIO_InitStructure);
 
   /*-- FSMC Configuration ------------------------------------------------------*/
   p.FSMC_AddressSetupTime = 5;
@@ -167,4 +101,30 @@ void SRAM_Init(void)
 
   /*!< Enable FSMC Bank1_SRAM2 Bank */
   FSMC_NORSRAMCmd(FSMC_Bank1_NORSRAM2, ENABLE);
+  
+  return TRUE;
+}
+
+void SRAM_test(void)
+{
+  volatile uint32 delay;
+  uint32 ramRead;
+  uint32 ramWrite;
+  uint32 ramSize;
+  uint32 ramAddr = 0x64000000;
+  while(1)
+  {
+    for (ramSize = 1024*1024*512 - 1; ramSize > 0; ramSize--)
+    {
+      ramWrite = 0xA5A5;
+      *(uint16_t *)(ramAddr + ramSize) = ramWrite; // break point here
+      for (delay = 0; delay < 1000; delay++);
+      ramRead  = *(uint16_t *)(ramAddr + ramSize);
+      for (delay = 0; delay < 1000; delay++);
+      if (ramRead != ramWrite)
+      {
+        
+      }
+    }
+  }
 }

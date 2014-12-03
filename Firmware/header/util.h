@@ -7,7 +7,9 @@
 #define CCITT_REV_POLYNOMIAL (0x8408)
 #define CCITT_REVREP_POLYNOMIAL (0x8810)
 
-//#define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+#ifndef MIN
+  #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
+#endif
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 
 void   Util_swap16(uint16* pToSwap);

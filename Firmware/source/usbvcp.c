@@ -23,6 +23,7 @@ typedef struct
   uint16 bytesToSend;
   uint16 bytesToReceive;
   uint16 bytesReceived;
+  boolean waitForFirstByte;
 } CommStatus;
 
 static struct
@@ -61,7 +62,7 @@ extern uint32 APP_Rx_ptr_in;    /* Increment this pointer or roll it back to
 extern uint32 APP_Rx_ptr_out;
 
 /* Private function prototypes -----------------------------------------------*/
-static void   USB_notifyTimeout(void);
+static void   USB_notifyTimeout(SoftTimer timer);
 static uint16 VCP_Init     (void);
 static uint16 VCP_DeInit   (void);
 static uint16 VCP_Ctrl     (uint32 Cmd, uint8* Buf, uint32 Len);
@@ -245,6 +246,7 @@ boolean USBVCP_send(uint8 *pSrc, uint32 numBytes)
     Util_copyMemory(pSrc, &APP_Rx_Buffer[APP_Rx_ptr_in], bytesToSend);
     APP_Rx_ptr_in += bytesToSend;
     numBytes -= bytesToSend;
+  }
   return TRUE;
 }
 
@@ -258,38 +260,22 @@ boolean USBVCP_send(uint8 *pSrc, uint32 numBytes)
 boolean USBVCP_receive(uint32 numBytes, uint32 timeout, boolean interChar)
 {
   SoftTimerConfig timer;
-  DMA_InitTypeDef dmaInit;
 
   /***** Configure the timeout (or inter-char timeout) timer for this port *****/
   timer.appNotifyTimerExpired = &USB_notifyTimeout;
-  timer.timer  = sUART.port[port].timer;
+  timer.timer  = TIME_SOFT_TIMER_USB;
   timer.value  = timeout;
   timer.reload = 0;
-  sUART.port[port].icConfig = timer;
-
-  sUART.port[port].commStatus.bytesToReceive  = numBytes;
-  sUART.port[port].commStatus.bytesReceived   = 0;
-
-  sUART.port[port].pUART->CR1 |= USART_CR1_RXNEIE;  // Turn on the rx interrupt
-  sUART.port[port].pUART->CR1 |= USART_CR1_RE;      // Enable RX
-
-  if (TRUE == interChar)
-  {
-    timer.value = 0; // stop the timer
-    Time_startTimer(timer);
-    NVIC_EnableIRQ(portInfo.periph.irqNumber); // Wait for the first byte to start ICtimer
-  }
-  else
-  {
-    NVIC_DisableIRQ(portInfo.periph.irqNumber); // Ensure the IC interrupt is turned off
-    Time_startTimer(timer);
-  }
-
-
+  sUSBD.icConfig = timer;
+  
+  sUSBD.commStatus.bytesToReceive   = numBytes;
+  sUSBD.commStatus.bytesReceived    = 0;
+  sUSBD.commStatus.waitForFirstByte = interChar;
+  
   return SUCCESS;
 }
 
-void USB_notifyTimeout(void)
+void USB_notifyTimeout(SoftTimer timer)
 {
 
 }
