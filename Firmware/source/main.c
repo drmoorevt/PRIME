@@ -10,6 +10,7 @@
 //#include "sdcard.h"
 //#include "serialflash.h"
 #include "spi.h"
+#include "sram.h"
 #include "tests.h"
 #include "usbvcp.h"
 #include "util.h"
@@ -60,11 +61,13 @@ int main(void)
 //  ZigBee_init();
   USBVCP_init();
   
+  i = 0x64000000;
   while(1)
   {
+    *(uint16_t *) (i++) = 0xAADD; // break point here
     //for (i=0; i<12000000; i++);
-    sprintf(danString, "Hello Dan! %016lu\r\n", (uint32)SysTick->VAL);
-    USBVCP_send((uint8*)&danString, 32);
+//    sprintf(danString, "Hello Dan! %016lu\r\n", (uint32)SysTick->VAL);
+//    USBVCP_send((uint8*)&danString, 32);
     //__disable_irq();
     //Time_delay(250000);
     //__enable_irq();
