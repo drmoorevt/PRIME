@@ -46,9 +46,10 @@ boolean SRAM_setup(SRAMState state)
   
   /* GPIOD configuration */
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0  | GPIO_Pin_1  | GPIO_Pin_4  |
-                                GPIO_Pin_5  | GPIO_Pin_8  | GPIO_Pin_9  | 
-                                GPIO_Pin_10 | GPIO_Pin_11 | GPIO_Pin_12 | 
-                                GPIO_Pin_14 | GPIO_Pin_15;
+                                GPIO_Pin_5  | GPIO_Pin_7  | GPIO_Pin_8  | 
+                                GPIO_Pin_9  | GPIO_Pin_10 | GPIO_Pin_11 | 
+                                GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 | 
+                                GPIO_Pin_15;
   GPIO_configurePins(GPIOD, &GPIO_InitStructure);
 
   /* GPIOE configuration */
@@ -72,16 +73,16 @@ boolean SRAM_setup(SRAMState state)
   GPIO_configurePins(GPIOG, &GPIO_InitStructure);
 
   /*-- FSMC Configuration ------------------------------------------------------*/
-  p.FSMC_AddressSetupTime = 5;
+  p.FSMC_AddressSetupTime = 1; // 5
   p.FSMC_AddressHoldTime = 0;
-  p.FSMC_DataSetupTime = 5;
+  p.FSMC_DataSetupTime = 1; // 5
   p.FSMC_BusTurnAroundDuration = 0;
   p.FSMC_CLKDivision = 0;
   p.FSMC_DataLatency = 0;
   p.FSMC_AccessMode = FSMC_AccessMode_A;
 
-  FSMC_NORSRAMInitStructure.FSMC_Bank = FSMC_Bank1_NORSRAM2;
-  FSMC_NORSRAMInitStructure.FSMC_DataAddressMux = FSMC_DataAddressMux_Disable;
+  FSMC_NORSRAMInitStructure.FSMC_Bank = FSMC_Bank1_NORSRAM1; // changed
+  FSMC_NORSRAMInitStructure.FSMC_DataAddressMux = FSMC_DataAddressMux_Enable;
   FSMC_NORSRAMInitStructure.FSMC_MemoryType = FSMC_MemoryType_SRAM;
   FSMC_NORSRAMInitStructure.FSMC_MemoryDataWidth = FSMC_MemoryDataWidth_16b;
   FSMC_NORSRAMInitStructure.FSMC_BurstAccessMode = FSMC_BurstAccessMode_Disable;
@@ -100,31 +101,19 @@ boolean SRAM_setup(SRAMState state)
   FSMC_NORSRAMInit(&FSMC_NORSRAMInitStructure);
 
   /*!< Enable FSMC Bank1_SRAM2 Bank */
-  FSMC_NORSRAMCmd(FSMC_Bank1_NORSRAM2, ENABLE);
+  FSMC_NORSRAMCmd(FSMC_Bank1_NORSRAM1, ENABLE); // changed
   
   return TRUE;
 }
 
-void SRAM_test(void)
+boolean SRAM_test(void)
 {
-  volatile uint32 delay;
-  uint32 ramRead;
-  uint32 ramWrite;
-  uint32 ramSize;
-  uint32 ramAddr = 0x64000000;
-  while(1)
+  uint32 ramAddr;
+  for (ramAddr = 0; ramAddr < SRAM_ADDR; ramAddr++)
   {
-    for (ramSize = 1024*1024*512 - 1; ramSize > 0; ramSize--)
-    {
-      ramWrite = 0xA5A5;
-      *(uint16_t *)(ramAddr + ramSize) = ramWrite; // break point here
-      for (delay = 0; delay < 1000; delay++);
-      ramRead  = *(uint16_t *)(ramAddr + ramSize);
-      for (delay = 0; delay < 1000; delay++);
-      if (ramRead != ramWrite)
-      {
-        
-      }
-    }
+    GPSRAM->extmem[ramAddr] = (uint16)ramAddr;
+    if (GPSRAM->extmem[ramAddr] != (uint16)ramAddr)
+      return FALSE;
   }
+  return TRUE;
 }
