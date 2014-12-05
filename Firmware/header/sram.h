@@ -7,7 +7,12 @@
 #define SRAM_SIZE (0x100000)  // 1MB SRAM
 #define SRAM_ADDR (SRAM_SIZE / 2) // 512K x 16b
 
-typedef union
+#define SRAM_NUM_CHANNEL_SAMPLES       (47662) // Samples per 16bit channel
+#define SRAM_NUM_CHANNEL_ACCUMULATIONS (47662) // Accumulations per 32bit channel
+#define SRAM_NUM_STATE_ACCUMULATIONS   (47662) // Accumulations per 32bit channel
+
+
+typedef struct
 {
   uint16 extmem[SRAM_ADDR];
 } ExtMemoryMap;

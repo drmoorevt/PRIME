@@ -8,6 +8,7 @@
 #include "hih613x.h"
 #include "sdcard.h"
 #include "serialflash.h"
+#include "sram.h"
 #include "spi.h"
 #include "time.h"
 #include "uart.h"
