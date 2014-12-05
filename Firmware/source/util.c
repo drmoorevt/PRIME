@@ -121,7 +121,7 @@ void Util_fillMemory(void *pDst, uint32 numBytes, uint8 fillVal)
 * RETURNS      Nothing
 * NOTES        None
 \**************************************************************************************************/
-void Util_copyMemory(uint8 *pSrc, uint8 *pDst, uint16 numBytes)
+void Util_copyMemory(uint8 *pSrc, uint8 *pDst, uint32 numBytes)
 {
   while (numBytes-- > 0)
     pDst[numBytes] = pSrc[numBytes];

@@ -100,7 +100,7 @@ static uint16 CRC_calCRC16(uint16 crc, const uint8 *pData, uint32 len, uint16 po
 *              numBytes -- the length of the data
 * RETURNS      the CRC of the data
 \*********************************************************************/
-uint16 CRC_crc16(uint16 initial, CRC16Polynomial crcType, const uint8 *pData, uint32 numBytes)
+uint16 CRC_crc16(uint16 initial, CRC16Polynomial crcType, uint8 *pData, uint32 numBytes)
 {
   uint16 crc = 0;
   switch (crcType)

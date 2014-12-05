@@ -53,5 +53,11 @@ int main(void)
   ZigBee_init();
   USBVCP_init();
   
-  Tests_run();
+//  POST = SRAM_test();
+  
+//  if (POST)
+    while(1)
+      Tests_run();
+//  else
+//    while(1);
 }

@@ -32,12 +32,11 @@ typedef struct
   void (*appNotifyCommsEvent)(USBVCPEvent, uint32);
 } USBVCPCommConfig;
 
-void USBVCP_init(void);
+void    USBVCP_init(void);
+uint32  USBVCP_stopReceive(void);
 boolean USBVCP_send(uint8 *pSrc, uint32 numBytes);
 boolean USBVCP_openPort(USBVCPCommConfig config);
 boolean USBVCP_closePort(boolean closeInterface);
 boolean USBVCP_receive(uint32 numBytes, uint32 timeout, boolean interChar);
-
-uint32  USBVCP_stopReceive(void);
 
 #endif /* USBVCP_H */

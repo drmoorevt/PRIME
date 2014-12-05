@@ -11,7 +11,6 @@
 #include "sram.h"
 #include "spi.h"
 #include "time.h"
-#include "uart.h"
 #include "usbvcp.h"
 #include "util.h"
 #include <string.h>
@@ -21,7 +20,7 @@
 #define FILE_ID TESTS_C
 
 //#define TESTS_MAX_SAMPLES (10240)
-#define TESTS_MAX_SAMPLES (10000)
+#define TESTS_MAX_SAMPLES (10060)
 
 typedef enum
 {
@@ -133,12 +132,12 @@ static struct
   TestArgs testArgs;
   TestState state;
   uint32  powerProfile;
-  Samples adc1;
-  Samples adc2;
-  Samples adc3;
-  Samples periphState;
+  volatile Samples adc1;
+  volatile Samples adc2;
+  volatile Samples adc3;
+  volatile Samples periphState;
   uint32 (*getPeriphState)(void);
-  struct
+  volatile struct
   {
     uint32 bytesReceived;
     uint32 bytesToReceive;
@@ -178,19 +177,19 @@ void Tests_notifyCommsEvent(USBVCPEvent event, uint32 arg)
 {
   switch (event)
   {
-    case COMMS_EVENT_RX_COMPLETE:
-      UART_stopReceive(UART_PORT5);
+    case USBVCP_EVENT_RX_COMPLETE:
+      USBVCP_stopReceive();
       sTests.comms.receiving = FALSE;
       sTests.comms.bytesReceived = sTests.comms.bytesToReceive;
       break;
-    case COMMS_EVENT_RX_TIMEOUT:
+    case USBVCP_EVENT_RX_TIMEOUT:
       sTests.comms.bytesReceived = arg;
       sTests.comms.receiving = FALSE;
       sTests.comms.rxTimeout = TRUE;
       break;
-    case COMMS_EVENT_RX_INTERRUPT:
+    case USBVCP_EVENT_RX_INTERRUPT:
       break;
-    case COMMS_EVENT_TX_COMPLETE:
+    case USBVCP_EVENT_TX_COMPLETE:
       sTests.comms.transmitting = FALSE;
       break;
     default:
@@ -242,7 +241,7 @@ void Tests_init(void)
 * DESCRIPTION Will wait for either the specified number of bytes or for the timeout to expire
 * PARAMETERS  numBytes: The number of bytes to wait for
 *             timeout: The maximum amount time in milliseconds to wait for the data
-* RETURNS     Nothing (uses callbacks via the UART notifyXXX mechanism)
+* RETURNS     Nothing (uses callbacks via the USBVCP notifyXXX mechanism)
 * NOTES       If timeout is 0 then the function can block forever
 \**************************************************************************************************/
 void Tests_receiveData(uint32 numBytes, uint32 timeout)
@@ -257,7 +256,7 @@ void Tests_receiveData(uint32 numBytes, uint32 timeout)
   sTests.comms.rxTimeout = FALSE;
   sTests.comms.bytesReceived = 0;
   sTests.comms.bytesToReceive = numBytes;
-  UART_receiveData(UART_PORT5, numBytes, timeout, TRUE);
+  USBVCP_receive(numBytes, timeout, TRUE);
   while(sTests.comms.receiving)
   {
     if ((GPIOC->IDR & 0x0000E000) != 0x0000E000)
@@ -278,14 +277,14 @@ void Tests_receiveData(uint32 numBytes, uint32 timeout)
 
 /**************************************************************************************************\
 * FUNCTION    Tests_sendData
-* DESCRIPTION Sends the specified number of bytes out the UART configured for tests
+* DESCRIPTION Sends the specified number of bytes out the USBVCP configured for tests
 * PARAMETERS  numBytes: The number of bytes from the txBuffer to send out
-* RETURNS     Nothing (uses callbacks via the UART notifyXXX mechanism)
+* RETURNS     Nothing (uses callbacks via the USBVCP notifyXXX mechanism)
 \**************************************************************************************************/
 void Tests_sendData(uint16 numBytes)
 {
   sTests.comms.transmitting = TRUE;
-  UART_sendData(UART_PORT5, sTests.comms.txBuffer, numBytes);
+  USBVCP_send(sTests.comms.txBuffer, numBytes);
   while(sTests.comms.transmitting);
 }
 
@@ -299,7 +298,7 @@ uint8 Tests_getTestToRun(void)
 {
   const uint32 MIN_PACKET_SIZE = 8;
   boolean hasValidPacket = FALSE;
-  uint8 testToRun, argCount;
+  uint8 testToRun = 0, argCount = 0;
   uint32 size;
 
   do
@@ -486,7 +485,7 @@ boolean Tests_sendHeaderInfo(void)
 
   while (FALSE == tfAck)
   {
-    // Send the header + CRC out the UART
+    // Send the header + CRC out the VCP
     Tests_sendData(txBufOffset);
     Tests_receiveData(1, 0); // Wait for the ack
     if (sTests.comms.rxBuffer[0] == 0x54) // reset attempt
@@ -575,6 +574,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate, do
   
   // Disable all interrupts (except for the adc trigger which will be enabled last)
   DISABLE_SYSTICK_INTERRUPT();
+  NVIC_DisableIRQ(OTG_FS_IRQn);
   NVIC_DisableIRQ(USART3_IRQn);
   NVIC_DisableIRQ(UART4_IRQn);
   NVIC_DisableIRQ(UART5_IRQn);
@@ -620,6 +620,7 @@ static void Tests_teardownSPITests(boolean testPassed)
   ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
   // Enable all previous interrupts
   ENABLE_SYSTICK_INTERRUPT();
+  NVIC_EnableIRQ(OTG_FS_IRQn);
   NVIC_EnableIRQ(USART3_IRQn);
   NVIC_EnableIRQ(UART4_IRQn);
   NVIC_EnableIRQ(UART5_IRQn);
@@ -1347,7 +1348,7 @@ uint16 Tests_test17(void *pArgs)
     sTests.comms.txBuffer[i++] = '\n';
 
 
-    // Send the header out the UART
+    // Send the header out the USBVCP
     Tests_sendData(i);
 
     Time_delay(250000); // Wait 250ms for next sample

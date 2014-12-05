@@ -44,26 +44,3 @@ void NVIC_Init(NVIC_InitTypeDef* NVIC_InitStruct)
       (uint32_t)0x01 << (NVIC_InitStruct->NVIC_IRQChannel & (uint8_t)0x1F);
   }
 }
-
-#define NVIC_PriorityGroup_0         ((uint32_t)0x700) /*!< 0 bits for pre-emption priority
-                                                            4 bits for subpriority */
-#define NVIC_PriorityGroup_1         ((uint32_t)0x600) /*!< 1 bits for pre-emption priority
-                                                            3 bits for subpriority */
-#define NVIC_PriorityGroup_2         ((uint32_t)0x500) /*!< 2 bits for pre-emption priority
-                                                            2 bits for subpriority */
-#define NVIC_PriorityGroup_3         ((uint32_t)0x400) /*!< 3 bits for pre-emption priority
-                                                            1 bits for subpriority */
-#define NVIC_PriorityGroup_4         ((uint32_t)0x300) /*!< 4 bits for pre-emption priority
-                                                            0 bits for subpriority */
-
-#define IS_NVIC_PRIORITY_GROUP(GROUP) (((GROUP) == NVIC_PriorityGroup_0) || \
-                                       ((GROUP) == NVIC_PriorityGroup_1) || \
-                                       ((GROUP) == NVIC_PriorityGroup_2) || \
-                                       ((GROUP) == NVIC_PriorityGroup_3) || \
-                                       ((GROUP) == NVIC_PriorityGroup_4))
-
-#define IS_NVIC_PREEMPTION_PRIORITY(PRIORITY)  ((PRIORITY) < 0x10)
-
-#define IS_NVIC_SUB_PRIORITY(PRIORITY)  ((PRIORITY) < 0x10)
-
-#define IS_NVIC_OFFSET(OFFSET)  ((OFFSET) < 0x000FFFFF)

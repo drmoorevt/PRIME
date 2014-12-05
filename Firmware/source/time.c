@@ -1,7 +1,7 @@
 #include "stm32f2xx.h"
 #include "time.h"
 #include "util.h"
-//#include "tests.h"
+#include "tests.h"
 
 #define FILE_ID TIME_C
 
@@ -142,7 +142,7 @@ void TIM3_IRQHandler(void)
 {
   TIM3->EGR = TIM_EGR_TG;
   CLEAR_BIT(TIM3->SR, TIM_SR_UIF); // Clear the update interrupt flag
-//  Tests_notifySampleTrigger();
+  Tests_notifySampleTrigger();
 }
 
 /**************************************************************************************************\
