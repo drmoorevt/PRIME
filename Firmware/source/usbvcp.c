@@ -1,6 +1,7 @@
 #include "gpio.h"
 #include "misc.h"
 #include "time.h"
+
 #include "usbvcp.h"
 
 #include "usb_core.h"
@@ -26,7 +27,7 @@ typedef struct
   boolean waitForFirstByte;
 } CommStatus;
 
-static struct
+static volatile struct
 {
   boolean          isConfigured;
   USBVCPCommConfig appConfig;   // Buffers and callbacks set by the appLayer
@@ -53,16 +54,16 @@ USBD_Usr_cb_TypeDef USR_cb =
 };
 
 /* These are external variables imported from CDC core to be used for IN  transfer management. */
-extern uint8  APP_Rx_Buffer []; /* Write CDC received data in this buffer.
+extern volatile uint8  APP_Rx_Buffer []; /* Write CDC received data in this buffer.
                                      These data will be sent over USB IN endpoint
                                      in the CDC core functions. */
-extern uint32 APP_Rx_ptr_in;    /* Increment this pointer or roll it back to
+extern volatile uint32 APP_Rx_ptr_in;    /* Increment this pointer or roll it back to
                                      start address when writing received data
                                      in the buffer APP_Rx_Buffer. */
-extern uint32 APP_Rx_ptr_out;
+extern volatile uint32 APP_Rx_ptr_out;
 
 /* Private function prototypes -----------------------------------------------*/
-static void   USB_notifyTimeout(SoftTimer timer);
+static void   USBVCP_notifyTimeout(SoftTimer timer);
 static uint16 VCP_Init     (void);
 static uint16 VCP_DeInit   (void);
 static uint16 VCP_Ctrl     (uint32 Cmd, uint8* Buf, uint32 Len);
@@ -114,7 +115,6 @@ static uint16 VCP_DeInit(void)
 \*************************************************************************************************/
 static uint16 VCP_Ctrl(uint32 Cmd, uint8* Buf, uint32 Len)
 { 
-
   VCPLineCoding linecoding =  {115200 * 8, 0x00, 0x00, 0x08};
   switch (Cmd)
   {
@@ -166,8 +166,17 @@ static uint16 VCP_DataTx (uint8* Buf, uint32 Len)
 * RETURNS     Result of the operation: USBD_OK if all operations are OK else VCP_FAIL
 * NOTES       This function is not called by the USB core subsystem
 \*************************************************************************************************/
-static uint16 VCP_DataRx (uint8* Buf, uint32 Len)
+static uint16 VCP_DataRx (uint8 *Buf, uint32 Len)
 {
+  uint32 i = 0;
+  uint8 *pAppBuff = (uint8 *)sUSBD.appConfig.appReceiveBuffer;
+  while ((i < Len) && (sUSBD.commStatus.bytesReceived < sUSBD.commStatus.bytesToReceive))
+    pAppBuff[sUSBD.commStatus.bytesReceived++] = Buf[i++];
+  if (sUSBD.commStatus.bytesReceived >= sUSBD.commStatus.bytesToReceive)
+    sUSBD.appConfig.appNotifyCommsEvent(USBVCP_EVENT_RX_COMPLETE, sUSBD.commStatus.bytesReceived);
+  else
+    Time_startTimer(sUSBD.icConfig);
+  
   return USBD_OK;
 }
 
@@ -180,6 +189,7 @@ static uint16 VCP_DataRx (uint8* Buf, uint32 Len)
 boolean USBVCP_openPort(USBVCPCommConfig config)
 {
   USBD_Init(&sUSBD.dev, USB_OTG_FS_CORE_ID, &USR_desc, &USBD_CDC_cb, &USR_cb);
+  Util_copyMemory((uint8 *)&config, (uint8 *)&sUSBD.appConfig, sizeof(sUSBD.appConfig));
   return TRUE;
 }
 
@@ -247,6 +257,8 @@ boolean USBVCP_send(uint8 *pSrc, uint32 numBytes)
     APP_Rx_ptr_in += bytesToSend;
     numBytes -= bytesToSend;
   }
+  while (APP_Rx_ptr_in != APP_Rx_ptr_out); // Previous transmission must be out of the buffer
+  sUSBD.appConfig.appNotifyCommsEvent(USBVCP_EVENT_TX_COMPLETE, numBytes);
   return TRUE;
 }
 
@@ -262,7 +274,7 @@ boolean USBVCP_receive(uint32 numBytes, uint32 timeout, boolean interChar)
   SoftTimerConfig timer;
 
   /***** Configure the timeout (or inter-char timeout) timer for this port *****/
-  timer.appNotifyTimerExpired = &USB_notifyTimeout;
+  timer.appNotifyTimerExpired = &USBVCP_notifyTimeout;
   timer.timer  = TIME_SOFT_TIMER_USB;
   timer.value  = timeout;
   timer.reload = 0;
@@ -275,9 +287,41 @@ boolean USBVCP_receive(uint32 numBytes, uint32 timeout, boolean interChar)
   return SUCCESS;
 }
 
-void USB_notifyTimeout(SoftTimer timer)
+/**************************************************************************************************\
+* FUNCTION    USBVCP_notifyTimeout
+* DESCRIPTION Allows the applayer to abort a reception operation
+* PARAMETERS  port: The port to stop receiving on
+* RETURNS     The number of bytes received before stopping
+* NOTES       None
+\**************************************************************************************************/
+void USBVCP_notifyTimeout(SoftTimer timer)
 {
+  uint32 bytesReceived;
+  bytesReceived = USBVCP_stopReceive();
+  sUSBD.appConfig.appNotifyCommsEvent(USBVCP_EVENT_RX_TIMEOUT, bytesReceived);
+}
 
+/**************************************************************************************************\
+* FUNCTION    USBVCP_stopReceive
+* DESCRIPTION Allows the applayer to abort a reception operation
+* PARAMETERS  port: The port to stop receiving on
+* RETURNS     The number of bytes received before stopping
+* NOTES       None
+\**************************************************************************************************/
+uint32 USBVCP_stopReceive(void)
+{
+  uint32 bytesReceived;
+  
+  SoftTimerConfig nullTimer = {TIME_SOFT_TIMER_USB, 0, 0, 0};
+  Time_startTimer(nullTimer); // Clear the UART timeout timer by 'starting' it zeroed out
+
+  // Bytes received is the number we intended on receiving minus the number remaining
+  bytesReceived = sUSBD.commStatus.bytesReceived;
+  
+  sUSBD.commStatus.bytesToReceive = 0;
+  sUSBD.commStatus.bytesReceived  = 0;
+  
+  return bytesReceived;
 }
 
 void OTG_FS_IRQHandler(void)
