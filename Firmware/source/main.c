@@ -17,6 +17,7 @@
 #include "uart.h"
 #include "zigbee.h"
 
+// Depends on Analog_init
 void Main_init(void)
 {
   while (RCC->CR != 0x0F038F83) // Ensure that the PLL is functioning
@@ -32,13 +33,31 @@ void Main_init(void)
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
 }
 
+boolean Main_powerOnSelfTest(void)
+{
+  return SRAM_test();
+}
+
+void Main_run(void)
+{
+  while (TRUE)
+  {
+    Tests_run();
+  }
+}
+
+void Main_error(void)
+{
+  while (TRUE);
+}
+
 int main(void)
 {
   Time_init();
   ADC_init();
   DAC_init();
   Analog_init();
-  Main_init();	// depends on Analog_init
+  Main_init();
   UART_init();
   Bluetooth_init();
   HIH613X_init();
@@ -48,16 +67,12 @@ int main(void)
   SPI_init();
   SRAM_init();
   I2CBB_init();
+  USBVCP_init();
   Tests_init();
-  USBVCP_init();
   ZigBee_init();
-  USBVCP_init();
   
-//  POST = SRAM_test();
-  
-//  if (POST)
-    while(1)
-      Tests_run();
-//  else
-//    while(1);
+  if (Main_powerOnSelfTest())
+    Main_run();
+  else
+    Main_error();
 }

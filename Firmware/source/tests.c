@@ -219,6 +219,14 @@ TestFunction testFunctions[] = { &Tests_test00,
                                  &Tests_test16,
                                  &Tests_test17, };
 
+/**************************************************************************************************\
+* FUNCTION    Tests_init
+* DESCRIPTION Initializes the communications interface and sets the domain voltages to begin tests
+* PARAMETERS  numBytes: The number of bytes to wait for
+*             timeout: The maximum amount time in milliseconds to wait for the data
+* RETURNS     Nothing (uses callbacks via the USBVCP notifyXXX mechanism)
+* NOTES       If timeout is 0 then the function can block forever
+\**************************************************************************************************/
 void Tests_init(void)
 {
   USBVCPCommConfig usbComm = {&sTests.comms.rxBuffer[0], &sTests.comms.txBuffer[0],
@@ -379,6 +387,30 @@ const uint8 sendMessage[9]  = {'S','e','n','d','0','0','0','0','\n'};
 // User sends a request to reset tests: flush the test buffer and reset state machine
 const uint8 resetMessage[6] = {'R','e','s','e','t','\n'};
 
+/**************************************************************************************************\
+* FUNCTION    Tests_runTest14
+* DESCRIPTION Streams temperature and humidity information out the VCP
+* PARAMETERS  None
+* RETURNS     Nothing
+* NOTES       The delay for this function is dominated by the sampleRate, test measurements are
+              occurring. You should let USB stabilize before entering this function.
+\**************************************************************************************************/
+void Tests_runTest14(void)
+{
+  double temperature, humidity;
+  sTests.testArgs.test14Args.commonArgs.preTestDelayUs  = 100;
+  sTests.testArgs.test14Args.commonArgs.sampleRate      = 1;
+  sTests.testArgs.test14Args.commonArgs.postTestDelayUs = 100;
+  sTests.testArgs.test14Args.profile = HIH_PROFILE_STANDARD;
+  sTests.testArgs.test14Args.convert = TRUE;
+  sTests.testArgs.test14Args.measure = TRUE;
+  sTests.testArgs.test14Args.read = TRUE;
+  Tests_test14(&sTests.testArgs);
+  temperature = HIH613X_getTemperature();
+  humidity = HIH613X_getHumidity();
+  Tests_sendData(sprintf((char *)sTests.comms.txBuffer, "Temperature: %f, Humidity: %f\r\n", temperature, humidity));
+}
+
 /******************************** Test START,SEND,RESET protocol **********************************\
  * User sends runMessage with two-byte ASCII test number to run, respond with ACK or NAK
  *   Ex: Request: 'Test(0x09)\n(crc16)' Response: '(ack/nak)(crc16)'
@@ -418,6 +450,9 @@ void Tests_run(void)
   //}
   
   // SDCard_test();
+//  Time_delay(1000*1000*5); // Let USB synchronize for 5s
+//  while (1)
+//    Tests_runTest14();
   
   switch (sTests.state)
   {
@@ -523,7 +558,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate, do
   AppADCConfig adc3Config = {0};
 
   Analog_setDomain(SPI_DOMAIN, TRUE, initVoltage);  // Set domain voltage to ideal for IDLE state
-  Time_delay(5000); // The SF chip has a power on reset timer requiring 10ms max to finish
+  Time_delay(10000); // The SF chip has a power on reset timer requiring 10ms max to finish
 
   // ADC1 sampling domain voltage
   adc1Config.adcConfig.scan               = FALSE;

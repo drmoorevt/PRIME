@@ -246,10 +246,11 @@ boolean USBVCP_send(uint8 *pSrc, uint32 numBytes)
     while (APP_Rx_ptr_in != APP_Rx_ptr_out); // Previous transmission must be out of the buffer
     bytesToSend = (numBytes > APP_RX_DATA_SIZE) ? APP_RX_DATA_SIZE : numBytes;
     // Work out the wrap around if our transmission exceeds the size of the buffer
-    if (APP_Rx_ptr_in + bytesToSend > APP_RX_DATA_SIZE)
+    if (APP_Rx_ptr_in + bytesToSend >= APP_RX_DATA_SIZE)
     {
       Util_copyMemory(pSrc, &APP_Rx_Buffer[APP_Rx_ptr_in], APP_RX_DATA_SIZE - APP_Rx_ptr_in);
       pSrc += (APP_RX_DATA_SIZE - APP_Rx_ptr_in);
+      numBytes -= (APP_RX_DATA_SIZE - APP_Rx_ptr_in);
       bytesToSend -= (APP_RX_DATA_SIZE - APP_Rx_ptr_in);
       APP_Rx_ptr_in = 0;
     }

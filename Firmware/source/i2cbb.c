@@ -155,6 +155,7 @@ static boolean I2CBB_sendByte(uint8 byte)
     else
       SDA_LOW_HIH613X_I2C();
     byte <<= 1;
+    Time_delay(sI2CBB.clockTimeUs);   // Setup Time
     SCL_HIGH_HIH613X_I2C();           // Clock High
     Time_delay(sI2CBB.clockTimeUs);   // Clock high wait
     SCL_LOW_HIH613X_I2C();            // Clock low

@@ -189,7 +189,7 @@ void USB_OTG_BSP_TimeInit ( void )
 void USB_OTG_BSP_uDelay (const uint32_t usec)
 {
 
-  uint32_t count = 0;
+  volatile uint32_t count = 0;
   const uint32_t utime = (120 * usec / 7);
   do
   {

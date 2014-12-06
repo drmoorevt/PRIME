@@ -165,7 +165,7 @@ void Time_startTimer(SoftTimerConfig timerConfig)
 * RETURN        none
 * NOTES         Timer5 is connected to APB1 which is operating at 60MHz
 \**************************************************************************************************/
-void Time_delay(uint32 microSeconds)
+void Time_delay(volatile uint32 microSeconds)
 {
   if (0 == microSeconds)
     return;

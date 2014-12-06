@@ -5,7 +5,7 @@
 
 #define BITMASK(X) (1L << (X))
 /**************************************************************************************************\
-* FUNCTION     Util_spinWait
+* FUNCTION     Util_reflect
 * DESCRIPTION  Returns the inWord with the bottom nbrToReflect bits reflected
 * PARAMETERS   inWord: The word to reflect
 *              nbrToReflect: The number of bits in inWord (from the bottom) to reflect
