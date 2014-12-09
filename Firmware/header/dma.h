@@ -533,7 +533,7 @@ void DMA_DeInit(DMA_Stream_TypeDef* DMAy_Streamx);
 /* Initialization and Configuration functions *********************************/
 void DMA_Init(DMA_Stream_TypeDef* DMAy_Streamx, DMA_InitTypeDef* DMA_InitStruct);
 void DMA_StructInit(DMA_InitTypeDef* DMA_InitStruct);
-void DMA_Cmd(DMA_Stream_TypeDef* DMAy_Streamx, FunctionalState NewState, void (*callback)(uint8, uint16));
+void DMA_Cmd(DMA_Stream_TypeDef* DMAy_Streamx, FunctionalState NewState, void (*callback)(uint8, uint32));
 
 /* Optional Configuration functions *******************************************/
 void DMA_PeriphIncOffsetSizeConfig(DMA_Stream_TypeDef* DMAy_Streamx, uint32_t DMA_Pincos);

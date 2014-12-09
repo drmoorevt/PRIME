@@ -22,11 +22,11 @@
 
 static struct
 {
-  void  (*notifyStream0Complete)(uint8, uint16);
-  void  (*notifyStream1Complete)(uint8, uint16);
-  void  (*notifyStream2Complete)(uint8, uint16);
-  void  (*notifyDMA1Stream0Complete)(uint8, uint16);
-  void  (*notifyDMA1Stream7Complete)(uint8, uint16);
+  void  (*notifyStream0Complete)(uint8, uint32);
+  void  (*notifyStream1Complete)(uint8, uint32);
+  void  (*notifyStream2Complete)(uint8, uint32);
+  void  (*notifyDMA1Stream0Complete)(uint8, uint32);
+  void  (*notifyDMA1Stream7Complete)(uint8, uint32);
 } sDMA;
 
 void DMA_DeInit(DMA_Stream_TypeDef* DMAy_Streamx)
@@ -295,7 +295,7 @@ void DMA_StructInit(DMA_InitTypeDef* DMA_InitStruct)
   *    
   * @retval None
   */
-void DMA_Cmd(DMA_Stream_TypeDef* DMAy_Streamx, FunctionalState NewState, void (*callback)(uint8, uint16))
+void DMA_Cmd(DMA_Stream_TypeDef* DMAy_Streamx, FunctionalState NewState, void (*callback)(uint8, uint32))
 {
   if (DMAy_Streamx == DMA2_Stream0)
     sDMA.notifyStream0Complete = callback;

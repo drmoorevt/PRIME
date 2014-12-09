@@ -73,12 +73,12 @@ boolean SRAM_setup(SRAMState state)
   GPIO_configurePins(GPIOG, &GPIO_InitStructure);
 
   /*-- FSMC Configuration ------------------------------------------------------*/
-  p.FSMC_AddressSetupTime = 1; // 5
-  p.FSMC_AddressHoldTime = 0;
-  p.FSMC_DataSetupTime = 1; // 5
-  p.FSMC_BusTurnAroundDuration = 0;
-  p.FSMC_CLKDivision = 0;
-  p.FSMC_DataLatency = 0;
+  p.FSMC_AddressSetupTime = 0xF; // 5
+  p.FSMC_AddressHoldTime = 0xF;
+  p.FSMC_DataSetupTime = 0xFF; // 5
+  p.FSMC_BusTurnAroundDuration = 0xF;
+  p.FSMC_CLKDivision = 0xF;
+  p.FSMC_DataLatency = 0xF;
   p.FSMC_AccessMode = FSMC_AccessMode_A;
 
   FSMC_NORSRAMInitStructure.FSMC_Bank = FSMC_Bank1_NORSRAM1; // changed
@@ -86,6 +86,7 @@ boolean SRAM_setup(SRAMState state)
   FSMC_NORSRAMInitStructure.FSMC_MemoryType = FSMC_MemoryType_SRAM;
   FSMC_NORSRAMInitStructure.FSMC_MemoryDataWidth = FSMC_MemoryDataWidth_16b;
   FSMC_NORSRAMInitStructure.FSMC_BurstAccessMode = FSMC_BurstAccessMode_Disable;
+  FSMC_NORSRAMInitStructure.FSMC_AsynchronousWait = FSMC_AsynchronousWait_Disable;
   FSMC_NORSRAMInitStructure.FSMC_WaitSignalPolarity = FSMC_WaitSignalPolarity_Low;
   FSMC_NORSRAMInitStructure.FSMC_WrapMode = FSMC_WrapMode_Disable;
   FSMC_NORSRAMInitStructure.FSMC_WaitSignalActive = FSMC_WaitSignalActive_BeforeWaitState;
@@ -96,7 +97,6 @@ boolean SRAM_setup(SRAMState state)
   FSMC_NORSRAMInitStructure.FSMC_ReadWriteTimingStruct = &p;
   FSMC_NORSRAMInitStructure.FSMC_WriteTimingStruct = &p;
 
-  FSMC_NORSRAMInitStructure.FSMC_AsynchronousWait = FSMC_AsynchronousWait_Disable;
 
   FSMC_NORSRAMInit(&FSMC_NORSRAMInitStructure);
 
@@ -111,8 +111,8 @@ boolean SRAM_test(void)
   uint32 ramAddr;
   for (ramAddr = 0; ramAddr < SRAM_ADDR; ramAddr++)
   {
-    GPSRAM->extmem[ramAddr] = (uint16)ramAddr;
-    if (GPSRAM->extmem[ramAddr] != (uint16)ramAddr)
+    GPSRAM->extmem[ramAddr] = (uint16)ramAddr * (ramAddr - 1);
+    if (GPSRAM->extmem[ramAddr] != (uint16)ramAddr * (ramAddr - 1))
       return FALSE;
   }
   return TRUE;

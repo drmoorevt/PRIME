@@ -20,7 +20,8 @@
 #define FILE_ID TESTS_C
 
 //#define TESTS_MAX_SAMPLES (10240)
-#define TESTS_MAX_SAMPLES (10060)
+//#define TESTS_MAX_SAMPLES (10060)
+#define TESTS_MAX_SAMPLES (SRAM_NUM_CHANNEL_SAMPLES)
 
 typedef enum
 {
@@ -51,7 +52,8 @@ typedef struct
   uint8   channel;
   uint16  numSamples;
   boolean isSampling;
-  __attribute__((aligned)) uint16 adcBuffer[TESTS_MAX_SAMPLES];
+//  uint16  adcBuffer[TESTS_MAX_SAMPLES];
+  uint16  *pSampleBuffer;
 } Samples;
 
 typedef struct
@@ -59,7 +61,7 @@ typedef struct
   uint16 headerBytes;  // The size of this struct
   char   title[62];    // Title of this test
   uint16 timeScale;    // Time between samples in micro seconds
-  uint16 bytesPerChan; // Number of bytes to expect per channel
+  uint32 bytesPerChan; // Number of bytes to expect per channel
   uint16 numChannels;  // Total number of channels
 } TestHeader;
 
@@ -229,7 +231,7 @@ TestFunction testFunctions[] = { &Tests_test00,
 \**************************************************************************************************/
 void Tests_init(void)
 {
-  USBVCPCommConfig usbComm = {&sTests.comms.rxBuffer[0], &sTests.comms.txBuffer[0],
+  USBVCPCommConfig usbComm = {(uint8 *)&sTests.comms.rxBuffer[0], (uint8 *)&sTests.comms.txBuffer[0],
                               &Tests_notifyCommsEvent };
   Util_fillMemory(&sTests, sizeof(sTests), 0x00);
   Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
@@ -242,6 +244,11 @@ void Tests_init(void)
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
   USBVCP_openPort(usbComm);
   sTests.comms.portOpen = TRUE;
+  
+  sTests.adc1.pSampleBuffer        = &GPSRAM->adc.samples[0][0];
+  sTests.adc2.pSampleBuffer        = &GPSRAM->adc.samples[1][0];
+  sTests.adc3.pSampleBuffer        = &GPSRAM->adc.samples[2][0];
+  sTests.periphState.pSampleBuffer = &GPSRAM->adc.samples[3][0];
 }
 
 /**************************************************************************************************\
@@ -292,7 +299,7 @@ void Tests_receiveData(uint32 numBytes, uint32 timeout)
 void Tests_sendData(uint16 numBytes)
 {
   sTests.comms.transmitting = TRUE;
-  USBVCP_send(sTests.comms.txBuffer, numBytes);
+  USBVCP_send((uint8 *)&sTests.comms.txBuffer[0], numBytes);
   while(sTests.comms.transmitting);
 }
 
@@ -323,10 +330,11 @@ uint8 Tests_getTestToRun(void)
     testToRun = sTests.comms.rxBuffer[4];
     argCount  = sTests.comms.rxBuffer[5];
     size = MIN_PACKET_SIZE + argCount;
-    hasValidPacket = (0x0000 == CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, sTests.comms.rxBuffer, size));
+    hasValidPacket = (0x0000 == CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, 
+                      (uint8 *)&sTests.comms.rxBuffer, size));
   } while (!hasValidPacket);
 
-  Util_copyMemory(&sTests.comms.rxBuffer[6], sTests.testArgs.asBytes, argCount);
+  Util_copyMemory((uint8 *)&sTests.comms.rxBuffer[6], sTests.testArgs.asBytes, argCount);
   sTests.argCount = argCount;
   return testToRun;
 }
@@ -341,8 +349,9 @@ void Tests_notifySampleTrigger(void)
 {
   if (FALSE == sTests.periphState.isSampling)
     return;
-  if (sTests.periphState.numSamples < TESTS_MAX_SAMPLES)
-    sTests.periphState.adcBuffer[sTests.periphState.numSamples++] = sTests.getPeriphState();
+  if (sTests.periphState.numSamples++ < TESTS_MAX_SAMPLES)
+    *sTests.periphState.pSampleBuffer++ = sTests.getPeriphState();
+//    sTests.periphState.adcBuffer[sTests.periphState.numSamples++] = sTests.getPeriphState();
   else
     sTests.periphState.isSampling = FALSE;
 }
@@ -353,24 +362,21 @@ void Tests_notifySampleTrigger(void)
 * PARAMETERS  None
 * RETURNS     Nothing
 \**************************************************************************************************/
-void Tests_notifyConversionComplete(uint8 chan, uint16 numSamples)
+void Tests_notifyConversionComplete(uint8 chan, uint32 numSamples)
 {
   switch (chan)
   {
     case ADC_Channel_1:
       sTests.adc1.channel    = chan;
       sTests.adc1.isSampling = FALSE;
-      sTests.adc1.numSamples = sizeof(sTests.adc1.adcBuffer) / 2;
       break;
     case ADC_Channel_2:
       sTests.adc2.channel    = chan;
       sTests.adc2.isSampling = FALSE;
-      sTests.adc2.numSamples = sizeof(sTests.adc2.adcBuffer) / 2;
       break;
     case ADC_Channel_3:
       sTests.adc3.channel    = chan;
       sTests.adc3.isSampling = FALSE;
-      sTests.adc3.numSamples = sizeof(sTests.adc3.adcBuffer) / 2;
       break;
     default:
       break;
@@ -397,6 +403,7 @@ const uint8 resetMessage[6] = {'R','e','s','e','t','\n'};
 \**************************************************************************************************/
 void Tests_runTest14(void)
 {
+  uint16 testBuffer[20];
   double temperature, humidity;
   sTests.testArgs.test14Args.commonArgs.preTestDelayUs  = 100;
   sTests.testArgs.test14Args.commonArgs.sampleRate      = 1;
@@ -408,7 +415,8 @@ void Tests_runTest14(void)
   Tests_test14(&sTests.testArgs);
   temperature = HIH613X_getTemperature();
   humidity = HIH613X_getHumidity();
-  Tests_sendData(sprintf((char *)sTests.comms.txBuffer, "Temperature: %f, Humidity: %f\r\n", temperature, humidity));
+  Util_copyMemory((uint8 *)&GPSRAM->adc.samples[0][0], (uint8 *)testBuffer, 20);
+//  Tests_sendData(sprintf((char *)sTests.comms.txBuffer, "Temperature: %f, Humidity: %f\r\n", temperature, humidity));
 }
 
 /******************************** Test START,SEND,RESET protocol **********************************\
@@ -451,8 +459,8 @@ void Tests_run(void)
   
   // SDCard_test();
 //  Time_delay(1000*1000*5); // Let USB synchronize for 5s
-//  while (1)
-//    Tests_runTest14();
+  while (1)
+    Tests_runTest14();
   
   switch (sTests.state)
   {
@@ -471,10 +479,10 @@ void Tests_run(void)
         while ((0x88 != sTests.comms.rxBuffer[0]) &&  // Binary result ACK
                (0x54 != sTests.comms.rxBuffer[0]))    // Test reset request
         {
-          Tests_sendBinaryResults(&sTests.adc1);
-          Tests_sendBinaryResults(&sTests.adc2);
-          Tests_sendBinaryResults(&sTests.adc3);
-          Tests_sendBinaryResults(&sTests.periphState);
+          Tests_sendBinaryResults((Samples *)&sTests.adc1);
+          Tests_sendBinaryResults((Samples *)&sTests.adc2);
+          Tests_sendBinaryResults((Samples *)&sTests.adc3);
+          Tests_sendBinaryResults((Samples *)&sTests.periphState);
           Tests_receiveData(1, 0);
         }
       }
@@ -514,8 +522,8 @@ boolean Tests_sendHeaderInfo(void)
                     sizeof(ChanHeader));
     txBufOffset += sizeof(ChanHeader);
   }
-  crc = CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, sTests.comms.txBuffer, txBufOffset);
-  Util_copyMemory((uint8 *)&crc, &sTests.comms.txBuffer[txBufOffset], sizeof(crc));
+  crc = CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, (uint8 *)&sTests.comms.txBuffer, txBufOffset);
+  Util_copyMemory((uint8 *)&crc, (uint8 *)&sTests.comms.txBuffer[txBufOffset], sizeof(crc));
   txBufOffset += 2;
 
   while (FALSE == tfAck)
@@ -532,12 +540,12 @@ boolean Tests_sendHeaderInfo(void)
 
 void Tests_sendBinaryResults(Samples *adcBuffer)
 {
-  uint16 bytesToTransmit, bytesLeft;
-  uint8 *pData = (uint8 *)&adcBuffer->adcBuffer;
-  for (bytesLeft = sizeof(adcBuffer->adcBuffer); bytesLeft > 0; bytesLeft -= bytesToTransmit)
+  uint32 bytesToTransmit, bytesLeft;
+  uint8 *pData = (uint8 *)adcBuffer->pSampleBuffer;
+  for (bytesLeft = SRAM_NUM_CHANNEL_SAMPLES * 2; bytesLeft > 0; bytesLeft -= bytesToTransmit)
   {
     bytesToTransmit = MIN(sizeof(sTests.comms.txBuffer), bytesLeft);
-    Util_copyMemory(pData, sTests.comms.txBuffer, bytesToTransmit);
+    Util_copyMemory(pData, (uint8 *)&sTests.comms.txBuffer[0], bytesToTransmit);
     Tests_sendData(bytesToTransmit);
     pData+= bytesToTransmit;
   }
@@ -566,7 +574,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate, do
   adc1Config.adcConfig.numChannels        = 1;
   adc1Config.adcConfig.chan[0].chanNum    = ADC_Channel_1;
   adc1Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_15Cycles;
-  adc1Config.appSampleBuffer              = &sTests.adc1.adcBuffer[0];
+  adc1Config.appSampleBuffer              = sTests.adc1.pSampleBuffer;
   adc1Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
 
   // ADC2 sampling domain input current
@@ -575,7 +583,7 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate, do
   adc2Config.adcConfig.numChannels        = 1;
   adc2Config.adcConfig.chan[0].chanNum    = ADC_Channel_2;
   adc2Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_15Cycles;
-  adc2Config.appSampleBuffer              = &sTests.adc2.adcBuffer[0];
+  adc2Config.appSampleBuffer              = sTests.adc2.pSampleBuffer;
   adc2Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
 
   // ADC3 sampling domain output current
@@ -584,13 +592,13 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate, do
   adc3Config.adcConfig.numChannels        = 1;
   adc3Config.adcConfig.chan[0].chanNum    = ADC_Channel_3;
   adc3Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_15Cycles;
-  adc3Config.appSampleBuffer              = &sTests.adc3.adcBuffer[0];
+  adc3Config.appSampleBuffer              = sTests.adc3.pSampleBuffer;
   adc3Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
 
   // Prepare data structures for retrieval
   sTests.testHeader.timeScale = sampleRate; // in microseconds (60MHz clock)
   sTests.testHeader.numChannels = 4;
-  sTests.testHeader.bytesPerChan = TESTS_MAX_SAMPLES * 2;
+  sTests.testHeader.bytesPerChan = SRAM_NUM_CHANNEL_SAMPLES * 2;
   sTests.chanHeader[0].chanNum  = adc1Config.adcConfig.chan[0].chanNum;
   sTests.chanHeader[0].bitRes   = (3.3 / 4096.0) * 2;  // Voltage measurements are div2
   sTests.chanHeader[1].chanNum  = adc2Config.adcConfig.chan[0].chanNum;
@@ -627,10 +635,14 @@ static void Tests_setupSPITests(PeripheralChannels periph, uint32 sampleRate, do
   }
   sTests.periphState.channel = periph;        // For sorting out the state of the peripheral
   sTests.periphState.isSampling = TRUE;
-  sTests.periphState.numSamples = 0;
-  ADC_getSamples(ADC_PORT1, TESTS_MAX_SAMPLES); // Notify App when sample buffer is full
-  ADC_getSamples(ADC_PORT2, TESTS_MAX_SAMPLES);
-  ADC_getSamples(ADC_PORT3, TESTS_MAX_SAMPLES);
+  sTests.periphState.numSamples = 0;                  // incremented on each sample
+  
+  sTests.adc1.numSamples = SRAM_NUM_CHANNEL_SAMPLES;  // untouched by test
+  sTests.adc2.numSamples = SRAM_NUM_CHANNEL_SAMPLES;
+  sTests.adc3.numSamples = SRAM_NUM_CHANNEL_SAMPLES;
+  ADC_getSamples(ADC_PORT1, SRAM_NUM_CHANNEL_SAMPLES); // Will notify App when sample buffer is full
+  ADC_getSamples(ADC_PORT2, SRAM_NUM_CHANNEL_SAMPLES);
+  ADC_getSamples(ADC_PORT3, SRAM_NUM_CHANNEL_SAMPLES);
   sTests.adc1.isSampling = TRUE;
   sTests.adc2.isSampling = TRUE;
   sTests.adc3.isSampling = TRUE;
@@ -650,8 +662,10 @@ static void Tests_teardownSPITests(boolean testPassed)
   Analog_setDomain(SPI_DOMAIN, FALSE, 3.3);  // Immediately Disable the SPI domain
 
   // Then wait for any ongoing tests to complete
-//  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-  while (sTests.periphState.isSampling);
+  while(sTests.adc1.isSampling || 
+        sTests.adc2.isSampling || 
+        sTests.adc3.isSampling || 
+        sTests.periphState.isSampling);
   ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
   // Enable all previous interrupts
   ENABLE_SYSTICK_INTERRUPT();

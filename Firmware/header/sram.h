@@ -16,7 +16,7 @@ typedef union
 {
   struct
   {
-    uint16 samples[SRAM_NUM_CHANNELS][SRAM_NUM_CHANNEL_SAMPLES];
+    uint16 samples[SRAM_NUM_CHANNEL_SAMPLES][SRAM_NUM_CHANNELS];
     uint32 summations[SRAM_NUM_CHANNELS][SRAM_NUM_CHANNEL_SUMMATIONS];
   } adc;
   uint16 extmem[SRAM_ADDR];

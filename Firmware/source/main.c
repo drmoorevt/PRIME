@@ -48,7 +48,7 @@ void Main_run(void)
 
 void Main_error(void)
 {
-  while (TRUE);
+  while (!Main_powerOnSelfTest());
 }
 
 int main(void)

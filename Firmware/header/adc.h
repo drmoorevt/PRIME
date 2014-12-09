@@ -64,7 +64,7 @@ typedef struct
 {
   ADCConfig adcConfig;  // Not using this yet, but ultimately allow apps to decide these params
   uint16 *appSampleBuffer;
-  void  (*appNotifyConversionComplete)(uint8, uint16);
+  void  (*appNotifyConversionComplete)(uint8, uint32);
 } AppADCConfig;
 
 void ADC_init(void);
