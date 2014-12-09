@@ -73,13 +73,13 @@ boolean SRAM_setup(SRAMState state)
   GPIO_configurePins(GPIOG, &GPIO_InitStructure);
 
   /*-- FSMC Configuration ------------------------------------------------------*/
-  p.FSMC_AddressSetupTime = 0xF; // 5
-  p.FSMC_AddressHoldTime = 0xF;
-  p.FSMC_DataSetupTime = 0xFF; // 5
-  p.FSMC_BusTurnAroundDuration = 0xF;
-  p.FSMC_CLKDivision = 0xF;
-  p.FSMC_DataLatency = 0xF;
-  p.FSMC_AccessMode = FSMC_AccessMode_A;
+  p.FSMC_AddressSetupTime = 0x1; // 5
+  p.FSMC_AddressHoldTime = 0x1;
+  p.FSMC_DataSetupTime = 0x1; // 5
+  p.FSMC_BusTurnAroundDuration = 0x1;
+  p.FSMC_CLKDivision = 0x0;
+  p.FSMC_DataLatency = 0x0;
+  p.FSMC_AccessMode = FSMC_AccessMode_D;
 
   FSMC_NORSRAMInitStructure.FSMC_Bank = FSMC_Bank1_NORSRAM1; // changed
   FSMC_NORSRAMInitStructure.FSMC_DataAddressMux = FSMC_DataAddressMux_Enable;
@@ -111,9 +111,11 @@ boolean SRAM_test(void)
   uint32 ramAddr;
   for (ramAddr = 0; ramAddr < SRAM_ADDR; ramAddr++)
   {
-    GPSRAM->extmem[ramAddr] = (uint16)ramAddr * (ramAddr - 1);
-    if (GPSRAM->extmem[ramAddr] != (uint16)ramAddr * (ramAddr - 1))
-      return FALSE;
+    *(uint16 *)(0x60000000 + ramAddr) = 0xDEAD;
+//    GPSRAM->extmem[ramAddr] = 0xDEAD;
+//    GPSRAM->extmem[ramAddr] = (uint16)ramAddr * (ramAddr - 1);
+//    if (GPSRAM->extmem[ramAddr] != (uint16)ramAddr * (ramAddr - 1))
+//      return FALSE;
   }
   return TRUE;
 }
