@@ -6233,10 +6233,10 @@ Source: AVX .. aphvc.pdf</description>
 </class>
 </classes>
 <parts>
-<part name="FRAME1" library="frames" deviceset="FRAME_B_L" device=""/>
+<part name="FRAME1" library="frames" deviceset="FRAME_B_L" device="" value="LAB304 LLC"/>
 <part name="U1" library="Texas Instruments_By_element14_Batch_1" deviceset="TPS62240DRVTG4" device=""/>
-<part name="R1" library="rcl" deviceset="R-US_" device="R0603"/>
-<part name="R2" library="rcl" deviceset="R-US_" device="R0603"/>
+<part name="330K" library="rcl" deviceset="R-US_" device="R0603" value="360k"/>
+<part name="R2" library="rcl" deviceset="R-US_" device="R0603" value="82k"/>
 <part name="PE1" library="supply1" deviceset="PE" device=""/>
 <part name="C1" library="rcl" deviceset="C-US" device="C0603" value="33pF"/>
 <part name="C2" library="rcl" deviceset="C-US" device="C0603" value="4.7uF"/>
@@ -6247,21 +6247,21 @@ Source: AVX .. aphvc.pdf</description>
 <part name="C4" library="rcl" deviceset="C-US" device="C0603" value=".1uF"/>
 <part name="U2" library="My Library-adm" deviceset="MIC94325" device=""/>
 <part name="PE5" library="supply1" deviceset="PE" device=""/>
-<part name="R7" library="rcl" deviceset="R-US_" device="R0603"/>
+<part name="R7" library="rcl" deviceset="R-US_" device="R0603" value="130k"/>
 <part name="PE6" library="supply1" deviceset="PE" device=""/>
 <part name="C5" library="rcl" deviceset="C-US" device="C0603" value="10nF"/>
 <part name="C6" library="rcl" deviceset="C-US" device="C0603" value="4.7uF"/>
 <part name="PE7" library="supply1" deviceset="PE" device=""/>
 <part name="R10" library="rcl" deviceset="R-US_" device="R0603" value=".1R"/>
 <part name="PE9" library="supply1" deviceset="PE" device=""/>
-<part name="R3" library="rcl" deviceset="R-US_" device="R0603"/>
+<part name="R3" library="rcl" deviceset="R-US_" device="R0603" value="560k"/>
 <part name="L2" library="Bourns_By_element14_Batch_1" deviceset="PM1008-2R2K-RC" device="" value="2200 nH"/>
 <part name="PE10" library="supply1" deviceset="PE" device=""/>
 <part name="J1" library="LAB-ASDM300F" deviceset="SULLINSSMTHEADER-4" device=""/>
 <part name="J2" library="LAB-ASDM300F" deviceset="SULLINSSMTHEADER-4" device=""/>
 <part name="PE2" library="supply1" deviceset="PE" device=""/>
-<part name="R4" library="rcl" deviceset="R-US_" device="R0603"/>
-<part name="R5" library="rcl" deviceset="R-US_" device="R0603"/>
+<part name="R4" library="rcl" deviceset="R-US_" device="R0603" value="220k"/>
+<part name="R5" library="rcl" deviceset="R-US_" device="R0603" value="91k"/>
 </parts>
 <sheets>
 <sheet>
@@ -6270,6 +6270,10 @@ Source: AVX .. aphvc.pdf</description>
 Vref = .6V</text>
 <text x="261.62" y="154.94" size="1.778" layer="95">Vout = Vadj * (1 + R7 / R8)
 Vref = .1.1V</text>
+<text x="175.26" y="213.36" size="5.08" layer="95">NOTE: Vadj must be driven:
+Vadj = 0.0, Vout = 3.321
+Vadj = 3.3, Vout = 1.371</text>
+<text x="355.6" y="25.4" size="5.08" layer="94">LAB304 LLC</text>
 </plain>
 <instances>
 <instance part="FRAME1" gate="G$1" x="0" y="0"/>
@@ -6278,13 +6282,13 @@ Vref = .1.1V</text>
 <attribute name="NAME" x="147.3708" y="190.5508" size="2.0828" layer="95" ratio="10" rot="SR0"/>
 <attribute name="VALUE" x="147.5232" y="149.3774" size="2.0828" layer="96" ratio="10" rot="SR0"/>
 </instance>
-<instance part="R1" gate="G$1" x="205.74" y="177.8" smashed="yes" rot="R90">
-<attribute name="NAME" x="199.39" y="179.2986" size="1.778" layer="95"/>
-<attribute name="VALUE" x="209.042" y="173.99" size="1.778" layer="96" rot="R90"/>
+<instance part="330K" gate="G$1" x="205.74" y="177.8" smashed="yes" rot="R90">
+<attribute name="NAME" x="204.47" y="179.2986" size="1.778" layer="95" rot="MR0"/>
+<attribute name="VALUE" x="204.47" y="177.038" size="1.778" layer="96" rot="MR0"/>
 </instance>
 <instance part="R2" gate="G$1" x="205.74" y="162.56" smashed="yes" rot="R90">
-<attribute name="NAME" x="199.39" y="164.0586" size="1.778" layer="95"/>
-<attribute name="VALUE" x="209.042" y="158.75" size="1.778" layer="96" rot="R90"/>
+<attribute name="NAME" x="204.47" y="164.0586" size="1.778" layer="95" rot="MR0"/>
+<attribute name="VALUE" x="204.47" y="161.798" size="1.778" layer="96" rot="MR0"/>
 </instance>
 <instance part="PE1" gate="M" x="205.74" y="154.94" smashed="yes">
 <attribute name="VALUE" x="205.74" y="152.4" size="1.778" layer="96" rot="R180"/>
@@ -6328,8 +6332,8 @@ Vref = .1.1V</text>
 <attribute name="VALUE" x="248.92" y="152.4" size="1.778" layer="96" rot="R180"/>
 </instance>
 <instance part="R7" gate="G$1" x="307.34" y="177.8" smashed="yes" rot="R90">
-<attribute name="NAME" x="305.8414" y="173.99" size="1.778" layer="95" rot="R90"/>
-<attribute name="VALUE" x="310.642" y="173.99" size="1.778" layer="96" rot="R90"/>
+<attribute name="NAME" x="306.07" y="176.7586" size="1.778" layer="95" rot="MR0"/>
+<attribute name="VALUE" x="306.07" y="174.498" size="1.778" layer="96" rot="MR0"/>
 </instance>
 <instance part="PE6" gate="M" x="307.34" y="154.94" smashed="yes">
 <attribute name="VALUE" x="307.34" y="152.4" size="1.778" layer="96" rot="R180"/>
@@ -6366,8 +6370,8 @@ Vref = .1.1V</text>
 <instance part="J1" gate="G$1" x="137.16" y="200.66" smashed="yes">
 <attribute name="NAME" x="139.7" y="199.898" size="1.524" layer="95"/>
 </instance>
-<instance part="J1" gate="G$2" x="177.8" y="170.18" smashed="yes" rot="R180">
-<attribute name="NAME" x="175.26" y="170.942" size="1.524" layer="95" rot="R180"/>
+<instance part="J1" gate="G$2" x="210.82" y="203.2" smashed="yes" rot="R180">
+<attribute name="NAME" x="208.28" y="203.962" size="1.524" layer="95" rot="R180"/>
 </instance>
 <instance part="J1" gate="G$3" x="121.92" y="172.72" smashed="yes" rot="R180">
 <attribute name="NAME" x="119.38" y="173.482" size="1.524" layer="95" rot="R180"/>
@@ -6375,8 +6379,8 @@ Vref = .1.1V</text>
 <instance part="J1" gate="G$4" x="76.2" y="160.02" smashed="yes" rot="R180">
 <attribute name="NAME" x="73.66" y="160.782" size="1.524" layer="95" rot="R180"/>
 </instance>
-<instance part="J2" gate="G$1" x="383.54" y="200.66" smashed="yes" rot="MR180">
-<attribute name="NAME" x="386.08" y="201.422" size="1.524" layer="95" rot="MR180"/>
+<instance part="J2" gate="G$1" x="381" y="200.66" smashed="yes" rot="MR180">
+<attribute name="NAME" x="383.54" y="201.422" size="1.524" layer="95" rot="MR180"/>
 </instance>
 <instance part="J2" gate="G$2" x="76.2" y="157.48" smashed="yes" rot="MR0">
 <attribute name="NAME" x="73.66" y="156.718" size="1.524" layer="95" rot="MR0"/>
@@ -6395,8 +6399,8 @@ Vref = .1.1V</text>
 <attribute name="VALUE" x="295.91" y="166.878" size="1.778" layer="96"/>
 </instance>
 <instance part="R5" gate="G$1" x="307.34" y="162.56" smashed="yes" rot="R270">
-<attribute name="NAME" x="308.8386" y="166.37" size="1.778" layer="95" rot="R270"/>
-<attribute name="VALUE" x="304.038" y="166.37" size="1.778" layer="96" rot="R270"/>
+<attribute name="NAME" x="306.07" y="161.5186" size="1.778" layer="95" rot="MR0"/>
+<attribute name="VALUE" x="306.07" y="159.258" size="1.778" layer="96" rot="MR0"/>
 </instance>
 </instances>
 <busses>
@@ -6462,7 +6466,7 @@ Vref = .1.1V</text>
 </net>
 <net name="BUCKFB" class="0">
 <segment>
-<pinref part="R1" gate="G$1" pin="1"/>
+<pinref part="330K" gate="G$1" pin="1"/>
 <pinref part="R2" gate="G$1" pin="2"/>
 <wire x1="205.74" y1="172.72" x2="205.74" y2="170.18" width="0.1524" layer="91"/>
 <wire x1="205.74" y1="170.18" x2="205.74" y2="167.64" width="0.1524" layer="91"/>
@@ -6563,7 +6567,7 @@ Vref = .1.1V</text>
 </net>
 <net name="BUCKOUT" class="0">
 <segment>
-<pinref part="R1" gate="G$1" pin="2"/>
+<pinref part="330K" gate="G$1" pin="2"/>
 <wire x1="187.96" y1="182.88" x2="205.74" y2="182.88" width="0.1524" layer="91"/>
 <junction x="205.74" y="182.88"/>
 <wire x1="205.74" y1="182.88" x2="213.36" y2="182.88" width="0.1524" layer="91"/>
@@ -6584,11 +6588,6 @@ Vref = .1.1V</text>
 <junction x="213.36" y="182.88"/>
 <junction x="223.52" y="182.88"/>
 </segment>
-<segment>
-<pinref part="R4" gate="G$1" pin="1"/>
-<wire x1="294.64" y1="170.18" x2="281.94" y2="170.18" width="0.1524" layer="91"/>
-<label x="281.94" y="170.18" size="1.778" layer="95"/>
-</segment>
 </net>
 <net name="VOUT" class="0">
 <segment>
@@ -6604,17 +6603,9 @@ Vref = .1.1V</text>
 <net name="OUTCURRENT" class="0">
 <segment>
 <pinref part="U3" gate="G$2" pin="OUT"/>
-<wire x1="381" y1="200.66" x2="358.14" y2="200.66" width="0.1524" layer="91"/>
+<wire x1="378.46" y1="200.66" x2="358.14" y2="200.66" width="0.1524" layer="91"/>
 <pinref part="J2" gate="G$1" pin="S"/>
-<label x="381" y="200.66" size="1.778" layer="95" rot="MR0"/>
-</segment>
-</net>
-<net name="VADJ" class="0">
-<segment>
-<pinref part="R3" gate="G$1" pin="1"/>
-<wire x1="180.34" y1="170.18" x2="182.88" y2="170.18" width="0.1524" layer="91"/>
-<label x="162.56" y="137.16" size="1.778" layer="95"/>
-<pinref part="J1" gate="G$2" pin="S"/>
+<label x="378.46" y="200.66" size="1.778" layer="95" rot="MR0"/>
 </segment>
 </net>
 <net name="EN" class="0">
@@ -6623,6 +6614,23 @@ Vref = .1.1V</text>
 <wire x1="124.46" y1="172.72" x2="134.62" y2="172.72" width="0.1524" layer="91"/>
 <label x="124.46" y="172.72" size="1.778" layer="95"/>
 <pinref part="J1" gate="G$3" pin="S"/>
+</segment>
+</net>
+<net name="VADJ" class="0">
+<segment>
+<pinref part="J1" gate="G$2" pin="S"/>
+<wire x1="213.36" y1="203.2" x2="223.52" y2="203.2" width="0.1524" layer="91"/>
+<label x="223.52" y="203.2" size="1.778" layer="95" rot="MR0"/>
+</segment>
+<segment>
+<pinref part="R3" gate="G$1" pin="1"/>
+<wire x1="182.88" y1="170.18" x2="172.72" y2="170.18" width="0.1524" layer="91"/>
+<label x="172.72" y="170.18" size="1.778" layer="95"/>
+</segment>
+<segment>
+<pinref part="R4" gate="G$1" pin="1"/>
+<wire x1="294.64" y1="170.18" x2="284.48" y2="170.18" width="0.1524" layer="91"/>
+<label x="284.48" y="170.18" size="1.778" layer="95"/>
 </segment>
 </net>
 </nets>
