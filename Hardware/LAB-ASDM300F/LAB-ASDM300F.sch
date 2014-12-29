@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="6.5.0">
+<eagle version="6.6.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -6235,7 +6235,7 @@ Source: AVX .. aphvc.pdf</description>
 <parts>
 <part name="FRAME1" library="frames" deviceset="FRAME_B_L" device="" value="LAB304 LLC"/>
 <part name="U1" library="Texas Instruments_By_element14_Batch_1" deviceset="TPS62240DRVTG4" device=""/>
-<part name="330K" library="rcl" deviceset="R-US_" device="R0603" value="360k"/>
+<part name="R1" library="rcl" deviceset="R-US_" device="R0603" value="330k"/>
 <part name="R2" library="rcl" deviceset="R-US_" device="R0603" value="82k"/>
 <part name="PE1" library="supply1" deviceset="PE" device=""/>
 <part name="C1" library="rcl" deviceset="C-US" device="C0603" value="33pF"/>
@@ -6274,6 +6274,7 @@ Vref = .1.1V</text>
 Vadj = 0.0, Vout = 3.321
 Vadj = 3.3, Vout = 1.371</text>
 <text x="355.6" y="25.4" size="5.08" layer="94">LAB304 LLC</text>
+<text x="419.1" y="7.62" size="1.778" layer="94">2</text>
 </plain>
 <instances>
 <instance part="FRAME1" gate="G$1" x="0" y="0"/>
@@ -6282,7 +6283,7 @@ Vadj = 3.3, Vout = 1.371</text>
 <attribute name="NAME" x="147.3708" y="190.5508" size="2.0828" layer="95" ratio="10" rot="SR0"/>
 <attribute name="VALUE" x="147.5232" y="149.3774" size="2.0828" layer="96" ratio="10" rot="SR0"/>
 </instance>
-<instance part="330K" gate="G$1" x="205.74" y="177.8" smashed="yes" rot="R90">
+<instance part="R1" gate="G$1" x="205.74" y="177.8" smashed="yes" rot="R90">
 <attribute name="NAME" x="204.47" y="179.2986" size="1.778" layer="95" rot="MR0"/>
 <attribute name="VALUE" x="204.47" y="177.038" size="1.778" layer="96" rot="MR0"/>
 </instance>
@@ -6466,7 +6467,7 @@ Vadj = 3.3, Vout = 1.371</text>
 </net>
 <net name="BUCKFB" class="0">
 <segment>
-<pinref part="330K" gate="G$1" pin="1"/>
+<pinref part="R1" gate="G$1" pin="1"/>
 <pinref part="R2" gate="G$1" pin="2"/>
 <wire x1="205.74" y1="172.72" x2="205.74" y2="170.18" width="0.1524" layer="91"/>
 <wire x1="205.74" y1="170.18" x2="205.74" y2="167.64" width="0.1524" layer="91"/>
@@ -6567,7 +6568,7 @@ Vadj = 3.3, Vout = 1.371</text>
 </net>
 <net name="BUCKOUT" class="0">
 <segment>
-<pinref part="330K" gate="G$1" pin="2"/>
+<pinref part="R1" gate="G$1" pin="2"/>
 <wire x1="187.96" y1="182.88" x2="205.74" y2="182.88" width="0.1524" layer="91"/>
 <junction x="205.74" y="182.88"/>
 <wire x1="205.74" y1="182.88" x2="213.36" y2="182.88" width="0.1524" layer="91"/>

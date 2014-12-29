@@ -344,6 +344,7 @@ UsedLibrary="C:/Program Files (x86)/EAGLE-6.6.0/lbr/xilinx-xcv.lbr"
 UsedLibrary="C:/Program Files (x86)/EAGLE-6.6.0/lbr/zetex.lbr"
 UsedLibrary="C:/Program Files (x86)/EAGLE-6.6.0/lbr/zilog.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/My Library-adm.lbr"
+UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/micrel.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/smd-ipc-adm.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/Element14/3M_By_element14_Batch_1.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/Element14/ADI-Phase-2.lbr"
@@ -556,7 +557,6 @@ UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/Element14/W
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/Element14/Xilinx_By_element14_Batch_1.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/Element14/Yageo_By_element14_Batch_1.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/STMicro/micro-stm_v2.lbr"
-UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/SparkFun-Eagle-Libraries-master/SparkFun-PowerIC.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/SparkFun-Eagle-Libraries-master/LilyPad-Wearables.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/SparkFun-Eagle-Libraries-master/SparkFun-Aesthetics.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/SparkFun-Eagle-Libraries-master/SparkFun-AnalogIC.lbr"
@@ -570,19 +570,19 @@ UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/SparkFun-Ea
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/SparkFun-Eagle-Libraries-master/SparkFun-FreqCtrl.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/SparkFun-Eagle-Libraries-master/SparkFun-LED.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/SparkFun-Eagle-Libraries-master/SparkFun-Passives.lbr"
+UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/SparkFun-Eagle-Libraries-master/SparkFun-PowerIC.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/SparkFun-Eagle-Libraries-master/SparkFun-RF.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/SparkFun-Eagle-Libraries-master/SparkFun-Resistors.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/SparkFun-Eagle-Libraries-master/SparkFun-Retired.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/SparkFun-Eagle-Libraries-master/SparkFun-Sensors.lbr"
 UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/LAB-PEGMA/CAD/PEGMA.lbr"
-UsedLibrary="C:/Users/drmoore/Documents/PEGMA/Hardware/CAD Libraries/micrel.lbr"
 
 [Win_1]
 Type="Control Panel"
-Loc="286 710 1379 1468"
+Loc="1129 673 1728 1072"
 State=2
 Number=0
 
 [Desktop]
-Screen="7680 1600"
+Screen="2880 1800"
 Window="Win_1"
