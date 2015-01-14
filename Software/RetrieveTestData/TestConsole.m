@@ -1,6 +1,24 @@
 function [name, chans, data, time] = TestConsole(CommPort)
     close all
     
+    interval = 1;
+    delete(instrfindall);
+    s = openFixtureComms(CommPort, 115200);
+    
+    while (1)
+        pause(interval);
+        KBps = s.BytesAvailable / (1024 * interval);
+        flushinput(s);
+        fprintf('\nKBps: %10.4f, Kbps: %10.4f', KBps, KBps * 8);
+    end
+    while (1)
+        t1 = tic;
+        fread(s, 1024 * 1024);
+        tElapsed = toc(t1);
+        KBps = 1024 / tElapsed;
+        fprintf('\nKBps: %10.4f, Kbps: %10.4f', KBps, KBps * 8);
+    end
+    
     numSweeps = 100;
     eeFails = 0;
     sfFails = 0;
