@@ -13,3 +13,5 @@
 /Hardware/*.epf
 
 /Firmware/*.bak
+/Hardware/LAB-PPS330D/docs/SPICE/*.log
+/Hardware/LAB-PPS330D/docs/SPICE/*.raw
