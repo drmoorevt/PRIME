@@ -4,6 +4,7 @@
 #include "bluetooth.h"
 #include "dac.h"
 #include "eeprom.h"
+#include "esp8266.h"
 #include "gpio.h"
 #include "hih613x.h"
 #include "i2cbb.h"
@@ -28,14 +29,15 @@ void Main_init(void)
   Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
   Analog_setDomain(COMMS_DOMAIN,   TRUE, 3.3);  // Enable comms domain
   Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Disable SPI domain
+  Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Disable SPI domain
   Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
   Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
 }
 
 boolean Main_powerOnSelfTest(void)
 {
-  return SRAM_test();
+//  return SRAM_test();
+  return TRUE;
 }
 
 void Main_run(void)
@@ -59,20 +61,24 @@ int main(void)
   Analog_init();
   Main_init();
   UART_init();
+  ESP8266_init();
   Bluetooth_init();
   HIH613X_init();
   EEPROM_init();
   SerialFlash_init();
   SDCard_init();
   SPI_init();
-  SRAM_init();
+//  SRAM_init();
   I2CBB_init();
-  USBVCP_init();
-  Tests_init();
-  ZigBee_init();
+//  USBVCP_init();
+//  Tests_init();
+//  ZigBee_init();
   
-  if (Main_powerOnSelfTest())
-    Main_run();
-  else
-    Main_error();
+  while (1)
+    ESP8266_test();
+  
+//  if (Main_powerOnSelfTest())
+//    Main_run();
+//  else
+//    Main_error();
 }

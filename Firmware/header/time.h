@@ -67,7 +67,7 @@ void Time_startTimer(SoftTimerConfig timerConfig);
 uint32 Time_getTimerValue(SoftTimer timer);
 
 uint32 Time_getTimeOfday(void);
-uint32 Time_getSystemTime(void);
+uint64 Time_getSystemTime(void);
 boolean Time_isSecondBoundary(void);
 
 #endif //TIME_H

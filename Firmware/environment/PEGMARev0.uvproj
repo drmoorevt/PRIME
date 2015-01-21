@@ -441,6 +441,11 @@
               <FilePath>..\header\eeprom.h</FilePath>
             </File>
             <File>
+              <FileName>esp8266.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\esp8266.h</FilePath>
+            </File>
+            <File>
               <FileName>fsmc.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\header\fsmc.h</FilePath>
@@ -694,6 +699,11 @@
               <FileName>eeprom.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\source\eeprom.c</FilePath>
+            </File>
+            <File>
+              <FileName>esp8266.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\esp8266.c</FilePath>
             </File>
             <File>
               <FileName>fsmc.c</FileName>

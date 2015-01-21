@@ -459,8 +459,9 @@ void Tests_run(void)
   
   // SDCard_test();
 //  Time_delay(1000*1000*5); // Let USB synchronize for 5s
-  while (1)
-    Tests_runTest14();
+
+//  while (1)
+//    Tests_runTest14();
   
   switch (sTests.state)
   {

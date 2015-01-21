@@ -79,7 +79,7 @@ boolean SRAM_setup(SRAMState state)
   p.FSMC_BusTurnAroundDuration = 0x1;
   p.FSMC_CLKDivision = 0x0;
   p.FSMC_DataLatency = 0x0;
-  p.FSMC_AccessMode = FSMC_AccessMode_D;
+  p.FSMC_AccessMode = FSMC_AccessMode_A;
 
   FSMC_NORSRAMInitStructure.FSMC_Bank = FSMC_Bank1_NORSRAM1; // changed
   FSMC_NORSRAMInitStructure.FSMC_DataAddressMux = FSMC_DataAddressMux_Enable;
@@ -100,7 +100,7 @@ boolean SRAM_setup(SRAMState state)
 
   FSMC_NORSRAMInit(&FSMC_NORSRAMInitStructure);
 
-  /*!< Enable FSMC Bank1_SRAM2 Bank */
+  /*!< Enable FSMC Bank1_SRAM1 Bank */
   FSMC_NORSRAMCmd(FSMC_Bank1_NORSRAM1, ENABLE); // changed
   
   return TRUE;

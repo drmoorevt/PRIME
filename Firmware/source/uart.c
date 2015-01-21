@@ -214,8 +214,8 @@ boolean UART_openPort(UARTPort port, AppCommConfig config)
   if (ERROR == UART_getPortInfo(port, &pi))
     return ERROR; // Port does not exist
 
-  if (sUART.port[portToOpen].isConfigured)
-    return ERROR; // Port is already open, return error code
+//  if (sUART.port[portToOpen].isConfigured)
+//    return ERROR; // Port is already open, return error code
 
   /***** Configure the peripheral *****/
   *pi.periph.pClockReg |= pi.periph.clockEnableBit; // Enable port clocks
@@ -312,6 +312,9 @@ boolean UART_sendData(UARTPort port, uint8 *pSrc, uint16 numBytes)
   UART_getPortInfo(port, &portInfo);
 //  DMA_DeInit(portInfo.txStreamNumDMA);
   
+  // Turn off the peripheral ...?
+  sUART.port[port].pUART->CR1 &= (~USART_CR1_UE);
+  
   /***** Configure DMA TX transfers *****/
   DMA_StructInit(&dmaInit);
   dmaInit.DMA_Channel = portInfo.txChanNumDMA;
@@ -330,6 +333,8 @@ boolean UART_sendData(UARTPort port, uint8 *pSrc, uint16 numBytes)
   DMA_Cmd(portInfo.txStreamNumDMA, ENABLE, sUART.port[port].appConfig.appNotifyCommsEvent);
      
   sUART.port[port].pUART->CR1 |= USART_CR1_TE;            // Enable TX
+  sUART.port[port].pUART->CR1 |= USART_CR1_UE;            // Enable peripheral
+  
 //  sUART.port[port].commStatus.bytesToSend  = numBytes;
 //  sUART.port[port].commStatus.bytesSent = 0;
   
@@ -463,17 +468,17 @@ static uint16 Uart_calcBaudRateRegister(BaudRate baud)
   switch (baud)
   {
     case UART_BAUDRATE_2400:
-      return 0x30C0;  // 780
+      return 0x30C4;  // 781.25
     case UART_BAUDRATE_4800:
       return 0x1860;  // 390
     case UART_BAUDRATE_9600:
-      return 0x0C30;  // 195
+      return 0x0C35;  // 195 + .25 + .0625
     case UART_BAUDRATE_19200:
-      return 0x0618;  // 97.5
+      return 0x061B;  // 97.5 + .125 + .0625
     case UART_BAUDRATE_38400:
       return 0x030C;  // 48.75
     case UART_BAUDRATE_57600:
-      return 0x0208;  // 32.5
+      return 0x0209;  // 32.5 + .0625
     case UART_BAUDRATE_115200:
       return 0x0104;  // 16.25
     case UART_BAUDRATE_230400:

@@ -26,6 +26,8 @@ static struct
   void  (*notifyStream1Complete)(uint8, uint32);
   void  (*notifyStream2Complete)(uint8, uint32);
   void  (*notifyDMA1Stream0Complete)(uint8, uint32);
+  void  (*notifyDMA1Stream1Complete)(uint8, uint32);
+  void  (*notifyDMA1Stream3Complete)(uint8, uint32);
   void  (*notifyDMA1Stream7Complete)(uint8, uint32);
 } sDMA;
 
@@ -305,6 +307,10 @@ void DMA_Cmd(DMA_Stream_TypeDef* DMAy_Streamx, FunctionalState NewState, void (*
     sDMA.notifyStream2Complete = callback;
   else if (DMAy_Streamx == DMA1_Stream0)
     sDMA.notifyDMA1Stream0Complete = callback;
+  else if (DMAy_Streamx == DMA1_Stream1)
+    sDMA.notifyDMA1Stream1Complete = callback;
+  else if (DMAy_Streamx == DMA1_Stream3)
+    sDMA.notifyDMA1Stream3Complete = callback;
   else if (DMAy_Streamx == DMA1_Stream7)
     sDMA.notifyDMA1Stream7Complete = callback;
 
@@ -1175,6 +1181,44 @@ void DMA1_Stream0_IRQHandler(void)
   {
     DMA_ClearITPendingBit(DMA1_Stream0, DMA_IT_TCIF0);
     sDMA.notifyDMA1Stream0Complete(0, DMA1_Stream0->NDTR);
+  }
+}
+
+// USART3 RX, DMA1, Stream1 Channel 4
+void DMA1_Stream1_IRQHandler(void)
+{
+  if (DMA_GetITStatus(DMA1_Stream1, DMA_IT_TEIF1)) // Transfer error?
+    DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_TEIF1);
+    
+  if (DMA_GetITStatus(DMA1_Stream1, DMA_IT_FEIF1)) // FIFO error?
+    DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_FEIF1);
+    
+  if (DMA_GetITStatus(DMA1_Stream1, DMA_IT_HTIF1)) // Half transfer interrupt?
+    DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_HTIF1);
+
+  if (DMA_GetITStatus(DMA1_Stream1, DMA_IT_TCIF1)) // Transfer complete interrupt?
+  {
+    DMA_ClearITPendingBit(DMA1_Stream1, DMA_IT_TCIF1);
+    sDMA.notifyDMA1Stream1Complete(0, DMA1_Stream1->NDTR);
+  }
+}
+
+// USART3 TX, DMA1, Stream3 Channel 4
+void DMA1_Stream3_IRQHandler(void)
+{
+  if (DMA_GetITStatus(DMA1_Stream3, DMA_IT_TEIF3)) // Transfer error?
+    DMA_ClearITPendingBit(DMA1_Stream3, DMA_IT_TEIF3);
+    
+  if (DMA_GetITStatus(DMA1_Stream3, DMA_IT_FEIF3)) // FIFO error?
+    DMA_ClearITPendingBit(DMA1_Stream3, DMA_IT_FEIF3);
+    
+  if (DMA_GetITStatus(DMA1_Stream3, DMA_IT_HTIF3)) // Half transfer interrupt?
+    DMA_ClearITPendingBit(DMA1_Stream3, DMA_IT_HTIF3);
+
+  if (DMA_GetITStatus(DMA1_Stream3, DMA_IT_TCIF3)) // Transfer complete interrupt?
+  {
+    DMA_ClearITPendingBit(DMA1_Stream3, DMA_IT_TCIF3);
+    sDMA.notifyDMA1Stream3Complete(3, DMA1_Stream3->NDTR);
   }
 }
 

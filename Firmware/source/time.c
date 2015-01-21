@@ -203,7 +203,7 @@ uint32 Time_getTimerValue(SoftTimer timer)
 * PARAMETERS    none
 * RETURN        uint32 - systemTime
 \**************************************************************************************************/
-uint32 Time_getSystemTime(void)
+uint64 Time_getSystemTime(void)
 {
   uint32 sysTime;
   

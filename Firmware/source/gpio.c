@@ -74,7 +74,7 @@ void GPIO_structInitUART(GPIO_InitTypeDef* GPIO_InitStruct, uint16 pin, uint8 po
   /* Reset GPIO init structure parameters values */
   GPIO_InitStruct->GPIO_Pin      = pin;
   GPIO_InitStruct->GPIO_Mode     = GPIO_Mode_AF;
-  GPIO_InitStruct->GPIO_Speed    = GPIO_Speed_2MHz;
+  GPIO_InitStruct->GPIO_Speed    = GPIO_Speed_100MHz;
   GPIO_InitStruct->GPIO_OType    = GPIO_OType_PP;
   GPIO_InitStruct->GPIO_PuPd     = GPIO_PuPd_NOPULL;
   GPIO_InitStruct->GPIO_AltFunc  = (portNum < 3) ? GPIO_AF_UART1_3 : GPIO_AF_UART_4_6;
