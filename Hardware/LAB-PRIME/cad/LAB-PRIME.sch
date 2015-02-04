@@ -10535,6 +10535,129 @@ Source: http://www.ftdichip.com/Documents/DataSheets/DS_FT232R_v104.pdf</descrip
 </deviceset>
 </devicesets>
 </library>
+<library name="LAB304">
+<packages>
+<package name="LAB-ASDM300F">
+<description>&lt;B&gt;Dual In Line&lt;/B&gt;&lt;p&gt;
+package type P</description>
+<wire x1="0" y1="4.1275" x2="0" y2="0" width="0.1524" layer="21"/>
+<wire x1="0" y1="4.1275" x2="0" y2="6.6675" width="0.1524" layer="21" curve="180"/>
+<wire x1="18.415" y1="0" x2="0" y2="0" width="0.1524" layer="21"/>
+<wire x1="18.415" y1="0" x2="18.415" y2="10.795" width="0.1524" layer="21"/>
+<wire x1="0" y1="10.795" x2="18.415" y2="10.795" width="0.1524" layer="21"/>
+<wire x1="0" y1="10.795" x2="0" y2="6.6675" width="0.1524" layer="21"/>
+<pad name="1" x="5.3975" y="9.2075" drill="1.016" rot="R90"/>
+<pad name="2" x="5.3975" y="6.6675" drill="1.016" rot="R90"/>
+<pad name="3" x="5.3975" y="4.1275" drill="1.016" rot="R90"/>
+<pad name="4" x="5.3975" y="1.5875" drill="1.016" rot="R90"/>
+<pad name="5" x="13.0175" y="1.5875" drill="1.016"/>
+<pad name="6" x="13.0175" y="4.1275" drill="1.016"/>
+<pad name="7" x="13.0175" y="6.6675" drill="1.016"/>
+<pad name="8" x="13.0175" y="9.2075" drill="1.016"/>
+<text x="4.7625" y="11.1125" size="1.778" layer="25" ratio="10">&gt;NAME</text>
+<text x="4.7625" y="-2.2225" size="1.778" layer="27" ratio="10">&gt;VALUE</text>
+</package>
+<package name="LAB-PPS330D">
+<wire x1="0" y1="10.16" x2="0" y2="0" width="0.254" layer="21"/>
+<wire x1="10.16" y1="0" x2="0" y2="0" width="0.254" layer="21"/>
+<wire x1="10.16" y1="0" x2="10.16" y2="10.16" width="0.254" layer="21"/>
+<wire x1="0" y1="10.16" x2="4.445" y2="10.16" width="0.254" layer="21"/>
+<pad name="1" x="1.27" y="8.89" drill="1.016" rot="R90"/>
+<pad name="2" x="1.27" y="6.35" drill="1.016" rot="R90"/>
+<pad name="3" x="1.27" y="3.81" drill="1.016" rot="R90"/>
+<pad name="4" x="1.27" y="1.27" drill="1.016" rot="R90"/>
+<pad name="5" x="8.89" y="1.27" drill="1.016"/>
+<pad name="6" x="8.89" y="3.81" drill="1.016"/>
+<pad name="7" x="8.89" y="6.35" drill="1.016"/>
+<pad name="8" x="8.89" y="8.89" drill="1.016"/>
+<text x="0.635" y="10.4775" size="1.778" layer="25" ratio="10">&gt;NAME</text>
+<text x="0.3175" y="-2.2225" size="1.778" layer="27" ratio="10">&gt;VALUE</text>
+<wire x1="4.445" y1="10.16" x2="5.715" y2="10.16" width="0.254" layer="21"/>
+<wire x1="5.715" y1="10.16" x2="10.16" y2="10.16" width="0.254" layer="21"/>
+<wire x1="4.445" y1="10.16" x2="5.715" y2="10.16" width="0.254" layer="21" curve="180"/>
+<wire x1="4.7625" y1="9.8425" x2="5.3975" y2="9.8425" width="0.4064" layer="21"/>
+<wire x1="5.55625" y1="10.00125" x2="4.60375" y2="10.00125" width="0.4064" layer="21"/>
+</package>
+</packages>
+<symbols>
+<symbol name="LAB-ASDM300F">
+<wire x1="-10.16" y1="10.16" x2="-10.16" y2="-10.16" width="0.254" layer="94"/>
+<wire x1="-10.16" y1="-10.16" x2="10.16" y2="-10.16" width="0.254" layer="94"/>
+<wire x1="10.16" y1="-10.16" x2="10.16" y2="10.16" width="0.254" layer="94"/>
+<wire x1="10.16" y1="10.16" x2="-10.16" y2="10.16" width="0.254" layer="94"/>
+<pin name="I-IN" x="15.24" y="-2.54" length="middle" direction="out" rot="R180"/>
+<pin name="VADJ" x="-15.24" y="-7.62" length="middle" direction="in"/>
+<pin name="EN" x="-15.24" y="7.62" length="middle" direction="in"/>
+<pin name="GND" x="-15.24" y="-2.54" length="middle" direction="pwr"/>
+<pin name="I-OUT" x="15.24" y="2.54" length="middle" direction="out" rot="R180"/>
+<pin name="VOUT" x="15.24" y="7.62" length="middle" direction="out" rot="R180"/>
+<pin name="VIN" x="-15.24" y="2.54" length="middle" direction="pwr"/>
+<text x="-10.16" y="12.7" size="2.54" layer="95">&gt;Name</text>
+<text x="-10.16" y="-15.24" size="2.54" layer="95">&gt;Value</text>
+</symbol>
+<symbol name="LAB-PPS330D">
+<wire x1="-10.16" y1="10.16" x2="-10.16" y2="-10.16" width="0.254" layer="94"/>
+<wire x1="-10.16" y1="-10.16" x2="10.16" y2="-10.16" width="0.254" layer="94"/>
+<wire x1="10.16" y1="-10.16" x2="10.16" y2="10.16" width="0.254" layer="94"/>
+<wire x1="10.16" y1="10.16" x2="-10.16" y2="10.16" width="0.254" layer="94"/>
+<pin name="V0" x="-15.24" y="7.62" length="middle" direction="pwr"/>
+<pin name="V1" x="-15.24" y="2.54" length="middle" direction="in"/>
+<pin name="V2" x="-15.24" y="-2.54" length="middle" direction="in"/>
+<pin name="GND" x="-15.24" y="-7.62" length="middle" direction="pwr"/>
+<pin name="DGND" x="15.24" y="-7.62" length="middle" direction="out" rot="R180"/>
+<pin name="S0" x="15.24" y="-2.54" length="middle" direction="in" rot="R180"/>
+<pin name="S1" x="15.24" y="2.54" length="middle" direction="in" rot="R180"/>
+<pin name="VOUT" x="15.24" y="7.62" length="middle" direction="out" rot="R180"/>
+<text x="-10.16" y="12.7" size="2.54" layer="95">&gt;Name</text>
+<text x="-10.16" y="-15.24" size="2.54" layer="95">&gt;Value</text>
+</symbol>
+</symbols>
+<devicesets>
+<deviceset name="LAB-ADSM300F">
+<gates>
+<gate name="G$1" symbol="LAB-ASDM300F" x="0" y="0"/>
+</gates>
+<devices>
+<device name="" package="LAB-ASDM300F">
+<connects>
+<connect gate="G$1" pin="EN" pad="3"/>
+<connect gate="G$1" pin="GND" pad="4 6"/>
+<connect gate="G$1" pin="I-IN" pad="1"/>
+<connect gate="G$1" pin="I-OUT" pad="5"/>
+<connect gate="G$1" pin="VADJ" pad="2"/>
+<connect gate="G$1" pin="VIN" pad="8"/>
+<connect gate="G$1" pin="VOUT" pad="7"/>
+</connects>
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="LAB-PPS330D">
+<gates>
+<gate name="G$1" symbol="LAB-PPS330D" x="0" y="0"/>
+</gates>
+<devices>
+<device name="" package="LAB-PPS330D">
+<connects>
+<connect gate="G$1" pin="DGND" pad="5"/>
+<connect gate="G$1" pin="GND" pad="4"/>
+<connect gate="G$1" pin="S0" pad="6"/>
+<connect gate="G$1" pin="S1" pad="7"/>
+<connect gate="G$1" pin="V0" pad="3"/>
+<connect gate="G$1" pin="V1" pad="2"/>
+<connect gate="G$1" pin="V2" pad="1"/>
+<connect gate="G$1" pin="VOUT" pad="8"/>
+</connects>
+<technologies>
+<technology name=""/>
+</technologies>
+</device>
+</devices>
+</deviceset>
+</devicesets>
+</library>
 </libraries>
 <attributes>
 </attributes>
@@ -10632,6 +10755,14 @@ Source: http://www.ftdichip.com/Documents/DataSheets/DS_FT232R_v104.pdf</descrip
 <part name="FRAME2" library="frames" deviceset="FRAME_D_L" device=""/>
 <part name="IC3" library="memory-micron" deviceset="MT29F8G08DAA" device=""/>
 <part name="IC4" library="ftdichip" deviceset="FT232R" device="L"/>
+<part name="U$1" library="LAB304" deviceset="LAB-ADSM300F" device=""/>
+<part name="U$2" library="LAB304" deviceset="LAB-ADSM300F" device=""/>
+<part name="U$3" library="LAB304" deviceset="LAB-ADSM300F" device=""/>
+<part name="U$4" library="LAB304" deviceset="LAB-ADSM300F" device=""/>
+<part name="U$5" library="LAB304" deviceset="LAB-PPS330D" device=""/>
+<part name="U$6" library="LAB304" deviceset="LAB-PPS330D" device=""/>
+<part name="U$7" library="LAB304" deviceset="LAB-PPS330D" device=""/>
+<part name="U$8" library="LAB304" deviceset="LAB-PPS330D" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -10780,6 +10911,14 @@ Source: http://www.ftdichip.com/Documents/DataSheets/DS_FT232R_v104.pdf</descrip
 <instance part="FRAME2" gate="G$2" x="756.92" y="2.54"/>
 <instance part="IC3" gate="G$1" x="566.42" y="208.28"/>
 <instance part="IC4" gate="1" x="523.24" y="276.86"/>
+<instance part="U$1" gate="G$1" x="353.06" y="518.16"/>
+<instance part="U$2" gate="G$1" x="406.4" y="518.16"/>
+<instance part="U$3" gate="G$1" x="477.52" y="518.16"/>
+<instance part="U$4" gate="G$1" x="563.88" y="518.16"/>
+<instance part="U$5" gate="G$1" x="548.64" y="477.52"/>
+<instance part="U$6" gate="G$1" x="589.28" y="477.52"/>
+<instance part="U$7" gate="G$1" x="586.74" y="447.04"/>
+<instance part="U$8" gate="G$1" x="546.1" y="449.58"/>
 </instances>
 <busses>
 </busses>
