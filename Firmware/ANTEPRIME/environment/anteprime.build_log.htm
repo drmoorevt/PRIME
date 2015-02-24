@@ -1,0 +1,114 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Project:</h2>
+C:\Users\drmoore\Documents\PEGMA\Firmware\ANTEPRIME\environment\anteprime.uvproj
+Project File Date:  02/23/2015
+
+<h2>Output:</h2>
+  
+Warning: *** SUPPORT EXPIRED, NEW PRODUCT SERIAL NUMBER REQUIRED ***
+         *** Running with Code Size Limit: 32K                   ***
+Build target 'AntePrime'
+compiling main.c...
+..\source\main.c(61): error:  #20: identifier "BSP_DemoTypedef" is undefined
+  BSP_DemoTypedef BSP_examples[]=
+..\source\main.c(63): error:  #20: identifier "Touchscreen_demo" is undefined
+    {Touchscreen_demo, "TOUCHSCREEN", 0}, 
+..\source\main.c(64): error:  #20: identifier "LCD_demo" is undefined
+    {LCD_demo, "LCD", 0}, 
+..\source\main.c(65): error:  #20: identifier "Log_demo" is undefined
+    {Log_demo, "LCD LOG", 0},     
+..\source\main.c(66): error:  #20: identifier "MEMS_demo" is undefined
+    {MEMS_demo, "MEMS", 0}, 
+..\source\main.c(91): warning:  #223-D: function "HAL_Init" declared implicitly
+    HAL_Init();
+..\source\main.c(94): warning:  #223-D: function "BSP_LED_Init" declared implicitly
+    BSP_LED_Init(LED3);
+..\source\main.c(94): error:  #20: identifier "LED3" is undefined
+    BSP_LED_Init(LED3);
+..\source\main.c(95): error:  #20: identifier "LED4" is undefined
+    BSP_LED_Init(LED4); 
+..\source\main.c(101): warning:  #223-D: function "BSP_PB_Init" declared implicitly
+    BSP_PB_Init(BUTTON_KEY, BUTTON_MODE_EXTI);
+..\source\main.c(101): error:  #20: identifier "BUTTON_KEY" is undefined
+    BSP_PB_Init(BUTTON_KEY, BUTTON_MODE_EXTI);
+..\source\main.c(101): error:  #20: identifier "BUTTON_MODE_EXTI" is undefined
+    BSP_PB_Init(BUTTON_KEY, BUTTON_MODE_EXTI);
+..\source\main.c(105): warning:  #223-D: function "BSP_LCD_Init" declared implicitly
+    BSP_LCD_Init();
+..\source\main.c(108): warning:  #223-D: function "BSP_LCD_LayerDefaultInit" declared implicitly
+    BSP_LCD_LayerDefaultInit(1, LCD_FRAME_BUFFER);
+..\source\main.c(108): error:  #20: identifier "LCD_FRAME_BUFFER" is undefined
+    BSP_LCD_LayerDefaultInit(1, LCD_FRAME_BUFFER);
+..\source\main.c(115): warning:  #223-D: function "BSP_PB_GetState" declared implicitly
+      if(BSP_PB_GetState(BUTTON_KEY) == RESET)
+..\source\main.c(121): warning:  #223-D: function "COUNT_OF_EXAMPLE" declared implicitly
+        if(DemoIndex >= COUNT_OF_EXAMPLE(BSP_examples))
+..\source\main.c(156): error:  #20: identifier "RCC_ClkInitTypeDef" is undefined
+    RCC_ClkInitTypeDef RCC_ClkInitStruct;
+..\source\main.c(157): error:  #20: identifier "RCC_OscInitTypeDef" is undefined
+    RCC_OscInitTypeDef RCC_OscInitStruct;
+..\source\main.c(160): warning:  #223-D: function "__HAL_RCC_PWR_CLK_ENABLE" declared implicitly
+    __HAL_RCC_PWR_CLK_ENABLE();
+..\source\main.c(165): warning:  #223-D: function "__HAL_PWR_VOLTAGESCALING_CONFIG" declared implicitly
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+..\source\main.c(165): error:  #20: identifier "PWR_REGULATOR_VOLTAGE_SCALE1" is undefined
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+..\source\main.c(168): error:  #20: identifier "RCC_OSCILLATORTYPE_HSE" is undefined
+    RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+..\source\main.c(169): error:  #20: identifier "RCC_HSE_ON" is undefined
+    RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+..\source\main.c(170): error:  #20: identifier "RCC_PLL_ON" is undefined
+    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+..\source\main.c(171): error:  #20: identifier "RCC_PLLSOURCE_HSE" is undefined
+    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+..\source\main.c(174): error:  #20: identifier "RCC_PLLP_DIV2" is undefined
+    RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+..\source\main.c(176): warning:  #223-D: function "HAL_RCC_OscConfig" declared implicitly
+    HAL_RCC_OscConfig(&RCC_OscInitStruct);
+..\source\main.c(179): warning:  #223-D: function "HAL_PWREx_EnableOverDrive" declared implicitly
+    HAL_PWREx_EnableOverDrive();
+..\source\main.c(183): error:  #20: identifier "RCC_CLOCKTYPE_SYSCLK" is undefined
+    RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+..\source\main.c(183): error:  #20: identifier "RCC_CLOCKTYPE_HCLK" is undefined
+    RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+..\source\main.c(183): error:  #20: identifier "RCC_CLOCKTYPE_PCLK1" is undefined
+    RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+..\source\main.c(183): error:  #20: identifier "RCC_CLOCKTYPE_PCLK2" is undefined
+    RCC_ClkInitStruct.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
+..\source\main.c(184): error:  #20: identifier "RCC_SYSCLKSOURCE_PLLCLK" is undefined
+    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+..\source\main.c(185): error:  #20: identifier "RCC_SYSCLK_DIV1" is undefined
+    RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+..\source\main.c(186): error:  #20: identifier "RCC_HCLK_DIV4" is undefined
+    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;  
+..\source\main.c(187): error:  #20: identifier "RCC_HCLK_DIV2" is undefined
+    RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;  
+..\source\main.c(188): warning:  #223-D: function "HAL_RCC_ClockConfig" declared implicitly
+    HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5);
+..\source\main.c(188): error:  #20: identifier "FLASH_LATENCY_5" is undefined
+    HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5);
+..\source\main.c(201): warning:  #223-D: function "BSP_LCD_SelectLayer" declared implicitly
+    BSP_LCD_SelectLayer(1);
+..\source\main.c(203): warning:  #223-D: function "BSP_LCD_SetFont" declared implicitly
+    BSP_LCD_SetFont(&LCD_DEFAULT_FONT);
+..\source\main.c(203): error:  #20: identifier "LCD_DEFAULT_FONT" is undefined
+    BSP_LCD_SetFont(&LCD_DEFAULT_FONT);
+..\source\main.c(206): warning:  #223-D: function "BSP_LCD_SetBackColor" declared implicitly
+    BSP_LCD_SetBackColor(LCD_COLOR_WHITE); 
+..\source\main.c(206): error:  #20: identifier "LCD_COLOR_WHITE" is undefined
+    BSP_LCD_SetBackColor(LCD_COLOR_WHITE); 
+..\source\main.c(207): warning:  #223-D: function "BSP_LCD_Clear" declared implicitly
+    BSP_LCD_Clear(LCD_COLOR_WHITE);
+..\source\main.c(210): warning:  #223-D: function "BSP_LCD_SetTextColor" declared implicitly
+    BSP_LCD_SetTextColor(LCD_COLOR_DARKBLUE);  
+..\source\main.c(210): error:  #20: identifier "LCD_COLOR_DARKBLUE" is undefined
+    BSP_LCD_SetTextColor(LCD_COLOR_DARKBLUE);  
+..\source\main.c: 17 warnings, 30 errors
+"..\object\anteprime.axf" - 30 Error(s), 17 Warning(s).
+Target not created
+</pre>
+</body>
+</html>
