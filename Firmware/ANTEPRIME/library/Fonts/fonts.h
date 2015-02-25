@@ -1,11 +1,11 @@
 /**
   ******************************************************************************
-  * @file    system_stm32f4xx.h
+  * @file    fonts.h
   * @author  MCD Application Team
-  * @version V2.2.0
-  * @date    15-December-2014
-  * @brief   CMSIS Cortex-M4 Device System Source File for STM32F4xx devices.       
-  ******************************************************************************  
+  * @version V1.0.0
+  * @date    18-February-2014
+  * @brief   Header for fonts.c file
+  ******************************************************************************
   * @attention
   *
   * <h2><center>&copy; COPYRIGHT(c) 2014 STMicroelectronics</center></h2>
@@ -32,76 +32,75 @@
   * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
-  ******************************************************************************  
-  */ 
-
-/** @addtogroup CMSIS
-  * @{
+  ******************************************************************************
   */
 
-/** @addtogroup stm32f4xx_system
-  * @{
-  */  
-  
-/**
-  * @brief Define to prevent recursive inclusion
-  */
-#ifndef __SYSTEM_STM32F4XX_H
-#define __SYSTEM_STM32F4XX_H
+/* Define to prevent recursive inclusion -------------------------------------*/
+#ifndef __FONTS_H
+#define __FONTS_H
 
 #ifdef __cplusplus
  extern "C" {
-#endif 
+#endif
 
-/** @addtogroup STM32F4xx_System_Includes
-  * @{
-  */
+/* Includes ------------------------------------------------------------------*/
+#include <stdint.h>
 
-/**
-  * @}
-  */
-
-
-/** @addtogroup STM32F4xx_System_Exported_types
-  * @{
-  */
-  /* This variable is updated in three ways:
-      1) by calling CMSIS function SystemCoreClockUpdate()
-      2) by calling HAL API function HAL_RCC_GetSysClockFreq()
-      3) each time HAL_RCC_ClockConfig() is called to configure the system clock frequency 
-         Note: If you use this function to configure the system clock; then there
-               is no need to call the 2 first functions listed above, since SystemCoreClock
-               variable is updated automatically.
-  */
-extern uint32_t SystemCoreClock;          /*!< System Clock Frequency (Core Clock) */
-
-
-/**
-  * @}
-  */
-
-/** @addtogroup STM32F4xx_System_Exported_Constants
-  * @{
-  */
-
-/**
-  * @}
-  */
-
-/** @addtogroup STM32F4xx_System_Exported_Macros
-  * @{
-  */
-
-/**
-  * @}
-  */
-
-/** @addtogroup STM32F4xx_System_Exported_Functions
+/** @addtogroup Utilities
   * @{
   */
   
-extern void SystemInit(void);
-extern void SystemCoreClockUpdate(void);
+/** @addtogroup STM32_EVAL
+  * @{
+  */ 
+
+/** @addtogroup Common
+  * @{
+  */
+
+/** @addtogroup FONTS
+  * @{
+  */ 
+
+/** @defgroup FONTS_Exported_Types
+  * @{
+  */ 
+typedef struct _tFont
+{    
+  const uint8_t *table;
+  uint16_t Width;
+  uint16_t Height;
+  
+} sFONT;
+
+extern sFONT Font24;
+extern sFONT Font20;
+extern sFONT Font16;
+extern sFONT Font12;
+extern sFONT Font8;
+/**
+  * @}
+  */ 
+
+/** @defgroup FONTS_Exported_Constants
+  * @{
+  */ 
+#define LINE(x) ((x) * (((sFONT *)BSP_LCD_GetFont())->Height))
+
+/**
+  * @}
+  */ 
+
+/** @defgroup FONTS_Exported_Macros
+  * @{
+  */ 
+/**
+  * @}
+  */ 
+
+/** @defgroup FONTS_Exported_Functions
+  * @{
+  */ 
 /**
   * @}
   */
@@ -109,14 +108,27 @@ extern void SystemCoreClockUpdate(void);
 #ifdef __cplusplus
 }
 #endif
+  
+#endif /* __FONTS_H */
+ 
+/**
+  * @}
+  */
 
-#endif /*__SYSTEM_STM32F4XX_H */
+/**
+  * @}
+  */ 
 
 /**
   * @}
   */
-  
+
 /**
   * @}
-  */  
+  */
+
+/**
+  * @}
+  */      
+
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
