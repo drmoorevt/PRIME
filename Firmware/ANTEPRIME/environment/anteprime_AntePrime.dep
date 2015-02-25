@@ -1,14 +1,0 @@
-Dependencies for Project 'anteprime', Target 'AntePrime': (DO NOT MODIFY !)
-F (..\source\main.c)(0x54EBFDC6)(-c --cpu Cortex-M4.fp -D__EVAL -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I..\header -I..\library\Drivers\BSP\STM32F429I-Discovery -I..\library\Drivers\BSP\Components -I..\library\Drivers\CMSIS\Device\ST\STM32F4xx\Include -I..\library\Drivers\CMSIS\Include -I..\library\Drivers\CMSIS\Lib\ARM -I..\library\Drivers\STM32F4xx_HAL_Driver\Inc --C99-I C:\Keil\ARM\RV31\INC-I C:\Keil\ARM\CMSIS\Include-I C:\Keil\ARM\Inc\ST\STM32F4xx-DSTM32F429xx -DSTM32F429_439xx-o ..\object\main.o --omf_browse ..\object\main.crf --depend ..\object\main.d)
-I (..\header\main.h)(0x54EBFD8D)
-I (..\header\types.h)(0x54EBFDD6)
-I (C:\Keil\ARM\ARMCC\include\stdint.h)(0x51C86004)
-I (C:\Keil\ARM\Inc\ST\STM32F4xx\stm32f4xx.h)(0x532C8E0A)
-I (C:\Keil\ARM\CMSIS\Include\core_cm4.h)(0x532C9272)
-I (C:\Keil\ARM\CMSIS\Include\core_cmInstr.h)(0x532C9272)
-I (C:\Keil\ARM\CMSIS\Include\core_cmFunc.h)(0x532C9272)
-I (C:\Keil\ARM\CMSIS\Include\core_cm4_simd.h)(0x532C9272)
-I (C:\Keil\ARM\Inc\ST\STM32F4xx\system_stm32f4xx.h)(0x532C8E0A)
-F (..\header\main.h)(0x54EBFD8D)()
-F (..\header\stm32f4xx_hal_conf.h)(0x54DD7381)()
-F (..\header\types.h)(0x54EBFDD6)()
