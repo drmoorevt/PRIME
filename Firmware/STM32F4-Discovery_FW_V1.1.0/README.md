@@ -1,1 +1,0 @@
-This folder contains the firmware included on the STM32F429 discovery demo board.
