@@ -98,7 +98,7 @@ static void SystemClock_Config(void)
   HAL_RCC_OscConfig(&RCC_OscInitStruct);
 
   /* Activate the Over-Drive mode */
-  HAL_PWREx_EnableOverDrive();
+//  HAL_PWREx_EnableOverDrive();
     
   /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2 
      clocks dividers */

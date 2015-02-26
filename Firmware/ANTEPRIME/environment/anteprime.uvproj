@@ -715,6 +715,41 @@
             </File>
           </Files>
         </Group>
+        <Group>
+          <GroupName>Components</GroupName>
+          <Files>
+            <File>
+              <FileName>l3gd20.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\library\BSP\Components\l3gd20\l3gd20.c</FilePath>
+            </File>
+            <File>
+              <FileName>stmpe811.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\library\BSP\Components\stmpe811\stmpe811.c</FilePath>
+            </File>
+            <File>
+              <FileName>ili9341.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\library\BSP\Components\ili9341\ili9341.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f4xx_hal_pwr_ex.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\library\STM32F4xx_HAL_Driver\src\stm32f4xx_hal_pwr_ex.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f4xx_hal_rcc_ex.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\library\STM32F4xx_HAL_Driver\src\stm32f4xx_hal_rcc_ex.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f4xx_hal_flash_ex.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\library\STM32F4xx_HAL_Driver\src\stm32f4xx_hal_flash_ex.c</FilePath>
+            </File>
+          </Files>
+        </Group>
       </Groups>
     </Target>
   </Targets>
