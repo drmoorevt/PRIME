@@ -1,7 +1,9 @@
+#include "analog.h"
+#include "extmem.h"
 #include "main.h"
 #include "stm32f4xx.h"
-#include "stm32f4xx_hal.h"
 
+#include "stm32f4xx_hal.h"
 #include "stm32f429i_discovery.h"
 #include "stm32f429i_discovery_lcd.h"
 
@@ -9,23 +11,44 @@
 
 __IO uint8_t ubKeyPressed = RESET; 
 
+static struct
+{
+  boolean ramTest;
+  boolean adcTest;
+} sMain;
+
+void assert_failed(uint8_t* file, uint32_t line);
+  
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
 static void Display_DemoDescription(void);
 
+void SysTick_Handler(void)
+{
+  HAL_IncTick();
+}
+
+// setup ADC
+boolean Main_setupGPIO(void)
+{
+  GPIO_InitTypeDef configPortF = { .Pin       = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8,
+                                   .Mode      = GPIO_MODE_ANALOG,
+                                   .Pull      = GPIO_NOPULL,
+                                   .Speed     = GPIO_SPEED_LOW,
+                                   .Alternate = 0
+                                 };
+  (RCC->AHB1ENR |= (RCC_AHB1ENR_GPIOFEN));
+  HAL_GPIO_Init(GPIOF, &configPortF);
+  return TRUE;
+}
+
 int main(void)
 { 
-  /* STM32F4xx HAL library initialization:
-       - Configure the Flash prefetch, instruction and Data caches
-       - Configure the Systick to generate an interrupt each 1 msec
-       - Set NVIC Group Priority to 4
-       - Global MSP (MCU Support Package) initialization
-     */
   HAL_Init();
   
   /* Configure LED3 and LED4 */
   BSP_LED_Init(LED3);
-  BSP_LED_Init(LED4); 
+  BSP_LED_Init(LED4);
   
   /* Configure the system clock to 180 MHz */
   SystemClock_Config();
@@ -33,23 +56,22 @@ int main(void)
   /* Configure USER Button */
   BSP_PB_Init(BUTTON_KEY, BUTTON_MODE_EXTI);
   
-  /*##-1- Initialize the LCD #################################################*/
-  /* Initialize the LCD */
-  BSP_LCD_Init();
+  BSP_LCD_Init();                                 // Initialize the LCD
+  BSP_LCD_LayerDefaultInit(1, LCD_FRAME_BUFFER);  // Initialize the LCD Layers
+  Display_DemoDescription();                      // Display test information
   
-  /* Initialize the LCD Layers */
-  BSP_LCD_LayerDefaultInit(1, LCD_FRAME_BUFFER);
-  
-  Display_DemoDescription();
+  sMain.adcTest = Analog_testAnalogBandwidth();
+  sMain.ramTest = ExtMem_testSDRAM();
   
   /* Wait For User inputs */
   while (1)
-  {
+  {/*
     if(BSP_PB_GetState(BUTTON_KEY) == RESET)
     {
       while (BSP_PB_GetState(BUTTON_KEY) == RESET); // debounce
       // Go!
     }
+   */
   }
 }
 
@@ -132,9 +154,14 @@ static void Display_DemoDescription(void)
   BSP_LCD_SetTextColor(LCD_COLOR_DARKBLUE);  
   
   /* Display LCD messages */
-  BSP_LCD_DisplayStringAt(0, 10, (uint8_t*)"STM32F429I BSP", CENTER_MODE);
+  BSP_LCD_DisplayStringAt(0, 10, (uint8_t*)"AntePrime Demo", CENTER_MODE);
   BSP_LCD_SetFont(&Font16);
-  BSP_LCD_DisplayStringAt(0, 35, (uint8_t*)"Drivers examples", CENTER_MODE);
+  BSP_LCD_DisplayStringAt(0, 35, (uint8_t*)"Peripheral Tests", CENTER_MODE);
+  
+  if (sMain.ramTest)
+    BSP_LCD_DisplayStringAt(0, 60, (uint8_t*)"SDRAM tests passed", CENTER_MODE);
+  else
+    BSP_LCD_DisplayStringAt(0, 60, (uint8_t*)"SDRAM tests failed", CENTER_MODE);
   
   /* Draw Bitmap */
 //  BSP_LCD_DrawBitmap((BSP_LCD_GetXSize() - 80)/2, 65, (uint8_t *)stlogo);
@@ -197,7 +224,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
  }
 }
 
-#ifdef  USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.
@@ -215,4 +241,3 @@ void assert_failed(uint8_t* file, uint32_t line)
   {
   }
 }
-#endif
