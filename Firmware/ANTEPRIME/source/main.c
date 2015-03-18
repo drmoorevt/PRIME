@@ -60,8 +60,8 @@ int main(void)
   BSP_LCD_LayerDefaultInit(1, LCD_FRAME_BUFFER);  // Initialize the LCD Layers
   Display_DemoDescription();                      // Display test information
   
-  sMain.adcTest = Analog_testAnalogBandwidth();
   sMain.ramTest = ExtMem_testSDRAM();
+  sMain.adcTest = Analog_testAnalogBandwidth();
   
   /* Wait For User inputs */
   while (1)
