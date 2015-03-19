@@ -96,6 +96,12 @@ void dmaTransferError(struct __DMA_HandleTypeDef * hdma)
   
 }
 
+/**************************************************************************************************\
+* FUNCTION    Analog_dmaInit
+* DESCRIPTION Configures the ADCs to use DMA
+* PARAMETERS  None
+* RETURNS     Nothing
+\**************************************************************************************************/
 void Analog_dmaInit(AnalogAdcHandle handle)
 {
   DMAx_CLK_ENABLE(); /* Enable DMA2 clock */
@@ -137,8 +143,13 @@ void Analog_dmaInit(AnalogAdcHandle handle)
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 }
 
-// setup ADC
-boolean Main_setupADC(AnalogAdcHandle handle)
+/**************************************************************************************************\
+* FUNCTION    Analog_setupADC
+* DESCRIPTION Configures the ADCs to use DMA
+* PARAMETERS  None
+* RETURNS     Nothing
+\**************************************************************************************************/
+boolean Analog_setupADC(AnalogAdcHandle handle)
 {
   GPIO_InitTypeDef          GPIO_InitStruct;
   ADCx_CHANNEL_GPIO_CLK_ENABLE();/* Enable GPIO clock */
@@ -199,8 +210,13 @@ boolean Main_setupADC(AnalogAdcHandle handle)
   return TRUE;
 }
 
-// setup ADC
-boolean Main_setupTimer(void)
+/**************************************************************************************************\
+* FUNCTION    Analog_setupTimer
+* DESCRIPTION Configures the ADCs to use DMA
+* PARAMETERS  None
+* RETURNS     Nothing
+\**************************************************************************************************/
+boolean Analog_setupTimer(void)
 {
   sAnalog.adc.timHandle.Instance = TIM2;
   sAnalog.adc.timHandle.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -213,6 +229,14 @@ boolean Main_setupTimer(void)
   return TRUE;
 }
 
+/**************************************************************************************************\
+* FUNCTION    Analog_testAnalogBandwidth
+* DESCRIPTION Configures the ADCs to use DMA
+* PARAMETERS  None
+* RETURNS     Nothing
+* NOTES       This function configures the ADCs to DMA the results of 0x10 continuous transfers to
+              predefined locations in memory.
+\**************************************************************************************************/
 boolean Analog_testAnalogBandwidth(void)
 {
   uint32 ADC_NBR_SAMPLES   = 0x10;
@@ -220,9 +244,9 @@ boolean Analog_testAnalogBandwidth(void)
   uint16 *ADC2_SAMPLE_ADDR = (uint16 *)(ADC1_SAMPLE_ADDR + ADC_NBR_SAMPLES);
   uint16 *ADC3_SAMPLE_ADDR = (uint16 *)(ADC2_SAMPLE_ADDR + ADC_NBR_SAMPLES);
 
-  Main_setupADC(ANALOG_HANDLE_ADC_1);
-  Main_setupADC(ANALOG_HANDLE_ADC_2);
-  Main_setupADC(ANALOG_HANDLE_ADC_3);
+  Analog_setupADC(ANALOG_HANDLE_ADC_1);
+  Analog_setupADC(ANALOG_HANDLE_ADC_2);
+  Analog_setupADC(ANALOG_HANDLE_ADC_3);
 //  Main_setupTimer();
 
   if(HAL_ADC_Start_DMA(&sAnalog.adc.adcHandle[ANALOG_HANDLE_ADC_1], (uint32 *)ADC1_SAMPLE_ADDR, ADC_NBR_SAMPLES) != HAL_OK)

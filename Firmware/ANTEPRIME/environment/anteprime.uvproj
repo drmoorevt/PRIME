@@ -713,6 +713,11 @@
               <FileType>1</FileType>
               <FilePath>..\library\STM32F4xx_HAL_Driver\src\stm32f4xx_ll_usb.c</FilePath>
             </File>
+            <File>
+              <FileName>stm32f4xx_hal_dac_ex.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\library\STM32F4xx_HAL_Driver\src\stm32f4xx_hal_dac_ex.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

@@ -42,6 +42,12 @@ boolean Main_setupGPIO(void)
   return TRUE;
 }
 
+/**************************************************************************************************\
+* FUNCTION    main
+* DESCRIPTION Program entry point
+* PARAMETERS  None
+* RETURNS     Nothing
+\**************************************************************************************************/
 int main(void)
 { 
   HAL_Init();
