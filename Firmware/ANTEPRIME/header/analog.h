@@ -13,6 +13,7 @@
 #define ADCx_CLK_ENABLE()               __HAL_RCC_ADC3_CLK_ENABLE()
 #define DMAx_CLK_ENABLE()               __HAL_RCC_DMA2_CLK_ENABLE()
 #define ADCx_CHANNEL_GPIO_CLK_ENABLE()  __HAL_RCC_GPIOC_CLK_ENABLE()
+#define DACx_CHANNEL_GPIO_CLK_ENABLE()  __HAL_RCC_GPIOC_CLK_ENABLE()
 
 #define ADCx_FORCE_RESET()              __HAL_RCC_ADC_FORCE_RESET()
 #define ADCx_RELEASE_RESET()            __HAL_RCC_ADC_RELEASE_RESET()
@@ -27,5 +28,6 @@
 
 
 boolean Analog_testAnalogBandwidth(void);
+boolean Analog_testDAC(void);
 
 #endif /* HEADER_ANALOG_H_ */

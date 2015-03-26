@@ -247,7 +247,7 @@ boolean Analog_testAnalogBandwidth(void)
   Analog_setupADC(ANALOG_HANDLE_ADC_1);
   Analog_setupADC(ANALOG_HANDLE_ADC_2);
   Analog_setupADC(ANALOG_HANDLE_ADC_3);
-//  Main_setupTimer();
+//  Analog_setupTimer();
 
   if(HAL_ADC_Start_DMA(&sAnalog.adc.adcHandle[ANALOG_HANDLE_ADC_1], (uint32 *)ADC1_SAMPLE_ADDR, ADC_NBR_SAMPLES) != HAL_OK)
     Error_Handler();
@@ -255,6 +255,86 @@ boolean Analog_testAnalogBandwidth(void)
     Error_Handler();
   if(HAL_ADC_Start_DMA(&sAnalog.adc.adcHandle[ANALOG_HANDLE_ADC_3], (uint32 *)ADC3_SAMPLE_ADDR, ADC_NBR_SAMPLES) != HAL_OK)
     Error_Handler();
+
+  return TRUE;
+}
+
+/**************************************************************************************************\
+* FUNCTION    Analog_setupDAC
+* DESCRIPTION Sets up the DAC to output analog voltages
+* PARAMETERS  None
+* RETURNS     Nothing
+\**************************************************************************************************/
+boolean Analog_setupDAC(AnalogDacHandle handle)
+{
+  
+}
+
+/**************************************************************************************************\
+* FUNCTION    Analog_testAnalogBandwidth
+* DESCRIPTION Configures the ADCs to use DMA
+* PARAMETERS  None
+* RETURNS     Nothing
+* NOTES       This function configures the ADCs to DMA the results of 0x10 continuous transfers to
+              predefined locations in memory.
+\**************************************************************************************************/
+boolean Analog_testDAC(void)
+{
+  GPIO_InitTypeDef          GPIO_InitStruct;
+  ADCx_CHANNEL_GPIO_CLK_ENABLE();/* Enable GPIO clock */
+  /* ADC3 Channel5 GPIO pin configuration */
+  GPIO_InitStruct.Pin  = ADCx_CHANNEL_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  ADC_ChannelConfTypeDef chanConfig;
+  /*##-1- Configure the ADC peripheral #######################################*/
+  sAnalog.adc.adcHandle[handle].Init.ClockPrescaler        = ADC_CLOCKPRESCALER_PCLK_DIV2;
+  sAnalog.adc.adcHandle[handle].Init.Resolution            = ADC_RESOLUTION_12B;
+  sAnalog.adc.adcHandle[handle].Init.ScanConvMode          = DISABLE;
+  sAnalog.adc.adcHandle[handle].Init.ContinuousConvMode    = ENABLE;
+  sAnalog.adc.adcHandle[handle].Init.DiscontinuousConvMode = DISABLE;
+  sAnalog.adc.adcHandle[handle].Init.NbrOfDiscConversion   = 0;
+  sAnalog.adc.adcHandle[handle].Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  sAnalog.adc.adcHandle[handle].Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T1_CC1;
+  sAnalog.adc.adcHandle[handle].Init.DataAlign             = ADC_DATAALIGN_RIGHT;
+  sAnalog.adc.adcHandle[handle].Init.NbrOfConversion       = 1;
+  sAnalog.adc.adcHandle[handle].Init.DMAContinuousRequests = DISABLE;
+  sAnalog.adc.adcHandle[handle].Init.EOCSelection          = DISABLE;
+
+  /*##-2- Configure ADC regular channel ######################################*/
+  switch (handle)
+  {
+    case ANALOG_HANDLE_ADC_1:
+      sAnalog.adc.adcHandle[handle].Instance = ADC1;
+      (RCC->APB2ENR |= (RCC_APB2ENR_ADC1EN));
+      chanConfig.Channel = ADC_CHANNEL_14; // GPIO_PIN_4 (PortC)
+      break;
+    case ANALOG_HANDLE_ADC_2:
+      sAnalog.adc.adcHandle[handle].Instance = ADC2;
+      (RCC->APB2ENR |= (RCC_APB2ENR_ADC2EN));
+      chanConfig.Channel = ADC_CHANNEL_15; // GPIO_PIN_5 (PortC)
+      break;
+    case ANALOG_HANDLE_ADC_3:
+      sAnalog.adc.adcHandle[handle].Instance = ADC3;
+      (RCC->APB2ENR |= (RCC_APB2ENR_ADC3EN));
+      chanConfig.Channel = ADC_CHANNEL_11; // GPIO_PIN_1 (PortC)
+      break;
+    default:
+      break;
+  }
+  chanConfig.Rank = 1;
+  chanConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  chanConfig.Offset = 0;
+
+  Analog_dmaInit(handle);
+
+  if(HAL_ADC_Init(&sAnalog.adc.adcHandle[handle]) != HAL_OK)
+    Error_Handler(); /* Initialization Error */
+
+  if(HAL_ADC_ConfigChannel(&sAnalog.adc.adcHandle[handle], &chanConfig) != HAL_OK)
+    Error_Handler(); /* Channel Configuration Error */
 
   return TRUE;
 }

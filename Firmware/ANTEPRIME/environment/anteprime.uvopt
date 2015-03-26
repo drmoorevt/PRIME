@@ -263,10 +263,10 @@
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <Focus>0</Focus>
-      <ColumnNumber>29</ColumnNumber>
+      <ColumnNumber>8</ColumnNumber>
       <tvExpOptDlg>0</tvExpOptDlg>
-      <TopLine>35</TopLine>
-      <CurrentLine>62</CurrentLine>
+      <TopLine>47</TopLine>
+      <CurrentLine>66</CurrentLine>
       <bDave2>0</bDave2>
       <PathWithFileName>..\source\main.c</PathWithFileName>
       <FilenameWithoutPath>main.c</FilenameWithoutPath>
@@ -279,10 +279,10 @@
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <Focus>0</Focus>
-      <ColumnNumber>0</ColumnNumber>
+      <ColumnNumber>6</ColumnNumber>
       <tvExpOptDlg>0</tvExpOptDlg>
-      <TopLine>185</TopLine>
-      <CurrentLine>231</CurrentLine>
+      <TopLine>222</TopLine>
+      <CurrentLine>223</CurrentLine>
       <bDave2>0</bDave2>
       <PathWithFileName>..\source\analog.c</PathWithFileName>
       <FilenameWithoutPath>analog.c</FilenameWithoutPath>
@@ -385,7 +385,7 @@
       <Focus>0</Focus>
       <ColumnNumber>0</ColumnNumber>
       <tvExpOptDlg>0</tvExpOptDlg>
-      <TopLine>177</TopLine>
+      <TopLine>178</TopLine>
       <CurrentLine>198</CurrentLine>
       <bDave2>0</bDave2>
       <PathWithFileName>..\startup\startup_stm32f429xx.s</PathWithFileName>
@@ -495,10 +495,10 @@
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <Focus>0</Focus>
-      <ColumnNumber>0</ColumnNumber>
+      <ColumnNumber>26</ColumnNumber>
       <tvExpOptDlg>0</tvExpOptDlg>
-      <TopLine>1</TopLine>
-      <CurrentLine>1</CurrentLine>
+      <TopLine>1183</TopLine>
+      <CurrentLine>1223</CurrentLine>
       <bDave2>0</bDave2>
       <PathWithFileName>..\library\BSP\STM32F429I-Discovery\stm32f429i_discovery_lcd.c</PathWithFileName>
       <FilenameWithoutPath>stm32f429i_discovery_lcd.c</FilenameWithoutPath>
@@ -513,8 +513,8 @@
       <Focus>0</Focus>
       <ColumnNumber>0</ColumnNumber>
       <tvExpOptDlg>0</tvExpOptDlg>
-      <TopLine>347</TopLine>
-      <CurrentLine>384</CurrentLine>
+      <TopLine>260</TopLine>
+      <CurrentLine>284</CurrentLine>
       <bDave2>0</bDave2>
       <PathWithFileName>..\library\BSP\STM32F429I-Discovery\stm32f429i_discovery_sdram.c</PathWithFileName>
       <FilenameWithoutPath>stm32f429i_discovery_sdram.c</FilenameWithoutPath>
@@ -633,7 +633,7 @@
       <Focus>0</Focus>
       <ColumnNumber>60</ColumnNumber>
       <tvExpOptDlg>0</tvExpOptDlg>
-      <TopLine>450</TopLine>
+      <TopLine>451</TopLine>
       <CurrentLine>493</CurrentLine>
       <bDave2>0</bDave2>
       <PathWithFileName>..\library\STM32F4xx_HAL_Driver\src\stm32f4xx_hal_dac.c</PathWithFileName>
@@ -1081,7 +1081,7 @@
       <Focus>0</Focus>
       <ColumnNumber>0</ColumnNumber>
       <tvExpOptDlg>0</tvExpOptDlg>
-      <TopLine>4386</TopLine>
+      <TopLine>4387</TopLine>
       <CurrentLine>4405</CurrentLine>
       <bDave2>0</bDave2>
       <PathWithFileName>..\library\STM32F4xx_HAL_Driver\src\stm32f4xx_hal_tim.c</PathWithFileName>
@@ -1329,7 +1329,7 @@
       <Focus>0</Focus>
       <ColumnNumber>27</ColumnNumber>
       <tvExpOptDlg>0</tvExpOptDlg>
-      <TopLine>453</TopLine>
+      <TopLine>454</TopLine>
       <CurrentLine>491</CurrentLine>
       <bDave2>0</bDave2>
       <PathWithFileName>..\library\STM32F4xx_HAL_Driver\src\stm32f4xx_hal_adc_ex.c</PathWithFileName>

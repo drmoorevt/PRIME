@@ -15,6 +15,7 @@ static struct
 {
   boolean ramTest;
   boolean adcTest;
+  boolean dacTest;
 } sMain;
 
 void assert_failed(uint8_t* file, uint32_t line);
@@ -68,6 +69,7 @@ int main(void)
   
   sMain.ramTest = ExtMem_testSDRAM();
   sMain.adcTest = Analog_testAnalogBandwidth();
+  sMain.dacTest = Analog_testDAC();
   
   /* Wait For User inputs */
   while (1)
