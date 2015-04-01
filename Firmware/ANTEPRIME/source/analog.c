@@ -14,7 +14,7 @@ typedef enum
 {
   ANALOG_HANDLE_DAC_1   = 0,
   ANALOG_HANDLE_DAC_2   = 1,
-  ANALOG_HANDLE_DAC_MAX = 3,
+  ANALOG_HANDLE_DAC_MAX = 2,
 } AnalogDacHandle;
 
 static struct
@@ -64,6 +64,7 @@ void DMA2_Stream0_IRQHandler(void)
 \**************************************************************************************************/
 void DMA2_Stream1_IRQHandler(void)
 {
+  HAL_DMA_IRQHandler(sAnalog.adc.adcHandle[ANALOG_HANDLE_ADC_3].DMA_Handle);
   return;
 }
 
@@ -76,24 +77,8 @@ void DMA2_Stream1_IRQHandler(void)
 \**************************************************************************************************/
 void DMA2_Stream2_IRQHandler(void)
 {
+  HAL_DMA_IRQHandler(sAnalog.adc.adcHandle[ANALOG_HANDLE_ADC_2].DMA_Handle);
   return;
-}
-
-void dmaTransferComplete(struct __DMA_HandleTypeDef * hdma)
-{
-  
-}
-void dmaTransferHalfComplete(struct __DMA_HandleTypeDef * hdma)
-{
-  
-}
-void dmaTransferM1Complete(struct __DMA_HandleTypeDef * hdma)
-{
-  
-}
-void dmaTransferError(struct __DMA_HandleTypeDef * hdma)
-{
-  
 }
 
 /**************************************************************************************************\
@@ -151,13 +136,18 @@ void Analog_dmaInit(AnalogAdcHandle handle)
 \**************************************************************************************************/
 boolean Analog_setupADC(AnalogAdcHandle handle)
 {
-  GPIO_InitTypeDef          GPIO_InitStruct;
+  GPIO_InitTypeDef          GPIOA_InitStruct;
+  GPIO_InitTypeDef          GPIOC_InitStruct;
   ADCx_CHANNEL_GPIO_CLK_ENABLE();/* Enable GPIO clock */
   /* ADC3 Channel5 GPIO pin configuration */
-  GPIO_InitStruct.Pin  = ADCx_CHANNEL_PIN;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  GPIOA_InitStruct.Pin  = ADCA_CHANNEL_PIN;
+  GPIOA_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIOA_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIOA_InitStruct);
+  GPIOA_InitStruct.Pin  = ADCC_CHANNEL_PIN;
+  GPIOA_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIOA_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIOC_InitStruct);
 
   ADC_ChannelConfTypeDef chanConfig;
   /*##-1- Configure the ADC peripheral #######################################*/
@@ -267,7 +257,32 @@ boolean Analog_testAnalogBandwidth(void)
 \**************************************************************************************************/
 boolean Analog_setupDAC(AnalogDacHandle handle)
 {
+  GPIO_InitTypeDef          GPIO_InitStruct;
   
+  if (ANALOG_HANDLE_DAC_2 != handle)
+    return FALSE;  // Can only output on DAC_OUT_2 on the Discovery Board
+  
+  __HAL_RCC_DAC_CLK_ENABLE();
+  
+  DACx_CHANNEL_GPIO_CLK_ENABLE();/* Enable GPIO clock for DAC_OUT_2 */
+  /* ADC3 Channel5 GPIO pin configuration */
+  GPIO_InitStruct.Pin  = DACx_CHANNEL_PIN;
+  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(DACx_CHANNEL_GPIO_PORT, &GPIO_InitStruct);
+
+  DAC_ChannelConfTypeDef chanConfig = {DAC_TRIGGER_SOFTWARE, DAC_OUTPUTBUFFER_ENABLE};
+  
+  sAnalog.dac.dacHandle[handle].Instance = DAC;
+  HAL_DAC_Init(&sAnalog.dac.dacHandle[handle]);
+  HAL_DAC_ConfigChannel(&sAnalog.dac.dacHandle[handle], &chanConfig, DAC_CHANNEL_2);
+
+  /*##-4- Configure the NVIC for DMA #########################################*/
+  /* Enable the DMA1 Stream5 IRQ Channel */
+//  HAL_NVIC_SetPriority(DACx_DMA_IRQn1, 2, 0);
+//  HAL_NVIC_EnableIRQ(DACx_DMA_IRQn1);
+  
+  return TRUE;
 }
 
 /**************************************************************************************************\
@@ -280,61 +295,12 @@ boolean Analog_setupDAC(AnalogDacHandle handle)
 \**************************************************************************************************/
 boolean Analog_testDAC(void)
 {
-  GPIO_InitTypeDef          GPIO_InitStruct;
-  ADCx_CHANNEL_GPIO_CLK_ENABLE();/* Enable GPIO clock */
-  /* ADC3 Channel5 GPIO pin configuration */
-  GPIO_InitStruct.Pin  = ADCx_CHANNEL_PIN;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  ADC_ChannelConfTypeDef chanConfig;
-  /*##-1- Configure the ADC peripheral #######################################*/
-  sAnalog.adc.adcHandle[handle].Init.ClockPrescaler        = ADC_CLOCKPRESCALER_PCLK_DIV2;
-  sAnalog.adc.adcHandle[handle].Init.Resolution            = ADC_RESOLUTION_12B;
-  sAnalog.adc.adcHandle[handle].Init.ScanConvMode          = DISABLE;
-  sAnalog.adc.adcHandle[handle].Init.ContinuousConvMode    = ENABLE;
-  sAnalog.adc.adcHandle[handle].Init.DiscontinuousConvMode = DISABLE;
-  sAnalog.adc.adcHandle[handle].Init.NbrOfDiscConversion   = 0;
-  sAnalog.adc.adcHandle[handle].Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  sAnalog.adc.adcHandle[handle].Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T1_CC1;
-  sAnalog.adc.adcHandle[handle].Init.DataAlign             = ADC_DATAALIGN_RIGHT;
-  sAnalog.adc.adcHandle[handle].Init.NbrOfConversion       = 1;
-  sAnalog.adc.adcHandle[handle].Init.DMAContinuousRequests = DISABLE;
-  sAnalog.adc.adcHandle[handle].Init.EOCSelection          = DISABLE;
-
-  /*##-2- Configure ADC regular channel ######################################*/
-  switch (handle)
-  {
-    case ANALOG_HANDLE_ADC_1:
-      sAnalog.adc.adcHandle[handle].Instance = ADC1;
-      (RCC->APB2ENR |= (RCC_APB2ENR_ADC1EN));
-      chanConfig.Channel = ADC_CHANNEL_14; // GPIO_PIN_4 (PortC)
-      break;
-    case ANALOG_HANDLE_ADC_2:
-      sAnalog.adc.adcHandle[handle].Instance = ADC2;
-      (RCC->APB2ENR |= (RCC_APB2ENR_ADC2EN));
-      chanConfig.Channel = ADC_CHANNEL_15; // GPIO_PIN_5 (PortC)
-      break;
-    case ANALOG_HANDLE_ADC_3:
-      sAnalog.adc.adcHandle[handle].Instance = ADC3;
-      (RCC->APB2ENR |= (RCC_APB2ENR_ADC3EN));
-      chanConfig.Channel = ADC_CHANNEL_11; // GPIO_PIN_1 (PortC)
-      break;
-    default:
-      break;
-  }
-  chanConfig.Rank = 1;
-  chanConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  chanConfig.Offset = 0;
-
-  Analog_dmaInit(handle);
-
-  if(HAL_ADC_Init(&sAnalog.adc.adcHandle[handle]) != HAL_OK)
-    Error_Handler(); /* Initialization Error */
-
-  if(HAL_ADC_ConfigChannel(&sAnalog.adc.adcHandle[handle], &chanConfig) != HAL_OK)
-    Error_Handler(); /* Channel Configuration Error */
-
+  Analog_setupDAC(ANALOG_HANDLE_DAC_2);
+  
+  HAL_DAC_SetValue(&sAnalog.dac.dacHandle[ANALOG_HANDLE_DAC_2], DAC_CHANNEL_2, DAC_ALIGN_12B_R, 0x0800);
+  
+  HAL_DAC_Start(&sAnalog.dac.dacHandle[ANALOG_HANDLE_DAC_2], DAC_CHANNEL_2);
+    
   return TRUE;
 }

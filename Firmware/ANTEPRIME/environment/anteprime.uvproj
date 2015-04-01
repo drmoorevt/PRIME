@@ -344,7 +344,7 @@
           </ArmAdsMisc>
           <Cads>
             <interw>1</interw>
-            <Optim>3</Optim>
+            <Optim>0</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>
             <OneElfS>1</OneElfS>
@@ -420,6 +420,11 @@
               <FileType>1</FileType>
               <FilePath>..\source\extmem.c</FilePath>
             </File>
+            <File>
+              <FileName>plr5010d.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\source\plr5010d.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -439,6 +444,21 @@
               <FileName>types.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\header\types.h</FilePath>
+            </File>
+            <File>
+              <FileName>analog.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\analog.h</FilePath>
+            </File>
+            <File>
+              <FileName>extmem.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\extmem.h</FilePath>
+            </File>
+            <File>
+              <FileName>plr5010d.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\header\plr5010d.h</FilePath>
             </File>
           </Files>
         </Group>

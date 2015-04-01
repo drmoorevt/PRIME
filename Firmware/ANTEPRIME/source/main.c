@@ -1,6 +1,7 @@
 #include "analog.h"
 #include "extmem.h"
 #include "main.h"
+#include "plr5010d.h"
 #include "stm32f4xx.h"
 
 #include "stm32f4xx_hal.h"
@@ -16,6 +17,7 @@ static struct
   boolean ramTest;
   boolean adcTest;
   boolean dacTest;
+  boolean plrTest;
 } sMain;
 
 void assert_failed(uint8_t* file, uint32_t line);
@@ -67,9 +69,17 @@ int main(void)
   BSP_LCD_LayerDefaultInit(1, LCD_FRAME_BUFFER);  // Initialize the LCD Layers
   Display_DemoDescription();                      // Display test information
   
+  PLR5010D_init();
+  
   sMain.ramTest = ExtMem_testSDRAM();
   sMain.adcTest = Analog_testAnalogBandwidth();
   sMain.dacTest = Analog_testDAC();
+  uint16 i;
+  while (1)
+  {
+    HAL_Delay(1);
+    sMain.plrTest = PLR5010D_setVoltage(0, 0xFFFF);
+  }
   
   /* Wait For User inputs */
   while (1)
