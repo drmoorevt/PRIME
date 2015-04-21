@@ -74,11 +74,12 @@ int main(void)
   sMain.ramTest = ExtMem_testSDRAM();
   sMain.adcTest = Analog_testAnalogBandwidth();
   sMain.dacTest = Analog_testDAC();
-  uint16 i;
+  uint16 outBits = 0x0000;
   while (1)
   {
     HAL_Delay(1);
-    sMain.plrTest = PLR5010D_setVoltage(0, 0xFFFF);
+    sMain.plrTest = PLR5010D_setVoltage(outBits, ~outBits);
+    outBits++;
   }
   
   /* Wait For User inputs */
