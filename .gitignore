@@ -13,3 +13,10 @@
 /Hardware/*.epf
 
 /Firmware/*.bak
+/Hardware/LAB-PPS330D/docs/SPICE/*.log
+/Hardware/LAB-PPS330D/docs/SPICE/*.raw
+/Firmware/ANTEPRIME/environment/*.dep
+/Firmware/ANTEPRIME/environment/*.bak
+/Firmware/ANTEPRIME/object/*.d
+/Firmware/ANTEPRIME/list
+/Firmware/ANTEPRIME/object

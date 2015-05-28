@@ -1,18 +1,39 @@
 function [name, chans, data, time] = TestConsole(CommPort)
     close all
     
-    numSweeps = 5;
+    interval = 1;
+    delete(instrfindall);
+    s = openFixtureComms(CommPort, 115200);
+    
+    while (1)
+        pause(interval);
+        KBps = s.BytesAvailable / (1024 * interval);
+        flushinput(s);
+        fprintf('\nKBps: %10.4f, Kbps: %10.4f', KBps, KBps * 8);
+    end
+    while (1)
+        t1 = tic;
+        fread(s, 1024 * 1024);
+        tElapsed = toc(t1);
+        KBps = 1024 / tElapsed;
+        fprintf('\nKBps: %10.4f, Kbps: %10.4f', KBps, KBps * 8);
+    end
+    
+    numSweeps = 100;
     eeFails = 0;
     sfFails = 0;
     sdFails = 0;
     htFails = 0;
     
-    %[eeFails, chans, data, time] = runTest11(CommPort, 921600, numSweeps);
-    %[sfFails, chans, data, time] = runTest12(CommPort, 921600, numSweeps);
-     [sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 50);
-    %[htFails, chans, data, time] = runTest14(CommPort, 921600, numSweeps);
+   %[eeFails, chans, data, time] = runTest11(CommPort, 921600, numSweeps);
+   %[sfFails, chans, data, time] = runTest12(CommPort, 921600, numSweeps);
+   %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 150); % Lexar
+   %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 150); % SanDisk
+   %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 65);  % SwissBit
+   %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 2);   % Kingston
+   [htFails, chans, data, time] = runTest14(CommPort, 921600, numSweeps);
     
-    fprintf('Dev\tFails\nEE:\t%d\nSF:\t%d\nSD:\t%d\nHT:\t%d\n', eeFails, sfFails, sdFails, htFails);
+   %fprintf('Dev\tFails\nEE:\t%d\nSF:\t%d\nSD:\t%d\nHT:\t%d\n', eeFails, sfFails, sdFails, htFails);
     
     return;
     % End selection bypass

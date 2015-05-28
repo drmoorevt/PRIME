@@ -14,7 +14,7 @@ function [inEnergy, outEnergy, inEnergyDelta, outEnergyDelta] = analyzeTest(data
     % calculate energy and power consumption for the preTestIdle phase
     i = 1;
     stateStartIdx = ones(1, length(data(1,1,1,:)));
-    while (stateStartIdx < length(data(:,1,1,1)))
+    while (min(stateStartIdx) < length(data(:,1,1,1)))
         stateEndIdx = findStateDemarcations(data(:,4,1,:), stateStartIdx, stateRange);
         stateDuration = (time(stateEndIdx) - time(stateStartIdx)) / 1000; %ms -> s
         inAvePower(i,:)  = accumulate(inPower, stateStartIdx, stateEndIdx);
