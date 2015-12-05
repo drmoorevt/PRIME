@@ -26,14 +26,26 @@ void assert_failed(uint8_t* file, uint32_t line);
 static void SystemClock_Config(void);
 static void Display_DemoDescription(void);
 
+/**************************************************************************************************\
+* FUNCTION    main
+* DESCRIPTION Program entry point
+* PARAMETERS  None
+* RETURNS     Nothing
+\**************************************************************************************************/
 void SysTick_Handler(void)
 {
   HAL_IncTick();
 }
 
-// setup ADC
+/**************************************************************************************************\
+* FUNCTION    Main_setupGPIO
+* DESCRIPTION Program entry point
+* PARAMETERS  None
+* RETURNS     Nothing
+\**************************************************************************************************/
 boolean Main_setupGPIO(void)
 {
+  // setup ADC
   GPIO_InitTypeDef configPortF = { .Pin       = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8,
                                    .Mode      = GPIO_MODE_ANALOG,
                                    .Pull      = GPIO_NOPULL,
@@ -44,6 +56,13 @@ boolean Main_setupGPIO(void)
   HAL_GPIO_Init(GPIOF, &configPortF);
   return TRUE;
 }
+
+/**************************************************************************************************\
+* FUNCTION    main
+* DESCRIPTION Program entry point
+* PARAMETERS  None
+* RETURNS     Nothing
+\**************************************************************************************************/
 
 /**************************************************************************************************\
 * FUNCTION    main
