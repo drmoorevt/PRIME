@@ -9779,10 +9779,10 @@ at 27/07/2012 14:48:47</description>
 <part name="GND16" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="C19" library="rcl" deviceset="C-US" device="C0603" value="10u"/>
 <part name="GND17" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
-<part name="R1" library="rcl" deviceset="R-US_" device="R0603" value="51K"/>
+<part name="R1" library="rcl" deviceset="R-US_" device="R0603"/>
 <part name="GND18" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
-<part name="R2" library="rcl" deviceset="R-US_" device="R0603" value="39K"/>
-<part name="R3" library="rcl" deviceset="R-US_" device="R0603" value="18.4K"/>
+<part name="R2" library="rcl" deviceset="R-US_" device="R0603"/>
+<part name="R3" library="rcl" deviceset="R-US_" device="R0603"/>
 <part name="U25" library="adafruit" deviceset="ESP-12" device=""/>
 <part name="U12" library="LAB304" deviceset="LAB-PPS330D" device=""/>
 <part name="U13" library="LAB304" deviceset="LAB-PPS330D" device=""/>
@@ -9799,7 +9799,7 @@ at 27/07/2012 14:48:47</description>
 <part name="C7" library="rcl" deviceset="C-US" device="C0603" value="0.1u"/>
 <part name="C13" library="rcl" deviceset="C-US" device="C0603" value="10u"/>
 <part name="GND2" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
-<part name="C22" library="rcl" deviceset="C-US" device="C0603" value="10u"/>
+<part name="C22" library="rcl" deviceset="C-US" device="C0603" value="47u"/>
 <part name="GND3" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="U4" library="LAB304" deviceset="LAB-PPS330D" device=""/>
 <part name="GND5" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
@@ -9811,8 +9811,8 @@ at 27/07/2012 14:48:47</description>
 <part name="R5" library="rcl" deviceset="R-US_" device="R0603" value="2.2K"/>
 <part name="R6" library="rcl" deviceset="R-US_" device="R0603" value="2.2K"/>
 <part name="GND7" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
-<part name="U7" library="PEGMA" deviceset="MAX4376" device="" value="MAX4376HAUK"/>
-<part name="R7" library="rcl" deviceset="R-US_" device="R0603" value="0R1"/>
+<part name="U7" library="PEGMA" deviceset="MAX4376" device=""/>
+<part name="R7" library="rcl" deviceset="R-US_" device="R0603" value="0.13R"/>
 <part name="GND8" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="C4" library="rcl" deviceset="C-US" device="C0603" value="0.1u"/>
 <part name="GND10" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
@@ -9830,9 +9830,9 @@ at 27/07/2012 14:48:47</description>
 <part name="GND22" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="C18" library="rcl" deviceset="C-US" device="C0603" value="10u"/>
 <part name="GND23" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
-<part name="R8" library="rcl" deviceset="R-US_" device="R0603" value="100K"/>
+<part name="R8" library="rcl" deviceset="R-US_" device="R0603"/>
 <part name="GND24" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
-<part name="R9" library="rcl" deviceset="R-US_" device="R0603" value="100K"/>
+<part name="R9" library="rcl" deviceset="R-US_" device="R0603"/>
 <part name="GND27" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND28" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND29" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
@@ -9842,10 +9842,10 @@ at 27/07/2012 14:48:47</description>
 <part name="GND32" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="C10" library="rcl" deviceset="C-US" device="C0603" value="0.1u"/>
 <part name="GND33" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
-<part name="R11" library="rcl" deviceset="R-US_" device="R0603" value="100K"/>
-<part name="R12" library="rcl" deviceset="R-US_" device="R0603" value="100K"/>
-<part name="R13" library="rcl" deviceset="R-US_" device="R0603" value="100K"/>
-<part name="R14" library="rcl" deviceset="R-US_" device="R0603" value="100K"/>
+<part name="R11" library="rcl" deviceset="R-US_" device="R0603"/>
+<part name="R12" library="rcl" deviceset="R-US_" device="R0603"/>
+<part name="R13" library="rcl" deviceset="R-US_" device="R0603"/>
+<part name="R14" library="rcl" deviceset="R-US_" device="R0603"/>
 <part name="GND34" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="GND35" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="U21" library="SparkFun-AnalogIC" deviceset="LTC6244" device=""/>
@@ -10022,7 +10022,7 @@ at 27/07/2012 14:48:47</description>
 <text x="10.16" y="177.8" size="2.54" layer="91">Remove R29, R30 on Discovery board -- I2C needs to be pulled to domain voltage</text>
 <text x="10.16" y="172.72" size="2.54" layer="91">Can't use LTDC and NAND/NOR flash at the same time.</text>
 <text x="10.16" y="167.64" size="2.54" layer="91">Remove R69 and R72 from DISCO board to remove USB_OTG host circuitry</text>
-<text x="5.08" y="38.1" size="1.778" layer="91">0.00 = 3.3V
+<text x="5.08" y="40.64" size="1.778" layer="91">0.00 = 3.3V
 1.30 = 2.7V
 1.80 = 2.3V
 2.65 = 1.8V</text>
@@ -10228,16 +10228,16 @@ at 27/07/2012 14:48:47</description>
 <instance part="GND17" gate="1" x="48.26" y="58.42"/>
 <instance part="R1" gate="G$1" x="25.4" y="45.72" smashed="yes" rot="R90">
 <attribute name="NAME" x="24.13" y="46.7614" size="1.778" layer="95" rot="R180"/>
-<attribute name="VALUE" x="24.13" y="43.942" size="1.778" layer="96" rot="R180"/>
+<attribute name="VALUE" x="28.702" y="41.91" size="1.778" layer="96" rot="R90"/>
 </instance>
 <instance part="GND18" gate="1" x="25.4" y="38.1"/>
 <instance part="R2" gate="G$1" x="17.78" y="53.34" smashed="yes" rot="R180">
 <attribute name="NAME" x="16.51" y="54.8386" size="1.778" layer="95"/>
-<attribute name="VALUE" x="16.51" y="51.562" size="1.778" layer="96" rot="MR180"/>
+<attribute name="VALUE" x="21.59" y="56.642" size="1.778" layer="96" rot="R180"/>
 </instance>
 <instance part="R3" gate="G$1" x="17.78" y="60.96" smashed="yes" rot="R180">
 <attribute name="NAME" x="16.51" y="62.4586" size="1.778" layer="95"/>
-<attribute name="VALUE" x="16.51" y="59.182" size="1.778" layer="96" rot="MR180"/>
+<attribute name="VALUE" x="21.59" y="64.262" size="1.778" layer="96" rot="R180"/>
 </instance>
 <instance part="U25" gate="G$1" x="373.38" y="134.62"/>
 <instance part="U12" gate="G$1" x="307.34" y="127" smashed="yes">
@@ -10375,14 +10375,14 @@ at 27/07/2012 14:48:47</description>
 </instance>
 <instance part="R8" gate="G$1" x="330.2" y="208.28" smashed="yes" rot="R90">
 <attribute name="NAME" x="328.93" y="209.3214" size="1.778" layer="95" rot="R180"/>
-<attribute name="VALUE" x="328.93" y="206.502" size="1.778" layer="96" rot="R180"/>
+<attribute name="VALUE" x="333.502" y="204.47" size="1.778" layer="96" rot="R90"/>
 </instance>
 <instance part="GND24" gate="1" x="330.2" y="200.66" smashed="yes">
 <attribute name="VALUE" x="330.2" y="200.66" size="1.778" layer="96" rot="MR0"/>
 </instance>
 <instance part="R9" gate="G$1" x="330.2" y="220.98" smashed="yes" rot="R90">
 <attribute name="NAME" x="328.93" y="222.0214" size="1.778" layer="95" rot="R180"/>
-<attribute name="VALUE" x="328.93" y="219.202" size="1.778" layer="96" rot="R180"/>
+<attribute name="VALUE" x="333.502" y="217.17" size="1.778" layer="96" rot="R90"/>
 </instance>
 <instance part="GND27" gate="1" x="88.9" y="190.5"/>
 <instance part="GND28" gate="1" x="22.86" y="190.5"/>
@@ -10409,20 +10409,20 @@ at 27/07/2012 14:48:47</description>
 <attribute name="VALUE" x="203.2" y="45.72" size="1.778" layer="96" rot="MR0"/>
 </instance>
 <instance part="R11" gate="G$1" x="142.24" y="50.8" smashed="yes" rot="R90">
-<attribute name="NAME" x="143.51" y="49.7586" size="1.778" layer="95"/>
-<attribute name="VALUE" x="143.51" y="47.498" size="1.778" layer="96"/>
+<attribute name="NAME" x="140.97" y="51.8414" size="1.778" layer="95" rot="R180"/>
+<attribute name="VALUE" x="145.542" y="46.99" size="1.778" layer="96" rot="R90"/>
 </instance>
 <instance part="R12" gate="G$1" x="142.24" y="40.64" smashed="yes" rot="R90">
 <attribute name="NAME" x="140.97" y="41.6814" size="1.778" layer="95" rot="R180"/>
-<attribute name="VALUE" x="140.97" y="38.862" size="1.778" layer="96" rot="R180"/>
+<attribute name="VALUE" x="145.542" y="36.83" size="1.778" layer="96" rot="R90"/>
 </instance>
 <instance part="R13" gate="G$1" x="142.24" y="22.86" smashed="yes" rot="R90">
-<attribute name="NAME" x="143.51" y="21.8186" size="1.778" layer="95"/>
-<attribute name="VALUE" x="143.51" y="19.558" size="1.778" layer="96"/>
+<attribute name="NAME" x="140.97" y="23.9014" size="1.778" layer="95" rot="R180"/>
+<attribute name="VALUE" x="145.542" y="19.05" size="1.778" layer="96" rot="R90"/>
 </instance>
 <instance part="R14" gate="G$1" x="142.24" y="12.7" smashed="yes" rot="R90">
 <attribute name="NAME" x="140.97" y="13.7414" size="1.778" layer="95" rot="R180"/>
-<attribute name="VALUE" x="140.97" y="10.922" size="1.778" layer="96" rot="R180"/>
+<attribute name="VALUE" x="145.542" y="8.89" size="1.778" layer="96" rot="R90"/>
 </instance>
 <instance part="GND34" gate="1" x="142.24" y="33.02" smashed="yes">
 <attribute name="VALUE" x="142.24" y="33.02" size="1.778" layer="96"/>
