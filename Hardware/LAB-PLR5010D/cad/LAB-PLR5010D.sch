@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="6.6.0">
+<eagle version="7.3.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -3970,8 +3970,8 @@ COMPLIANT TO JEDEC STANDARDS MO-187BA</description>
 <part name="C1" library="SparkFun-Capacitors" deviceset="1NF/1000PF-50V-10%(0603)" device="" value="10uF"/>
 <part name="SUPPLY1" library="SparkFun-Aesthetics" deviceset="3.3V" device=""/>
 <part name="GND" library="SparkFun-Aesthetics" deviceset="GND2" device="" value="gnd"/>
-<part name="C3" library="SparkFun-Capacitors" deviceset="1NF/1000PF-50V-10%(0603)" device="" value="33nf"/>
-<part name="C4" library="SparkFun-Capacitors" deviceset="1NF/1000PF-50V-10%(0603)" device="" value="33nf"/>
+<part name="C3" library="SparkFun-Capacitors" deviceset="1NF/1000PF-50V-10%(0603)" device="" value="0.01uF"/>
+<part name="C4" library="SparkFun-Capacitors" deviceset="1NF/1000PF-50V-10%(0603)" device="" value="0.01uF"/>
 <part name="GND1" library="SparkFun-Aesthetics" deviceset="GND2" device="" value="gnd"/>
 <part name="GND3" library="SparkFun-Aesthetics" deviceset="GND2" device="" value="gnd"/>
 <part name="Q1" library="LAB304" deviceset="FZT849" device=""/>
