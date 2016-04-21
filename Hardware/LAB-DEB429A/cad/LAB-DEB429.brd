@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="7.3.0">
+<eagle version="6.6.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -244,7 +244,7 @@
 <wire x1="0.635" y1="112.395" x2="8.255" y2="112.395" width="0.254" layer="25"/>
 <wire x1="8.255" y1="112.395" x2="8.255" y2="120.015" width="0.254" layer="25"/>
 <wire x1="8.255" y1="120.015" x2="48.895" y2="120.015" width="0.254" layer="25"/>
-<text x="85.725" y="1.905" size="3.81" layer="25">LAB-DEB429A - REV1</text>
+<text x="85.725" y="1.905" size="3.81" layer="25" font="vector">LAB-DEB429A-REV1</text>
 </plain>
 <libraries>
 <library name="con-samtec">
@@ -2203,9 +2203,6 @@ design rules under a new name.
 <autorouter>
 <pass name="Default">
 <param name="RoutingGrid" value="50mil"/>
-<param name="AutoGrid" value="1"/>
-<param name="Efforts" value="0"/>
-<param name="TopRouterVariant" value="1"/>
 <param name="tpViaShape" value="round"/>
 <param name="PrefDir.1" value="|"/>
 <param name="PrefDir.2" value="0"/>
@@ -2440,11 +2437,11 @@ design rules under a new name.
 <attribute name="NAME" x="3.175" y="8.255" size="1.016" layer="25" rot="R90"/>
 <attribute name="VALUE" x="7.62" y="5.000625" size="1.27" layer="27" rot="R270"/>
 </element>
-<element name="R5" library="rcl" package="R0603" value="2.2K" x="80.645" y="112.7125" smashed="yes" rot="R270">
+<element name="R5" library="rcl" package="R0603" value="1K" x="80.645" y="112.7125" smashed="yes" rot="R270">
 <attribute name="NAME" x="85.09" y="113.665" size="1.016" layer="25" rot="R270"/>
 <attribute name="VALUE" x="78.74" y="113.3475" size="1.27" layer="27" rot="R270"/>
 </element>
-<element name="R6" library="rcl" package="R0603" value="2.2K" x="82.70875" y="112.7125" smashed="yes" rot="R90">
+<element name="R6" library="rcl" package="R0603" value="1K" x="82.70875" y="112.7125" smashed="yes" rot="R90">
 <attribute name="NAME" x="86.995" y="113.665" size="1.016" layer="25" rot="R270"/>
 <attribute name="VALUE" x="84.61375" y="112.0775" size="1.27" layer="27" rot="R90"/>
 </element>

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="7.3.0">
+<eagle version="6.6.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -9808,8 +9808,8 @@ at 27/07/2012 14:48:47</description>
 <part name="C21" library="rcl" deviceset="C-US" device="C0603" value="0.22u"/>
 <part name="R4" library="rcl" deviceset="R-US_" device="R0603" value="30"/>
 <part name="FRAME1" library="frames" deviceset="FRAME_B_L" device=""/>
-<part name="R5" library="rcl" deviceset="R-US_" device="R0603" value="2.2K"/>
-<part name="R6" library="rcl" deviceset="R-US_" device="R0603" value="2.2K"/>
+<part name="R5" library="rcl" deviceset="R-US_" device="R0603" value="1K"/>
+<part name="R6" library="rcl" deviceset="R-US_" device="R0603" value="1K"/>
 <part name="GND7" library="SparkFun-Aesthetics" deviceset="GND" device=""/>
 <part name="U7" library="PEGMA" deviceset="MAX4376" device="" value="MAX4376HAUK"/>
 <part name="R7" library="rcl" deviceset="R-US_" device="R0603" value="0R1"/>
