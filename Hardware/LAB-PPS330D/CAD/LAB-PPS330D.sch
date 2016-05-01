@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="6.5.0">
+<eagle version="6.6.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -963,9 +963,9 @@ S1: 0 S0: 0 -- Vout = NC, DGND = NC
 <pinref part="U1" gate="G$1" pin="A"/>
 </segment>
 <segment>
-<wire x1="233.68" y1="101.6" x2="226.06" y2="101.6" width="0.1524" layer="91"/>
-<pinref part="J2" gate="1" pin="1"/>
-<label x="226.06" y="101.6" size="1.778" layer="95"/>
+<wire x1="233.68" y1="99.06" x2="226.06" y2="99.06" width="0.1524" layer="91"/>
+<label x="226.06" y="99.06" size="1.778" layer="95"/>
+<pinref part="J2" gate="1" pin="2"/>
 </segment>
 </net>
 <net name="S1" class="0">
@@ -975,9 +975,9 @@ S1: 0 S0: 0 -- Vout = NC, DGND = NC
 <pinref part="U1" gate="G$1" pin="B"/>
 </segment>
 <segment>
-<wire x1="233.68" y1="99.06" x2="226.06" y2="99.06" width="0.1524" layer="91"/>
-<pinref part="J2" gate="1" pin="2"/>
-<label x="226.06" y="99.06" size="1.778" layer="95"/>
+<wire x1="233.68" y1="96.52" x2="226.06" y2="96.52" width="0.1524" layer="91"/>
+<label x="226.06" y="96.52" size="1.778" layer="95"/>
+<pinref part="J2" gate="1" pin="3"/>
 </segment>
 </net>
 <net name="DGND" class="0">
@@ -1067,19 +1067,19 @@ S1: 0 S0: 0 -- Vout = NC, DGND = NC
 </net>
 <net name="VOUT" class="0">
 <segment>
-<wire x1="215.9" y1="109.22" x2="215.9" y2="96.52" width="0.1524" layer="91"/>
-<wire x1="185.42" y1="109.22" x2="185.42" y2="96.52" width="0.1524" layer="91"/>
-<wire x1="185.42" y1="96.52" x2="215.9" y2="96.52" width="0.1524" layer="91"/>
-<wire x1="185.42" y1="96.52" x2="154.94" y2="96.52" width="0.1524" layer="91"/>
-<wire x1="154.94" y1="96.52" x2="154.94" y2="109.22" width="0.1524" layer="91"/>
-<junction x="185.42" y="96.52"/>
-<pinref part="J2" gate="1" pin="3"/>
-<wire x1="233.68" y1="96.52" x2="215.9" y2="96.52" width="0.1524" layer="91"/>
-<junction x="215.9" y="96.52"/>
-<label x="226.06" y="96.52" size="1.778" layer="95"/>
+<wire x1="215.9" y1="109.22" x2="215.9" y2="101.6" width="0.1524" layer="91"/>
+<wire x1="185.42" y1="109.22" x2="185.42" y2="101.6" width="0.1524" layer="91"/>
+<wire x1="185.42" y1="101.6" x2="215.9" y2="101.6" width="0.1524" layer="91"/>
+<wire x1="185.42" y1="101.6" x2="154.94" y2="101.6" width="0.1524" layer="91"/>
+<wire x1="154.94" y1="101.6" x2="154.94" y2="109.22" width="0.1524" layer="91"/>
+<junction x="185.42" y="101.6"/>
 <pinref part="U2" gate="P" pin="D"/>
 <pinref part="U3" gate="B" pin="S"/>
 <pinref part="U4" gate="B" pin="S"/>
+<wire x1="233.68" y1="101.6" x2="215.9" y2="101.6" width="0.1524" layer="91"/>
+<label x="226.06" y="101.6" size="1.778" layer="95"/>
+<pinref part="J2" gate="1" pin="1"/>
+<junction x="215.9" y="101.6"/>
 </segment>
 </net>
 <net name="N$5" class="0">
