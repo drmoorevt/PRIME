@@ -10035,6 +10035,18 @@ at 27/07/2012 14:48:47</description>
 <text x="10.16" y="147.32" size="2.54" layer="91">Using LD3 and LD4 as AUX0_CS and AUX1_CS</text>
 <text x="13.97" y="142.24" size="2.54" layer="91">-- The lights may flicker when aux devices in use</text>
 <text x="10.16" y="137.16" size="2.54" layer="91">MCU must not drive chip selects when MCU-Peripheral voltage is different</text>
+<text x="10.16" y="132.08" size="2.54" layer="91">Need to bridge SB26 and SB27 on DISCO board</text>
+<text x="10.16" y="127" size="2.54" layer="91">Remove D3 on DISCO board. Replace with bridge.Or replace power supply.</text>
+<text x="10.16" y="91.44" size="2.54" layer="91">Fix ASDM300F Pin1 designator</text>
+<text x="10.16" y="116.84" size="2.54" layer="91">Fix Blueooth Module pin spacing</text>
+<text x="10.16" y="111.76" size="2.54" layer="91">Fix LTC6244 Pinout</text>
+<text x="10.16" y="106.68" size="2.54" layer="91">Add delay to USB module WREN Line (Inverters)</text>
+<text x="10.16" y="101.6" size="2.54" layer="91">Fix SD GND is connected to DGND</text>
+<text x="10.16" y="96.52" size="2.54" layer="91">Add Pullup to USB_RST</text>
+<text x="10.16" y="121.92" size="2.54" layer="91">PPS330D Expect Selects to be active low, 74HC259 is active high</text>
+<text x="10.16" y="86.36" size="2.54" layer="91">LTC6244 Can't hit the high rail (try 6087)</text>
+<text x="10.16" y="81.28" size="2.54" layer="91">Fix select lines to PPS330D (S0-&gt;S1, S1-&gt;S0)</text>
+<text x="-88.9" y="91.44" size="2.54" layer="91">Switch output selects and Rev4 the PPS330D</text>
 </plain>
 <instances>
 <instance part="J1" gate="-1" x="40.64" y="271.78"/>
@@ -13188,6 +13200,12 @@ at 27/07/2012 14:48:47</description>
 <wire x1="152.4" y1="45.72" x2="142.24" y2="45.72" width="0.1524" layer="91"/>
 <pinref part="R12" gate="G$1" pin="2"/>
 <junction x="142.24" y="45.72"/>
+</segment>
+</net>
+<net name="N$43" class="0">
+<segment>
+<wire x1="10.16" y1="121.92" x2="-20.32" y2="91.44" width="0.1524" layer="91"/>
+<wire x1="-20.32" y1="91.44" x2="-78.74" y2="91.44" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
