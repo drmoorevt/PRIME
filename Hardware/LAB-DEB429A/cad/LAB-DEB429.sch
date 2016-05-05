@@ -10035,7 +10035,7 @@ at 27/07/2012 14:48:47</description>
 <text x="10.16" y="147.32" size="2.54" layer="91">Using LD3 and LD4 as AUX0_CS and AUX1_CS</text>
 <text x="13.97" y="142.24" size="2.54" layer="91">-- The lights may flicker when aux devices in use</text>
 <text x="10.16" y="137.16" size="2.54" layer="91">MCU must not drive chip selects when MCU-Peripheral voltage is different</text>
-<text x="10.16" y="132.08" size="2.54" layer="91">Need to bridge SB26 and SB27 on DISCO board</text>
+<text x="10.16" y="76.2" size="2.54" layer="91">Need to bridge SB26 and SB27 on DISCO board</text>
 <text x="10.16" y="127" size="2.54" layer="91">Remove D3 on DISCO board. Replace with bridge.Or replace power supply.</text>
 <text x="10.16" y="91.44" size="2.54" layer="91">Fix ASDM300F Pin1 designator</text>
 <text x="10.16" y="116.84" size="2.54" layer="91">Fix Blueooth Module pin spacing</text>
@@ -10047,6 +10047,8 @@ at 27/07/2012 14:48:47</description>
 <text x="10.16" y="86.36" size="2.54" layer="91">LTC6244 Can't hit the high rail (try 6087)</text>
 <text x="10.16" y="81.28" size="2.54" layer="91">Fix select lines to PPS330D (S0-&gt;S1, S1-&gt;S0)</text>
 <text x="-88.9" y="91.44" size="2.54" layer="91">Switch output selects and Rev4 the PPS330D</text>
+<text x="10.16" y="132.08" size="2.54" layer="91">Need to open collector the SPI chip selects -- use 74HC259</text>
+<text x="10.16" y="182.88" size="2.54" layer="91">May be able to power the MCU off of Vdd pin using a PPS330D</text>
 </plain>
 <instances>
 <instance part="J1" gate="-1" x="40.64" y="271.78"/>
