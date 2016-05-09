@@ -32,9 +32,12 @@
   */
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
-#include "stm32f429i_discovery_lcd.h"
 
 /* USER CODE BEGIN Includes */
+
+#include "stm32f429i_discovery_lcd.h"
+#include "analog.h"
+#include "powercon.h"
 
 /* USER CODE END Includes */
 
@@ -103,186 +106,11 @@ static void MX_USART1_UART_Init(void);
 
 static struct
 {
+  bool vDomain0Test;
+  bool vDomain1Test;
+  bool vDomain2Test;
   bool ramTest;
 } sMain;
-
-#define FT232H_DATA_AVAILABLE  (0x01)
-#define FT232H_SPACE_AVAILABLE (0x02)
-#define FT232H_SUSPEND         (0x04)
-#define FT232H_CONFIGURED      (0x08)
-#define FT232H_BUFFER_SIZE     (1024)
-static char helloString[FT232H_BUFFER_SIZE];
-
-uint8_t volatile * const pDataPipe = (uint8_t *)0x64000000;
-uint8_t volatile * const pStatPipe = (uint8_t *)0x64000001;
-  
-void Main_sendUSB(uint8_t *pBuf, uint32_t len)
-{
-  while(len--)
-  {
-    while(!(*pStatPipe & FT232H_SPACE_AVAILABLE));
-    *(pDataPipe) = *pBuf++;
-  }
-}
-
-void Main_testUSB(void)
-{
-  #define FT232H_DATA_AVAILABLE  (0x01)
-  #define FT232H_SPACE_AVAILABLE (0x02)
-  #define FT232H_SUSPEND         (0x04)
-  #define FT232H_CONFIGURED      (0x08)
-  #define FT232H_BUFFER_SIZE     (1024)
-  
-  uint32_t i;
-  uint32_t size;
-  uint32_t counter = 0;
-  volatile uint32_t j;
-  volatile uint8_t status;
-  volatile uint8_t inChar;
-  
-  //for (counter = 0; counter < 3426; counter++)
-  while(1)
-  {
-    for (j = 0; j < 9; j++)
-    {
-      for (i = 0x30; i < 0x50; i++)
-      {
-        while(!(*pStatPipe & FT232H_SPACE_AVAILABLE));
-        *(pDataPipe) = i;
-      }
-    }
-    *(pDataPipe) = (uint8_t)'\r';
-    *(pDataPipe) = (uint8_t)'\n';
-  }
-  
-  while (1)
-  {
-    status = (*pStatPipe & 0x0F);
-    if (status & FT232H_CONFIGURED)
-    {
-      if (status & FT232H_DATA_AVAILABLE)
-      {
-        while (status & FT232H_DATA_AVAILABLE)
-        {
-          inChar = *pDataPipe;
-          //memset(helloString, 0, 0);
-          //Util_fillMemory(helloString, sizeof(helloString), 0x00);
-          size = sprintf(helloString, "inChar = %c\r\n", inChar);
-          for (i = 0; i < size; i++)
-            *(pDataPipe) = helloString[i];
-          status = (*pStatPipe & 0x0F);
-        }
-        for (j = 0; j < 10000000; j++);
-      }
-      else if (status & FT232H_SPACE_AVAILABLE)
-      {
-        size = sprintf(helloString, "Hello World @ 480Mbps! Status = %X, Counter = %d \r\n", status, counter++);
-        for (i = 0; i < size; i++)
-          *(pDataPipe) = helloString[i];
-      }
-      else
-      {
-        for (j = 0; j < 10000000; j++);
-      }
-    }
-  }
-  
-  
-  while (1)
-  {
-    status = (*pStatPipe & 0x0F);
-    if (status & FT232H_CONFIGURED)
-    {
-      if (status & FT232H_DATA_AVAILABLE)
-      {
-        while (status & FT232H_DATA_AVAILABLE)
-        {
-          inChar = *pDataPipe;
-          //memset(helloString, 0, 0);
-          //Util_fillMemory(helloString, sizeof(helloString), 0x00);
-          size = sprintf(helloString, "inChar = %c\r\n", inChar);
-          for (i = 0; i < size; i++)
-            *(pDataPipe) = helloString[i];
-          status = (*pStatPipe & 0x0F);
-        }
-        for (j = 0; j < 10000000; j++);
-      }
-      else if (status & FT232H_SPACE_AVAILABLE)
-      {
-        size = sprintf(helloString, "Hello World @ 480Mbps! Status = %X, Counter = %d \r\n", status, counter++);
-        for (i = 0; i < size; i++)
-          *(pDataPipe) = helloString[i];
-      }
-    }
-  }
-}
-
-void Main_testPowerSupplies(void)
-{
-  uint32_t counter = 0;
-  ADC_ChannelConfTypeDef sConfig;
-  ADC_HandleTypeDef *adcNum;
-  sConfig.Channel = ADC_CHANNEL_VREFINT;
-  sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  //uint16_t dacOut = 0;
-  //HAL_DACEx_TriangleWaveGenerate(&hdac, DAC_CHANNEL_2, DAC_TRIANGLEAMPLITUDE_4095);
-   
-  while(1)
-  {
-    char outBuf[64];
-    uint32_t chanNum, adcVal, outLen;
-    HAL_DAC_SetValue(&hdac, DAC_CHANNEL_2, DAC_ALIGN_12B_R, counter++);
-    HAL_DAC_Start(&hdac, DAC_CHANNEL_2);
-    switch (counter)
-    {
-      case 0:
-        HAL_GPIO_WritePin(VADJ1_0_GPIO_Port, VADJ1_0_Pin, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(VADJ1_1_GPIO_Port, VADJ1_1_Pin, GPIO_PIN_RESET);
-        break;
-      case 1023:
-        HAL_GPIO_WritePin(VADJ1_0_GPIO_Port, VADJ1_0_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(VADJ1_1_GPIO_Port, VADJ1_1_Pin, GPIO_PIN_RESET);
-        break;
-      case 2047:
-        HAL_GPIO_WritePin(VADJ1_0_GPIO_Port, VADJ1_0_Pin, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(VADJ1_1_GPIO_Port, VADJ1_1_Pin, GPIO_PIN_SET);
-        break;
-      case 3071:
-        HAL_GPIO_WritePin(VADJ1_0_GPIO_Port, VADJ1_0_Pin, GPIO_PIN_SET);
-        HAL_GPIO_WritePin(VADJ1_1_GPIO_Port, VADJ1_1_Pin, GPIO_PIN_SET);
-        break;
-      case 4095:
-        counter = 0;
-        break;
-    }
-    for (chanNum = 0; chanNum < 9; chanNum++)
-    {
-      switch (chanNum)
-      {
-        case 0: sConfig.Channel = ADC_CHANNEL_VREFINT; adcNum = &hadc1; break;  // Vref
-        case 1: sConfig.Channel = ADC_CHANNEL_1;       adcNum = &hadc1; break;  // PII1 
-        case 2: sConfig.Channel = ADC_CHANNEL_2;       adcNum = &hadc1; break;  // PII2
-        
-        case 3: sConfig.Channel = ADC_CHANNEL_7;       adcNum = &hadc2; break;  // PV0
-        case 4: sConfig.Channel = ADC_CHANNEL_14;      adcNum = &hadc2; break;  // PV1
-        case 5: sConfig.Channel = ADC_CHANNEL_15;      adcNum = &hadc2; break;  // PV2
-        
-        case 6: sConfig.Channel = ADC_CHANNEL_4;       adcNum = &hadc3; break;  // PV0
-        case 7: sConfig.Channel = ADC_CHANNEL_11;      adcNum = &hadc3; break;  // PV1
-        case 8: sConfig.Channel = ADC_CHANNEL_13;      adcNum = &hadc3; break;  // PV2
-        default: return;
-      }
-      HAL_ADC_ConfigChannel(adcNum, &sConfig);
-      HAL_ADC_Start(adcNum);
-      adcVal = HAL_ADC_GetValue(adcNum);
-      outLen = sprintf(outBuf, "%d ", adcVal);
-      Main_sendUSB((uint8_t *)outBuf, outLen);
-    }
-    outLen = sprintf(outBuf, "\r\n");
-    Main_sendUSB((uint8_t *)outBuf, outLen);
-  }
-}
 
 #define SDRAM_DEVICE_ADDR         ((uint32_t)0xD0000000)
 #define SDRAM_DEVICE_SIZE         ((uint32_t)0x800000)  /* SDRAM device size in MBytes */
@@ -451,37 +279,23 @@ int main(void)
   BSP_SDRAM_Initialization_sequence(REFRESH_COUNT, &hsdram1);
   /* USER CODE END 2 */
   
+  AnalogInit anInit;
+  anInit.hadc1 = hadc1;
+  anInit.hadc2 = hadc2;
+  anInit.hadc3 = hadc3;
+  anInit.hdma_adc1 = hdma_adc1;
+  Analog_init(&anInit);
   
+  PowerCon_init(&hdac);
   
-  //Main_testUSB();
-  Main_testPowerSupplies();
+  sMain.vDomain0Test = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_0);
+  sMain.vDomain1Test = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_1);
+  sMain.vDomain2Test = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_2);
   sMain.ramTest = Main_testSDRAM();
   
   BSP_LCD_Init();                                 // Initialize the LCD
   BSP_LCD_LayerDefaultInit(1, LCD_FRAME_BUFFER);  // Initialize the LCD Layers
   Display_DemoDescription();                      // Display test information
-  /*
-  // Clear the peripheral voltage select pins
-  HAL_GPIO_WritePin(_PV_EN_GPIO_Port,  _PV_EN_Pin,  GPIO_PIN_SET);
-  HAL_GPIO_WritePin(_PV_CLR_GPIO_Port, _PV_CLR_Pin, GPIO_PIN_RESET);
-  HAL_Delay(10);
-  
-  // setup address 0
-  HAL_GPIO_WritePin(PV_VSEL0_GPIO_Port, PV_VSEL0_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(PV_VSEL1_GPIO_Port, PV_VSEL1_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(PV_VSEL2_GPIO_Port, PV_VSEL2_Pin, GPIO_PIN_RESET);
-  HAL_Delay(10);
-  
-  // Turn the 74HC259 into an addressable latch
-  HAL_GPIO_WritePin(_PV_EN_GPIO_Port,  _PV_EN_Pin,  GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(_PV_CLR_GPIO_Port, _PV_CLR_Pin, GPIO_PIN_SET);
-  HAL_Delay(10);
-  
-  
-  HAL_GPIO_WritePin(PV_D0_GPIO_Port, PV_D0_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(PV_D1_GPIO_Port, PV_D1_Pin, GPIO_PIN_RESET);
-  HAL_Delay(10);
-  */
   while(1);
 }
 
