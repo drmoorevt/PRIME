@@ -4,7 +4,7 @@
  *      *** Do not modify ! ***
  *
  * Project: 'PRIME' 
- * Target:  'PRIME Configuration' 
+ * Target:  'PRIME' 
  */
 
 #ifndef RTE_COMPONENTS_H
