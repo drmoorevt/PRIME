@@ -21,3 +21,6 @@
 /Firmware/ANTEPRIME/list
 /Firmware/ANTEPRIME/object
 *.epf
+/Firmware/PRIME/MDK-ARM/PRIME Build/*.crf
+/Firmware/PRIME/MDK-ARM/PRIME Build/*.d
+/Firmware/PRIME/MDK-ARM/PRIME Build/*.o
