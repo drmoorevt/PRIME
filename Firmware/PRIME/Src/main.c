@@ -805,6 +805,38 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
+  // Configure the SPI5 CS pins
+  GPIO_InitStruct.Pin = PLR0_CS_Pin|PLR1_CS_Pin|PLR2_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  
+  GPIO_InitStruct.Pin = SD_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  
+  GPIO_InitStruct.Pin = OF_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+  
+  GPIO_InitStruct.Pin = AF_CS_Pin|EE_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+  
+  HAL_GPIO_WritePin(PLR0_CS_GPIO_Port, PLR0_CS_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(PLR1_CS_GPIO_Port, PLR1_CS_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(PLR2_CS_GPIO_Port, PLR2_CS_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(SD_CS_GPIO_Port,   SD_CS_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(OF_CS_GPIO_Port,   OF_CS_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(AF_CS_GPIO_Port,   AF_CS_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(EE_CS_GPIO_Port,   EE_CS_Pin, GPIO_PIN_SET);
 }
 
 /* USER CODE BEGIN 4 */

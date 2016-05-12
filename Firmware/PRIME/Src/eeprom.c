@@ -1,18 +1,22 @@
 #include "stm32f4xx_hal.h"
+#include "spi.h"
 #include "time.h"
 #include "util.h"
 #include "eeprom.h"
+#include "powercon.h"
 
 #define FILE_ID EEPROM_C
 
-#define EEPROM_PIN_HOLD   (GPIO_Pin_2)
-#define EEPROM_PIN_SELECT (GPIO_Pin_5)
-
 // Can remove the wait by configuring the pins as push-pull, but risk leakage into the domain
-#define SELECT_CHIP_EE0()   do { GPIOB->BSRRH |= 0x00000020; Time_delay(1); } while (0)
-#define DESELECT_CHIP_EE0() do { GPIOB->BSRRL |= 0x00000020; Time_delay(1); } while (0)
-#define SELECT_EE_HOLD()    do { GPIOB->BSRRH |= 0x00000004; Time_delay(1); } while (0)
-#define DESELECT_EE_HOLD()  do { GPIOB->BSRRL |= 0x00000004; Time_delay(1); } while (0)
+#define SELECT_CHIP_EE0()   do {                                                              \
+                                 HAL_GPIO_WritePin(EE_CS_GPIO_Port, EE_CS_Pin, GPIO_PIN_SET); \
+                                 Time_delay(1);                                               \
+                               } while (0)
+
+#define DESELECT_CHIP_EE0() do {                                                              \
+                                 HAL_GPIO_WritePin(EE_CS_GPIO_Port, EE_CS_Pin, GPIO_PIN_SET); \
+                                 Time_delay(1);                                               \
+                               } while (0)
 
 #define WRITEPAGESIZE_EE ((uint16)128)
 #define EE_NUM_RETRIES   (3)
@@ -43,6 +47,7 @@ static const double EEPROM_POWER_PROFILES[EEPROM_PROFILE_MAX][EEPROM_STATE_MAX] 
 
 static struct
 {
+  SPI_HandleTypeDef hspi;
   double      vDomain[EEPROM_STATE_MAX]; // The domain voltage for each state
   EEPROMState state;
   boolean     isInitialized;
@@ -54,11 +59,14 @@ static struct
 * PARAMETERS  None
 * RETURNS     Nothing
 \**************************************************************************************************/
-void EEPROM_init(void)
+void EEPROM_init(SPI_HandleTypeDef *pSPI)
 {
   Util_fillMemory((uint8*)&sEEPROM, sizeof(sEEPROM), 0x00);
+  Util_copyMemory((uint8_t *)pSPI, (uint8_t *)&sEEPROM.hspi, sizeof(sEEPROM.hspi));
+  
   EEPROM_setPowerProfile(EEPROM_PROFILE_STANDARD);  // Set all states to 3.3v
   EEPROM_setup(FALSE);
+  
   sEEPROM.state = EEPROM_STATE_IDLE;
   sEEPROM.isInitialized = TRUE;
 }
@@ -73,16 +81,7 @@ void EEPROM_init(void)
 \**************************************************************************************************/
 boolean EEPROM_setup(boolean state)
 {
-  /*
-  // Initialize the EEPROM chip select and hold lines
-  GPIO_InitTypeDef eeCtrlPortB = {(EEPROM_PIN_HOLD | EEPROM_PIN_SELECT), GPIO_Mode_OUT,
-                                   GPIO_Speed_100MHz, GPIO_OType_OD, GPIO_PuPd_NOPULL,
-                                   GPIO_AF_SYSTEM };
-  eeCtrlPortB.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
-  GPIO_configurePins(GPIOB, &eeCtrlPortB);
-  GPIO_setPortClock(GPIOB, TRUE);
   DESELECT_CHIP_EE0();
-  DESELECT_EE_HOLD();
 
   // Set up the SPI transaction with respect to domain voltage
   if (sEEPROM.vDomain[sEEPROM.state] >= EE_HIGH_SPEED_VMIN)
@@ -144,7 +143,8 @@ static void EEPROM_setState(EEPROMState state)
   if (sEEPROM.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
   sEEPROM.state = state;
-  Analog_setDomain(SPI_DOMAIN, TRUE, sEEPROM.vDomain[state]);
+  PowerCon_setDeviceDomain(DEVICE_EEPROM, VOLTAGE_DOMAIN_0);
+  //Analog_setDomain(SPI_DOMAIN, TRUE, sEEPROM.vDomain[state]);
 }
 
 /**************************************************************************************************\

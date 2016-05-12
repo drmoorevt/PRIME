@@ -33,7 +33,7 @@ typedef enum
   EEPROM_RESULT_ERROR        = 2
 } EEPROMResult;
 
-void EEPROM_init(void);
+void EEPROM_init(SPI_HandleTypeDef *pSPI);
 boolean EEPROM_setup(boolean state);
 EEPROMState EEPROM_getState(void);
 uint32 EEPROM_getStateAsWord(void);
