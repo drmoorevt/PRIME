@@ -854,11 +854,11 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <plain>
 <text x="241.3" y="7.62" size="2.54" layer="94" rot="MR0">0</text>
 <text x="170.18" y="25.4" size="6.4516" layer="94">LAB304  LLC.</text>
-<text x="66.04" y="165.1" size="2.1844" layer="95">Select Lines Must Be Pulled/Driven High/Low To Select Output Voltage</text>
-<text x="66.04" y="147.32" size="2.1844" layer="95">S1: 0 S0: 0 -- Vout = V0, DGND = GND
+<text x="66.04" y="165.1" size="2.1844" layer="95" font="vector">Select Lines Must Be Pulled/Driven High/Low To Select Output Voltage</text>
+<text x="66.04" y="147.32" size="2.1844" layer="95" font="vector">S1: 0 S0: 0 -- Vout = V0, DGND = GND
 S1: 0 S0: 1 -- Vout = V1, DGND = GND
 S1: 1 S0: 0 -- Vout = V2, DGND = GND
-S1: 0 S0: 0 -- Vout = NC, DGND = NC
+S1: 1 S0: 1 -- Vout = NC, DGND = NC
 </text>
 </plain>
 <instances>
