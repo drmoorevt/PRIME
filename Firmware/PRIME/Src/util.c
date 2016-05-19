@@ -1,4 +1,5 @@
 #include "util.h"
+#include "stm32f4xx_hal.h"
 
 #define FILE_ID UTIL_C
 

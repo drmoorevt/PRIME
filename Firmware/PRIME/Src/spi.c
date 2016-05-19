@@ -1,5 +1,4 @@
 #include "stm32f4xx_hal.h"
-#include "gpio.h"
 #include "spi.h"
 
 #define FILE_ID SPI_C
@@ -10,15 +9,54 @@
 
 #define SPI_TX(x)    do { SPI2->DR = x; while(!(SPI2->SR&SPI_SR_TXE)); } while(0)
 
+static SPI_HandleTypeDef *spSPI;
+
 /**************************************************************************************************\
 * FUNCTION     SPI_init
 * DESCRIPTION  Initializes SPI support
 * PARAMETERS   none
 * RETURNS      nothing
 \**************************************************************************************************/
-void SPI_init(void)
+void SPI_init(SPI_HandleTypeDef *pSPI)
 {
-  SPI_setup(FALSE, SPI_CLOCK_RATE_1625000);
+  GPIO_InitTypeDef GPIO_InitStruct;
+  
+  // Configure the SPI5 CS pins
+  GPIO_InitStruct.Pin = PLR0_CS_Pin|PLR1_CS_Pin|PLR2_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  
+  GPIO_InitStruct.Pin = SD_CS_Pin|CSX_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  
+  GPIO_InitStruct.Pin = OF_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+  
+  GPIO_InitStruct.Pin = AF_CS_Pin|EE_CS_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+  
+  HAL_GPIO_WritePin(PLR0_CS_GPIO_Port, PLR0_CS_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(PLR1_CS_GPIO_Port, PLR1_CS_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(PLR2_CS_GPIO_Port, PLR2_CS_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(SD_CS_GPIO_Port,   SD_CS_Pin,   GPIO_PIN_SET);
+  HAL_GPIO_WritePin(OF_CS_GPIO_Port,   OF_CS_Pin,   GPIO_PIN_SET);
+  HAL_GPIO_WritePin(AF_CS_GPIO_Port,   AF_CS_Pin,   GPIO_PIN_SET);
+  HAL_GPIO_WritePin(EE_CS_GPIO_Port,   EE_CS_Pin,   GPIO_PIN_SET);
+  HAL_GPIO_WritePin(CSX_GPIO_Port,     CSX_Pin,     GPIO_PIN_SET);
+  
+  spSPI = pSPI;
+  SPI_setup(FALSE, SPI_CLOCK_RATE_MAX);
 }
 
 /**************************************************************************************************\
@@ -29,21 +67,25 @@ void SPI_init(void)
 \**************************************************************************************************/
 boolean SPI_setup(boolean state, SPIClockRate rate)
 {
-//  GPIO_InitTypeDef spiPortB  = {(SPI_MSCK_PIN | SPI_MISO_PIN | SPI_MOSI_PIN), GPIO_Mode_AF,
-//                                GPIO_Speed_25MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM};
-
-  GPIO_InitTypeDef spiPortB  = {(SPI_MSCK_PIN | SPI_MISO_PIN | SPI_MOSI_PIN), GPIO_Mode_AF,
-                                GPIO_Speed_100MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM};
-  spiPortB.GPIO_Mode    = (state == TRUE) ? GPIO_Mode_AF   : GPIO_Mode_IN;
-  spiPortB.GPIO_AltFunc = (state == TRUE) ? GPIO_AF_SPI1_2 : GPIO_AF_SYSTEM;
-
-  RCC->APB2RSTR |=  (RCC_APB1RSTR_SPI2RST);  // Reset the SPI peripheral
-  RCC->APB2RSTR &=  (~RCC_APB1RSTR_SPI2RST); // Release the SPI peripheral from reset
-  RCC->APB1ENR  |= (RCC_APB1ENR_SPI2EN);     // Enable SPI peripheral clocks
-  SPI2->CR1  = (SPI_CR1_SPE | SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI | (rate << 3));
-  SPI2->CR2 = (0x00000000);
-
-  GPIO_configurePins(GPIOB, &spiPortB);
+  HAL_SPI_DeInit(spSPI);
+  if (state)
+  {
+    uint32_t prescalar;
+    switch (rate)
+    {
+      case SPI_CLOCK_RATE_45000000: prescalar = SPI_BAUDRATEPRESCALER_2;   break;
+      case SPI_CLOCK_RATE_22500000: prescalar = SPI_BAUDRATEPRESCALER_4;   break;
+      case SPI_CLOCK_RATE_11250000: prescalar = SPI_BAUDRATEPRESCALER_8;   break;
+      case SPI_CLOCK_RATE_05625000: prescalar = SPI_BAUDRATEPRESCALER_16;  break;
+      case SPI_CLOCK_RATE_02812500: prescalar = SPI_BAUDRATEPRESCALER_32;  break;
+      case SPI_CLOCK_RATE_01406250: prescalar = SPI_BAUDRATEPRESCALER_64;  break;
+      case SPI_CLOCK_RATE_00703125: prescalar = SPI_BAUDRATEPRESCALER_128; break;
+      case SPI_CLOCK_RATE_00315625: prescalar = SPI_BAUDRATEPRESCALER_256; break;
+      default: return FALSE;
+    }
+    spSPI->Init.BaudRatePrescaler = prescalar;
+    HAL_SPI_Init(spSPI);
+  }
   return TRUE;
 }
 

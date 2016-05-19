@@ -37,6 +37,7 @@
 
 #include "stm32f429i_discovery_lcd.h"
 #include "analog.h"
+#include "eeprom.h"
 #include "powercon.h"
 
 /* USER CODE END Includes */
@@ -292,6 +293,8 @@ int main(void)
   sMain.vDomain1Test = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_1);
   sMain.vDomain2Test = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_2);
   sMain.ramTest = Main_testSDRAM();
+  
+  EEPROM_init(&hspi5);
   
   BSP_LCD_Init();                                 // Initialize the LCD
   BSP_LCD_LayerDefaultInit(1, LCD_FRAME_BUFFER);  // Initialize the LCD Layers
@@ -732,7 +735,6 @@ void MX_FMC_Init(void)
 */
 void MX_GPIO_Init(void)
 {
-
   GPIO_InitTypeDef GPIO_InitStruct;
 
   /* GPIO Ports Clock Enable */
@@ -745,8 +747,7 @@ void MX_GPIO_Init(void)
   __GPIOG_CLK_ENABLE();
   __GPIOD_CLK_ENABLE();
 
-  /*Configure GPIO pins : PV_VSEL0_Pin PV_VSEL1_Pin _PV_CLR_Pin _PV_EN_Pin 
-                           PV_VSEL2_Pin */
+  /*Configure GPIO pins : PV_VSEL0_Pin PV_VSEL1_Pin _PV_CLR_Pin _PV_EN_Pin PV_VSEL2_Pin */
   GPIO_InitStruct.Pin = PV_VSEL0_Pin|PV_VSEL1_Pin|_PV_CLR_Pin|_PV_EN_Pin 
                           |PV_VSEL2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -754,10 +755,9 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : _WF_RESET_Pin PV_D0_Pin PV_D1_Pin CSX_Pin 
-                           SD_CS_Pin _BT_RESET_Pin */
-  GPIO_InitStruct.Pin = _WF_RESET_Pin|PV_D0_Pin|PV_D1_Pin|CSX_Pin 
-                          |SD_CS_Pin|_BT_RESET_Pin;
+  /*Configure GPIO pins : _WF_RESET_Pin PV_D0_Pin PV_D1_Pin _BT_RESET_Pin */
+  GPIO_InitStruct.Pin = _WF_RESET_Pin|PV_D0_Pin|PV_D1_Pin 
+                          |_BT_RESET_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
@@ -769,10 +769,8 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : _PLR_CLR_Pin PLR0_CS_Pin PLR1_CS_Pin 
-                           PLR2_CS_Pin VADJ1_0_Pin VADJ1_1_Pin */
-  GPIO_InitStruct.Pin = _PLR_CLR_Pin|PLR0_CS_Pin|PLR1_CS_Pin 
-                          |PLR2_CS_Pin|VADJ1_0_Pin|VADJ1_1_Pin;
+  /*Configure GPIO pins : _PLR_CLR_Pin VADJ1_0_Pin VADJ1_1_Pin */
+  GPIO_InitStruct.Pin = _PLR_CLR_Pin|VADJ1_0_Pin|VADJ1_1_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
@@ -791,52 +789,19 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(TE_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : RDX_Pin WRX_DCX_Pin OF_CS_Pin */
-  GPIO_InitStruct.Pin = RDX_Pin|WRX_DCX_Pin|OF_CS_Pin;
+  /*Configure GPIO pins : RDX_Pin WRX_DCX_Pin */
+  GPIO_InitStruct.Pin = RDX_Pin|WRX_DCX_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
   
-  /*Configure GPIO pins : AF_CS_Pin EE_CS_Pin LD3_Pin LD4_Pin */
-  GPIO_InitStruct.Pin = AF_CS_Pin|EE_CS_Pin|LD3_Pin|LD4_Pin;
+  /*Configure GPIO pins : LD3_Pin LD4_Pin */
+  GPIO_InitStruct.Pin = LD3_Pin|LD4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
-
-  // Configure the SPI5 CS pins
-  GPIO_InitStruct.Pin = PLR0_CS_Pin|PLR1_CS_Pin|PLR2_CS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-  
-  GPIO_InitStruct.Pin = SD_CS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
-  
-  GPIO_InitStruct.Pin = OF_CS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
-  HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
-  
-  GPIO_InitStruct.Pin = AF_CS_Pin|EE_CS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
-  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
-  
-  HAL_GPIO_WritePin(PLR0_CS_GPIO_Port, PLR0_CS_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(PLR1_CS_GPIO_Port, PLR1_CS_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(PLR2_CS_GPIO_Port, PLR2_CS_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(SD_CS_GPIO_Port,   SD_CS_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(OF_CS_GPIO_Port,   OF_CS_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(AF_CS_GPIO_Port,   AF_CS_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(EE_CS_GPIO_Port,   EE_CS_Pin, GPIO_PIN_SET);
 }
 
 /* USER CODE BEGIN 4 */

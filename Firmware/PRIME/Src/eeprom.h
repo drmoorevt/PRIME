@@ -1,6 +1,8 @@
 #ifndef EEPROM_H
 #define EEPROM_H
 
+#include "types.h"
+
 typedef struct
 {
   uint8 testPage[128];

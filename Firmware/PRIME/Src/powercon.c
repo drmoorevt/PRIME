@@ -51,6 +51,8 @@ bool PowerCon_setDomainVoltage(VoltageDomain dom, double voltage)
       break;
     case VOLTAGE_DOMAIN_2:
       vf = rf * (vref * ((1/r2) + (1/rf)) - ((voltage - vref) / r1));
+      if (vf > 3.3)
+        dacVal = vf = 3.3;
       dacVal = vf * (4095.0 / 3.3);
       HAL_DAC_SetValue(&sPowerCon.hdac, DAC_CHANNEL_2, DAC_ALIGN_12B_R, dacVal);
       HAL_DAC_Start(&sPowerCon.hdac, DAC_CHANNEL_2);
@@ -133,15 +135,19 @@ bool PowerCon_powerSupplyPOST(VoltageDomain domain)
   ADCSelect chanNum;
   char outBuf[64];
   uint32_t adcVal, outLen, counter = 0;
-  switch (counter)
+  while (1)
   {
-    case 0:    PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 3.3); break;
-    case 1023: PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 2.7); break;
-    case 2047: PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 2.3); break;
-    case 3071: PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 1.8); break;
-    case 4095: counter = 0;                                      return true;
+    counter = (++counter >= 4096) ? 0 : counter;
+    switch (counter)
+    {
+      case 0:    PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 3.3); break;
+      case 1023: PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 2.7); break;
+      case 2047: PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 2.3); break;
+      case 3071: PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 1.8); break;
+    }
+    PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, counter * 3.3 / 4095.0);
+    //HAL_Delay(1);
   }
-  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, counter * 3.3 / 4095.0);
   
   for (chanNum = ADC_VREF_INTERNAL; chanNum < ADC_SELECT_MAX; chanNum++)
   {

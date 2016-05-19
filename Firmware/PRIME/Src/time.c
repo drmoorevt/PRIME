@@ -142,7 +142,7 @@ void TIM3_IRQHandler(void)
 {
   TIM3->EGR = TIM_EGR_TG;
   CLEAR_BIT(TIM3->SR, TIM_SR_UIF); // Clear the update interrupt flag
-  Tests_notifySampleTrigger();
+  //Tests_notifySampleTrigger();
 }
 
 /**************************************************************************************************\
@@ -272,7 +272,7 @@ static void Time_decrementSoftTimers(void)
 * RETURN        none
 * NOTES         Called in interrupt to decrement timers, handle time/date functionality
 \**************************************************************************************************/
-void SysTick_Handler(void)
+void HAL_SYSTICK_Callback(void)
 {
   if (0 == ((sTime.systemTime++) % MILLISECONDS_PER_SECOND))
     sTime.isSecondBoundary = TRUE;

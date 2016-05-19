@@ -85,17 +85,16 @@ boolean EEPROM_setup(boolean state)
 
   // Set up the SPI transaction with respect to domain voltage
   if (sEEPROM.vDomain[sEEPROM.state] >= EE_HIGH_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_7500000);
+    SPI_setup(state, SPI_CLOCK_RATE_11250000);
   else if (sEEPROM.vDomain[sEEPROM.state] >= EE_MID_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_3250000);
+    SPI_setup(state, SPI_CLOCK_RATE_05625000);
   else if (sEEPROM.vDomain[sEEPROM.state] >= EE_LOW_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_812500);
+    SPI_setup(state, SPI_CLOCK_RATE_01406250);
   else
   {
-    SPI_setup(state, SPI_CLOCK_RATE_406250);
+    SPI_setup(state, SPI_CLOCK_RATE_01406250);
     return FALSE; // Domain voltage is too low for EEPROM operation, attempt very low speed
   }
-*/
   return TRUE;
 }
 
@@ -311,16 +310,7 @@ void EEPROM_test(void)
   uint8 buffer[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
   uint8 test[sizeof(buffer)];
-
-  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,  FALSE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
-  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_delay(1000000); // Wait 1000ms for domains to settle
+  PowerCon_setDeviceDomain(DEVICE_EEPROM, VOLTAGE_DOMAIN_0);
 
   // basic read test
   EEPROM_read((uint8*)0,test,sizeof(test));
