@@ -132,9 +132,49 @@ bool PowerCon_init(DAC_HandleTypeDef *pDAC)
 \**************************************************************************************************/
 bool PowerCon_powerSupplyPOST(VoltageDomain domain)
 {
+  const double dom0Voltage[1] = {3.3};
+  const double dom1Voltage[4] = {3.3, 2.7, 2.3, 1.8};
+  const double dom2Voltage[4] = {3.3, 2.7, 2.3, 1.8};
+  const double DOMAIN_VOLTAGE_DIVIDER = 2;
+  const double *pTestArray;
+  uint32_t numTests;
+  
   ADCSelect chanNum;
   char outBuf[64];
-  uint32_t adcVal, outLen, counter = 0;
+  uint32_t adcVal, outLen, counter = 0, i;
+  double domVolts, loVolts, hiVolts;
+  switch (domain)
+  {
+    case VOLTAGE_DOMAIN_0:  // The static 3.3V domain
+      chanNum = ADC_DOM0_VOLTAGE;
+      pTestArray = dom0Voltage;
+      numTests = (sizeof(dom0Voltage) / sizeof(dom0Voltage[0]));
+      break;
+    case VOLTAGE_DOMAIN_1:  // This is the 2bit-selectable domain
+      chanNum = ADC_DOM1_VOLTAGE;
+      pTestArray = dom1Voltage;
+      numTests = (sizeof(dom0Voltage) / sizeof(dom0Voltage[0]));
+      break;
+    case VOLTAGE_DOMAIN_2:  // This is the fully dynamic domain
+      chanNum = ADC_DOM2_VOLTAGE;
+      pTestArray = dom2Voltage;
+      numTests = (sizeof(dom0Voltage) / sizeof(dom0Voltage[0]));
+      break;
+    default:
+      return false;
+  }
+  
+  for (i = 0; i < numTests; i++)
+  {
+    PowerCon_setDomainVoltage(domain, pTestArray[i]);
+    domVolts = Analog_getADCVoltage(chanNum) * DOMAIN_VOLTAGE_DIVIDER;
+    loVolts = (0.90)*(pTestArray[i]);
+    hiVolts = (1.10)*(pTestArray[i]);
+    if ((domVolts > hiVolts) || (domVolts < loVolts))
+      return false;
+  }
+  return true;
+
   while (1)
   {
     counter = (++counter >= 4096) ? 0 : counter;

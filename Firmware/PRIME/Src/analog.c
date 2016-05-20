@@ -62,5 +62,20 @@ uint16_t Analog_getADCVal(ADCSelect adc)
   }
   HAL_ADC_ConfigChannel(adcNum, &sConfig);
   HAL_ADC_Start(adcNum);
+  HAL_Delay(1);
   return HAL_ADC_GetValue(adcNum);
+}
+
+/**************************************************************************************************\
+* FUNCTION    Analog_getADCVoltage
+* DESCRIPTION 
+* PARAMETERS  
+* RETURNS     
+\**************************************************************************************************/
+double Analog_getADCVoltage(ADCSelect adc)
+{
+  const double refVoltage = 1.21;
+  uint16_t refCode = Analog_getADCVal(ADC_VREF_INTERNAL);
+  uint16_t domCode = Analog_getADCVal(adc);
+  return (refVoltage / (double)refCode) * (double)domCode;
 }

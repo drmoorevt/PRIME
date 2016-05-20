@@ -30,5 +30,6 @@ typedef struct
 
 bool Analog_init(AnalogInit *pAnInit);
 uint16_t Analog_getADCVal(ADCSelect adc);
+double Analog_getADCVoltage(ADCSelect adc);
 
 #endif

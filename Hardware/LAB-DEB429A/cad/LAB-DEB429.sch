@@ -10022,10 +10022,19 @@ at 27/07/2012 14:48:47</description>
 <text x="10.16" y="177.8" size="2.54" layer="91">Remove R29, R30 on Discovery board -- I2C needs to be pulled to domain voltage</text>
 <text x="10.16" y="172.72" size="2.54" layer="91">Can't use LTDC and NAND/NOR flash at the same time.</text>
 <text x="10.16" y="167.64" size="2.54" layer="91">Remove R69 and R72 from DISCO board to remove USB_OTG host circuitry</text>
-<text x="5.08" y="38.1" size="1.778" layer="91">0.00 = 3.3V
-1.30 = 2.7V
-1.80 = 2.3V
-2.65 = 1.8V</text>
+<text x="-20.32" y="20.32" size="1.778" layer="91">ASDM300F:
+Vadj     Vout
+0.00 = 3.32V
+0.85 = 2.82V
+1.80 = 2.26V
+2.65 = 1.76V
+
+Resistors:
+V1,  V2,    Vadj
+0.0, 0.0 = 0.00V
+0.0, 3.3 = 0.85V
+3.3, 0.0 = 1.80V
+3.3, 3.3 = 2.65V</text>
 <text x="276.86" y="177.8" size="6.4516" layer="95" rot="MR0">IODVS Devices</text>
 <text x="152.4" y="177.8" size="5.08" layer="95">Voltage Bus</text>
 <text x="284.48" y="40.64" size="5.08" layer="95" rot="MR180">Data Bus</text>
