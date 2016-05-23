@@ -10022,7 +10022,7 @@ at 27/07/2012 14:48:47</description>
 <text x="10.16" y="177.8" size="2.54" layer="91">Remove R29, R30 on Discovery board -- I2C needs to be pulled to domain voltage</text>
 <text x="10.16" y="172.72" size="2.54" layer="91">Can't use LTDC and NAND/NOR flash at the same time.</text>
 <text x="10.16" y="167.64" size="2.54" layer="91">Remove R69 and R72 from DISCO board to remove USB_OTG host circuitry</text>
-<text x="-20.32" y="20.32" size="1.778" layer="91">ASDM300F:
+<text x="5.08" y="5.08" size="1.778" layer="91">ASDM300F:
 Vadj     Vout
 0.00 = 3.32V
 0.85 = 2.82V
@@ -10058,6 +10058,8 @@ V1,  V2,    Vadj
 <text x="-88.9" y="91.44" size="2.54" layer="91">Switch output selects and Rev4 the PPS330D</text>
 <text x="10.16" y="132.08" size="2.54" layer="91">Need to open collector the SPI chip selects -- use 74HC259</text>
 <text x="10.16" y="182.88" size="2.54" layer="91">May be able to power the MCU off of Vdd pin using a PPS330D</text>
+<text x="-99.06" y="86.36" size="2.54" layer="91">SPI Devices can turn on when disconnected due to SPI activity</text>
+<text x="-99.06" y="81.28" size="2.54" layer="91">Add standoffs to board to prevent flex</text>
 </plain>
 <instances>
 <instance part="J1" gate="-1" x="40.64" y="271.78"/>
