@@ -536,6 +536,31 @@
               <FileType>5</FileType>
               <FilePath>..\Src\util.h</FilePath>
             </File>
+            <File>
+              <FileName>m25px.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\m25px.c</FilePath>
+            </File>
+            <File>
+              <FileName>m25px.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Src\m25px.h</FilePath>
+            </File>
+            <File>
+              <FileName>sst26.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\sst26.c</FilePath>
+            </File>
+            <File>
+              <FileName>sst26.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Src\sst26.h</FilePath>
+            </File>
+            <File>
+              <FileName>types.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Src\types.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
