@@ -19,7 +19,6 @@ struct
   boolean isSecondBoundary;
 } sTime;
 
-static void Time_initSysTick(void);
 static void Time_decrementSoftTimers(void);
 
 /**************************************************************************************************\
@@ -31,7 +30,6 @@ static void Time_decrementSoftTimers(void);
 void Time_init(void)
 {
   Util_fillMemory((uint8*)&sTime, sizeof(sTime), 0x00);  // Clear all of the software timers
-  Time_initSysTick();
 }
 
 /**************************************************************************************************\
@@ -169,9 +167,11 @@ void Time_delay(volatile uint32 microSeconds)
 {
   if (0 == microSeconds)
     return;
+  __HAL_RCC_TIM5_CLK_ENABLE();
+  
   RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;  // Turn on Timer5 clocks (60 MHz)
   TIM5->CR1     = (0x0000);            // Turn off the counter entirely
-  TIM5->PSC     = (60);                // Set prescalar to 60. Timer operates at 60MHz.
+  TIM5->PSC     = (90);                // Set prescalar to 60. Timer operates at 60MHz.
   TIM5->ARR     = (microSeconds);      // Set up the counter to count down
   TIM5->SR      = (0x0000);            // Clear all status (and interrupt) bits
   TIM5->DIER    = (0x0000);            // Turn off the timer (update) interrupt
@@ -277,16 +277,4 @@ void HAL_SYSTICK_Callback(void)
   if (0 == ((sTime.systemTime++) % MILLISECONDS_PER_SECOND))
     sTime.isSecondBoundary = TRUE;
   Time_decrementSoftTimers();
-}
-
-/**************************************************************************************************\
-* FUNCTION      Time_initSysTick
-* DESCRIPTION   Initializes the 1ms system tick timer
-* PARAMETERS    none
-* RETURN        none
-* NOTES         These
-\**************************************************************************************************/
-static void Time_initSysTick(void)
-{
-  SysTick_Config(SystemCoreClock / MILLISECONDS_PER_SECOND); // div 1000 = 1ms tick
 }

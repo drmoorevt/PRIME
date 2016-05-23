@@ -116,7 +116,7 @@ bool PowerCon_init(DAC_HandleTypeDef *pDAC)
   // Disconnect all peripheral devices
   Device i;
   for (i = DEVICE_EEPROM; i < DEVICE_MAX; i++)
-    PowerCon_setDeviceDomain(i, VOLTAGE_DOMAIN_NONE);
+    PowerCon_setDeviceDomain(i, VOLTAGE_DOMAIN_0);
   
   //Default voltage domains to 3.3, 2.7, 1.8
   PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 2.7);
@@ -137,11 +137,9 @@ bool PowerCon_powerSupplyPOST(VoltageDomain domain)
   const double dom2Voltage[4] = {3.3, 2.7, 2.3, 1.8};
   const double DOMAIN_VOLTAGE_DIVIDER = 2;
   const double *pTestArray;
-  uint32_t numTests;
   
   ADCSelect chanNum;
-  char outBuf[64];
-  uint32_t adcVal, outLen, counter = 0, i;
+  uint32_t i, numTests;
   double domVolts, loVolts, hiVolts;
   switch (domain)
   {
@@ -153,12 +151,12 @@ bool PowerCon_powerSupplyPOST(VoltageDomain domain)
     case VOLTAGE_DOMAIN_1:  // This is the 2bit-selectable domain
       chanNum = ADC_DOM1_VOLTAGE;
       pTestArray = dom1Voltage;
-      numTests = (sizeof(dom0Voltage) / sizeof(dom0Voltage[0]));
+      numTests = (sizeof(dom1Voltage) / sizeof(dom0Voltage[1]));
       break;
     case VOLTAGE_DOMAIN_2:  // This is the fully dynamic domain
       chanNum = ADC_DOM2_VOLTAGE;
       pTestArray = dom2Voltage;
-      numTests = (sizeof(dom0Voltage) / sizeof(dom0Voltage[0]));
+      numTests = (sizeof(dom2Voltage) / sizeof(dom0Voltage[2]));
       break;
     default:
       return false;
@@ -167,35 +165,12 @@ bool PowerCon_powerSupplyPOST(VoltageDomain domain)
   for (i = 0; i < numTests; i++)
   {
     PowerCon_setDomainVoltage(domain, pTestArray[i]);
+    HAL_Delay(100);
     domVolts = Analog_getADCVoltage(chanNum) * DOMAIN_VOLTAGE_DIVIDER;
     loVolts = (0.90)*(pTestArray[i]);
     hiVolts = (1.10)*(pTestArray[i]);
     if ((domVolts > hiVolts) || (domVolts < loVolts))
       return false;
   }
-  return true;
-
-  while (1)
-  {
-    counter = (++counter >= 4096) ? 0 : counter;
-    switch (counter)
-    {
-      case 0:    PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 3.3); break;
-      case 1023: PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 2.7); break;
-      case 2047: PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 2.3); break;
-      case 3071: PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 1.8); break;
-    }
-    PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, counter * 3.3 / 4095.0);
-    //HAL_Delay(1);
-  }
-  
-  for (chanNum = ADC_VREF_INTERNAL; chanNum < ADC_SELECT_MAX; chanNum++)
-  {
-    Analog_getADCVal(chanNum);
-    outLen = sprintf(outBuf, "%d ", adcVal);
-    //ExtUSB_tx((uint8_t *)outBuf, outLen);
-  }
-  outLen = sprintf(outBuf, "\r\n");
-  //ExtUSB_tx((uint8_t *)outBuf, outLen);
   return true;
 }

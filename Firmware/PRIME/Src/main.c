@@ -38,7 +38,12 @@
 #include "stm32f429i_discovery_lcd.h"
 #include "analog.h"
 #include "eeprom.h"
+#include "extusb.h"
+#include "m25px.h"
 #include "powercon.h"
+#include "spi.h"
+#include "sst26.h"
+#include "time.h"
 
 /* USER CODE END Includes */
 
@@ -111,18 +116,30 @@ static struct
   bool vDomain1Test;
   bool vDomain2Test;
   bool ramTest;
+  bool eepromTest;
+  bool norFlashTest;
+  bool nandFlashTest;
+  bool sdCardTest;
+  bool si114xTest;
+  bool hih6130Test;
+  bool usbTest;
+  bool bluetoothTest;
+  bool wifiTest;
+  bool plr5010d0Test;
+  bool plr5010d1Test;
+  bool plr5010d2Test;
 } sMain;
 
 #define SDRAM_DEVICE_ADDR         ((uint32_t)0xD0000000)
 #define SDRAM_DEVICE_SIZE         ((uint32_t)0x800000)  /* SDRAM device size in MBytes */
 bool Main_testSDRAM(void)
 {
-  uint32_t i;
-  for (i = 0; i < SDRAM_DEVICE_SIZE; i++)
+  uint32_t i;  // Avoid stomping on LCD SDRAM during the test by starting at BUFFER_OFFSET
+  for (i = BUFFER_OFFSET; i < SDRAM_DEVICE_SIZE; i++)
   {
     *(uint8_t *)(SDRAM_DEVICE_ADDR + i) = i;
   }
-  for (i = 0; i < SDRAM_DEVICE_SIZE; i++)
+  for (i = BUFFER_OFFSET; i < SDRAM_DEVICE_SIZE; i++)
   {
     if (*(uint8_t *)(SDRAM_DEVICE_ADDR + i) != (i & 0x000000FF))
       return false;
@@ -201,46 +218,79 @@ void BSP_SDRAM_Initialization_sequence(uint32_t RefreshCount, SDRAM_HandleTypeDe
   HAL_SDRAM_ProgramRefreshRate(SdramHandle, RefreshCount); 
 }
 
+static uint8_t sdramTest[] = "SDRAM............";
+static uint8_t vdom0Test[] = "Vdomain0.........";
+static uint8_t vdom1Test[] = "Vdomain1.........";
+static uint8_t vdom2Test[] = "Vdomain2.........";
+static uint8_t eeTest[]    = "EEPROM...........";
+static uint8_t norTest[]   = "NOR Flash........";
+static uint8_t nandTest[]  = "NAND Flash.......";
+static uint8_t sdTest[]    = "Micro-SD.........";
+static uint8_t siTest[]    = "Si114x...........";
+static uint8_t hihTest[]   = "HIH6130..........";
+static uint8_t usbTest[]   = "USB Hi-Speed.....";
+static uint8_t btTest[]    = "Bluetooth........";
+static uint8_t wifiTest[]  = "WIFI.............";
+static uint8_t plr0Test[]  = "PLR5010D0........";
+static uint8_t plr1Test[]  = "PLR5010D1........";
+static uint8_t plr2Test[]  = "PLR5010D2........";
+
 static void Display_DemoDescription(void)
 {
   uint8_t desc[50];
   
   /* Set LCD Foreground Layer  */
-  BSP_LCD_SelectLayer(1);
+  BSP_LCD_SelectLayer(0);
   
   BSP_LCD_SetFont(&LCD_DEFAULT_FONT);
   
   /* Clear the LCD */ 
-  BSP_LCD_SetBackColor(LCD_COLOR_WHITE); 
-  BSP_LCD_Clear(LCD_COLOR_WHITE);
+  BSP_LCD_SetBackColor(LCD_COLOR_BLACK); 
+  BSP_LCD_Clear(LCD_COLOR_BLACK);
   
   /* Set the LCD Text Color */
-  BSP_LCD_SetTextColor(LCD_COLOR_DARKBLUE);  
+  BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
   
   /* Display LCD messages */
-  BSP_LCD_DisplayStringAt(0, 10, (uint8_t*)"AntePrime Demo", CENTER_MODE);
+  BSP_LCD_DisplayStringAt(0, 10, (uint8_t*)"PRIME", CENTER_MODE);
   BSP_LCD_SetFont(&Font16);
   BSP_LCD_DisplayStringAt(0, 35, (uint8_t*)"Peripheral Tests", CENTER_MODE);
   
-  if (sMain.ramTest)
-    BSP_LCD_DisplayStringAt(0, 60, (uint8_t*)"SDRAM tests passed", CENTER_MODE);
-  else
-    BSP_LCD_DisplayStringAt(0, 60, (uint8_t*)"SDRAM tests failed", CENTER_MODE);
-  
   /* Draw Bitmap */
 //  BSP_LCD_DrawBitmap((BSP_LCD_GetXSize() - 80)/2, 65, (uint8_t *)stlogo);
-  
-  BSP_LCD_SetFont(&Font8);
-  BSP_LCD_DisplayStringAt(0, BSP_LCD_GetYSize()- 20, (uint8_t*)"Copyright (c) STMicroelectronics 2014", CENTER_MODE);
-  
-  BSP_LCD_SetFont(&Font12);
-  BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
-  BSP_LCD_FillRect(0, BSP_LCD_GetYSize()/2 + 15, BSP_LCD_GetXSize(), 60);
-  BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
-  BSP_LCD_SetBackColor(LCD_COLOR_BLUE); 
-  BSP_LCD_DisplayStringAt(0, BSP_LCD_GetYSize()/2 + 30, (uint8_t*)"Press USER Button to start:", CENTER_MODE);
+//  BSP_LCD_SetFont(&Font8);
+//  BSP_LCD_DisplayStringAt(0, BSP_LCD_GetYSize()- 20, (uint8_t*)"Daniel Moore (drmoore@gmail.com)", CENTER_MODE);
+//  
+//  BSP_LCD_SetFont(&Font12);
+//  BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
+//  BSP_LCD_FillRect(0, BSP_LCD_GetYSize()/2 + 15, BSP_LCD_GetXSize(), 60);
+//  BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+//  BSP_LCD_SetBackColor(LCD_COLOR_BLUE); 
+//  BSP_LCD_DisplayStringAt(0, BSP_LCD_GetYSize()/2 + 30, (uint8_t*)"Press USER Button to start:", CENTER_MODE);
 //  sprintf((char *)desc,"%s example", BSP_examples[DemoIndex].DemoName);
-  BSP_LCD_DisplayStringAt(0, BSP_LCD_GetYSize()/2 + 45, (uint8_t *)desc, CENTER_MODE);   
+//  BSP_LCD_DisplayStringAt(0, BSP_LCD_GetYSize()/2 + 45, (uint8_t *)desc, CENTER_MODE);   
+}
+
+void Main_printResult(uint32_t yPos, bool result)
+{
+  if (result)
+  {
+    BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+    BSP_LCD_DisplayStringAt(0, yPos, (uint8_t *)"[     ", RIGHT_MODE);
+    BSP_LCD_SetTextColor(LCD_COLOR_GREEN);
+    BSP_LCD_DisplayStringAt(0, yPos, (uint8_t *)"OK  ", RIGHT_MODE);
+    BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+    BSP_LCD_DisplayStringAt(0, yPos, (uint8_t *)" ]", RIGHT_MODE);
+  }
+  else
+  {
+    BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+    BSP_LCD_DisplayStringAt(0, yPos, (uint8_t *)"[     ", RIGHT_MODE);
+    BSP_LCD_SetTextColor(LCD_COLOR_RED);
+    BSP_LCD_DisplayStringAt(0, yPos, (uint8_t *)"FAIL ", RIGHT_MODE);
+    BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+    BSP_LCD_DisplayStringAt(0, yPos, (uint8_t *)"]", RIGHT_MODE);
+  }
 }
 
 int main(void)
@@ -270,11 +320,14 @@ int main(void)
   MX_FMC_Init();
   MX_I2C3_Init();
   //MX_LTDC_Init();
-  //MX_SPI5_Init();
+  MX_SPI5_Init();
   MX_TIM6_Init();
   MX_TIM7_Init();
   MX_UART5_Init();
   MX_USART1_UART_Init();
+  BSP_LCD_Init();                                 // Initialize the LCD
+  SPI_init(&hspi5);  // Reinitialize SPI after the LCD messes with it...
+  
 
   /* USER CODE BEGIN 2 */
   BSP_SDRAM_Initialization_sequence(REFRESH_COUNT, &hsdram1);
@@ -285,20 +338,89 @@ int main(void)
   anInit.hadc2 = hadc2;
   anInit.hadc3 = hadc3;
   anInit.hdma_adc1 = hdma_adc1;
+  
   Analog_init(&anInit);
-  
   PowerCon_init(&hdac);
+  EEPROM_init();
+  M25PX_init();
+  SST26_init();
   
-  sMain.vDomain0Test = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_0);
-  sMain.vDomain1Test = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_1);
-  sMain.vDomain2Test = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_2);
-  sMain.ramTest = Main_testSDRAM();
   
-  EEPROM_init(&hspi5);
+  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 3.3); // Set both domains to a known value
+  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 3.3);
   
-  BSP_LCD_Init();                                 // Initialize the LCD
-  BSP_LCD_LayerDefaultInit(1, LCD_FRAME_BUFFER);  // Initialize the LCD Layers
+  BSP_LED_Init(LED3);
+  BSP_LED_Init(LED4);
+  BSP_LED_On(LED3);
+  BSP_LED_On(LED4);
+  
+  BSP_LCD_LayerDefaultInit(0, LCD_FRAME_BUFFER);  // Initialize the LCD Layers
   Display_DemoDescription();                      // Display test information
+  
+  BSP_LCD_DisplayStringAt(0, 60,  sdramTest, LEFT_MODE);
+  sMain.ramTest       = Main_testSDRAM();
+  Main_printResult(60, sMain.ramTest);
+  
+  BSP_LCD_DisplayStringAt(0, 75,  vdom0Test, LEFT_MODE);
+  sMain.vDomain0Test  = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_0);
+  Main_printResult(75, sMain.vDomain0Test);
+  
+  BSP_LCD_DisplayStringAt(0, 90,  vdom1Test, LEFT_MODE);
+  sMain.vDomain1Test  = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_1);
+  Main_printResult(90, sMain.vDomain1Test);
+  
+  BSP_LCD_DisplayStringAt(0, 105,  vdom2Test, LEFT_MODE);
+  sMain.vDomain2Test  = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_2);
+  Main_printResult(105, sMain.vDomain2Test);
+  
+  BSP_LCD_DisplayStringAt(0, 120,  eeTest, LEFT_MODE);
+  sMain.eepromTest    = EEPROM_test();
+  Main_printResult(120, sMain.eepromTest);
+  
+  BSP_LCD_DisplayStringAt(0, 135,  norTest, LEFT_MODE);
+  sMain.norFlashTest  = M25PX_test();
+  Main_printResult(135, sMain.norFlashTest);
+  
+  BSP_LCD_DisplayStringAt(0, 150,  nandTest, LEFT_MODE);
+  sMain.nandFlashTest = SST26_test();
+  Main_printResult(150, sMain.nandFlashTest);
+  
+  BSP_LCD_DisplayStringAt(0, 165,  sdTest, LEFT_MODE);
+//
+  Main_printResult(165, sMain.sdCardTest);
+  
+  BSP_LCD_DisplayStringAt(0, 180,  siTest, LEFT_MODE);
+//
+  Main_printResult(180, sMain.si114xTest);
+  
+  BSP_LCD_DisplayStringAt(0, 195,  hihTest, LEFT_MODE);
+//
+  Main_printResult(195, sMain.hih6130Test);
+  
+  BSP_LCD_DisplayStringAt(0, 210,  usbTest, LEFT_MODE);
+  sMain.usbTest       = ExtUSB_testUSB();
+  Main_printResult(210, sMain.usbTest);
+  
+  BSP_LCD_DisplayStringAt(0, 225,  btTest, LEFT_MODE);
+//
+  Main_printResult(225, sMain.bluetoothTest);
+  
+  BSP_LCD_DisplayStringAt(0, 240,  wifiTest, LEFT_MODE);
+//
+  Main_printResult(240, sMain.wifiTest);
+  
+  BSP_LCD_DisplayStringAt(0, 255,  plr0Test, LEFT_MODE);
+//
+  Main_printResult(255, sMain.plr5010d0Test);
+  
+  BSP_LCD_DisplayStringAt(0, 270,  plr1Test, LEFT_MODE);
+//
+  Main_printResult(270, sMain.plr5010d1Test);
+  
+  BSP_LCD_DisplayStringAt(0, 285,  plr2Test, LEFT_MODE);
+//
+  Main_printResult(285, sMain.plr5010d2Test);
+  
   while(1);
 }
 

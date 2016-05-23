@@ -20,28 +20,31 @@ static SPI_HandleTypeDef *spSPI;
 void SPI_init(SPI_HandleTypeDef *pSPI)
 {
   GPIO_InitTypeDef GPIO_InitStruct;
+  __HAL_RCC_SPI5_CLK_ENABLE();
+  
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   
   // Configure the SPI5 CS pins
   GPIO_InitStruct.Pin = PLR0_CS_Pin|PLR1_CS_Pin|PLR2_CS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  //GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
   
   GPIO_InitStruct.Pin = SD_CS_Pin|CSX_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  //GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
   
   GPIO_InitStruct.Pin = OF_CS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  //GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
   
   GPIO_InitStruct.Pin = AF_CS_Pin|EE_CS_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
+  //GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
@@ -73,14 +76,14 @@ boolean SPI_setup(boolean state, SPIClockRate rate)
     uint32_t prescalar;
     switch (rate)
     {
-      case SPI_CLOCK_RATE_45000000: prescalar = SPI_BAUDRATEPRESCALER_2;   break;
-      case SPI_CLOCK_RATE_22500000: prescalar = SPI_BAUDRATEPRESCALER_4;   break;
-      case SPI_CLOCK_RATE_11250000: prescalar = SPI_BAUDRATEPRESCALER_8;   break;
-      case SPI_CLOCK_RATE_05625000: prescalar = SPI_BAUDRATEPRESCALER_16;  break;
-      case SPI_CLOCK_RATE_02812500: prescalar = SPI_BAUDRATEPRESCALER_32;  break;
-      case SPI_CLOCK_RATE_01406250: prescalar = SPI_BAUDRATEPRESCALER_64;  break;
-      case SPI_CLOCK_RATE_00703125: prescalar = SPI_BAUDRATEPRESCALER_128; break;
-      case SPI_CLOCK_RATE_00315625: prescalar = SPI_BAUDRATEPRESCALER_256; break;
+      case SPI_CLOCK_RATE_90000000: prescalar = SPI_BAUDRATEPRESCALER_2;   break;
+      case SPI_CLOCK_RATE_45000000: prescalar = SPI_BAUDRATEPRESCALER_4;   break;
+      case SPI_CLOCK_RATE_22500000: prescalar = SPI_BAUDRATEPRESCALER_8;   break;
+      case SPI_CLOCK_RATE_11250000: prescalar = SPI_BAUDRATEPRESCALER_16;  break;
+      case SPI_CLOCK_RATE_05625000: prescalar = SPI_BAUDRATEPRESCALER_32;  break;
+      case SPI_CLOCK_RATE_02812500: prescalar = SPI_BAUDRATEPRESCALER_64;  break;
+      case SPI_CLOCK_RATE_01406250: prescalar = SPI_BAUDRATEPRESCALER_128; break;
+      case SPI_CLOCK_RATE_00703125: prescalar = SPI_BAUDRATEPRESCALER_256; break;
       default: return FALSE;
     }
     spSPI->Init.BaudRatePrescaler = prescalar;
@@ -98,14 +101,11 @@ boolean SPI_setup(boolean state, SPIClockRate rate)
 \**************************************************************************************************/
 void SPI_write(const uint8 *pBytes, uint32 numBytes)
 {
-  uint16 dummy = SPI2->DR; // clear the DR
   if (numBytes == 0)
     return;
   
-  while(numBytes--)
-    SPI_TX(*pBytes++);
-  
-  while(SPI2->SR & SPI_SR_BSY); // Wait for tx to complete
+  HAL_SPI_Transmit(spSPI, (uint8_t *)pBytes, numBytes, 100);
+  while(spSPI->State != HAL_SPI_STATE_READY); // Wait for tx to complete
 }
 
 /*****************************************************************************\
@@ -118,19 +118,12 @@ void SPI_write(const uint8 *pBytes, uint32 numBytes)
 \*****************************************************************************/
 void SPI_read(uint8 *pBytes, uint32 numBytes)
 {
-  uint16 dummy = SPI2->DR; // clear the DR
-  
   if (numBytes == 0)
     return;
 
-  while(numBytes--)
-  {
-    SPI_TX(0xFF);
-		while (!(SPI2->SR & SPI_SR_RXNE));
-    *pBytes++ = SPI2->DR;   // read the incoming byte
-  }
-
-	while(SPI2->SR & SPI_SR_BSY); // Wait for tx to complete
+  
+  HAL_SPI_Receive(spSPI, (uint8_t *)pBytes, numBytes, 100);
+  while(spSPI->State != HAL_SPI_STATE_READY); // Wait for tx to complete
 }
 
 

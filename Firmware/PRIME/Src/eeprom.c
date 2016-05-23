@@ -9,7 +9,7 @@
 
 // Can remove the wait by configuring the pins as push-pull, but risk leakage into the domain
 #define SELECT_CHIP_EE0()   do {                                                              \
-                                 HAL_GPIO_WritePin(EE_CS_GPIO_Port, EE_CS_Pin, GPIO_PIN_SET); \
+                                 HAL_GPIO_WritePin(EE_CS_GPIO_Port, EE_CS_Pin, GPIO_PIN_RESET); \
                                  Time_delay(1);                                               \
                                } while (0)
 
@@ -47,7 +47,6 @@ static const double EEPROM_POWER_PROFILES[EEPROM_PROFILE_MAX][EEPROM_STATE_MAX] 
 
 static struct
 {
-  SPI_HandleTypeDef hspi;
   double      vDomain[EEPROM_STATE_MAX]; // The domain voltage for each state
   EEPROMState state;
   boolean     isInitialized;
@@ -59,10 +58,9 @@ static struct
 * PARAMETERS  None
 * RETURNS     Nothing
 \**************************************************************************************************/
-void EEPROM_init(SPI_HandleTypeDef *pSPI)
+void EEPROM_init(void)
 {
   Util_fillMemory((uint8*)&sEEPROM, sizeof(sEEPROM), 0x00);
-  Util_copyMemory((uint8_t *)pSPI, (uint8_t *)&sEEPROM.hspi, sizeof(sEEPROM.hspi));
   
   EEPROM_setPowerProfile(EEPROM_PROFILE_STANDARD);  // Set all states to 3.3v
   EEPROM_setup(FALSE);
@@ -305,13 +303,13 @@ boolean EEPROM_fill(uint8 *pDest, uint16 length, uint8 fillVal)
 * PARAMETERS  none
 * RETURNS     nothing
 \**************************************************************************************************/
-void EEPROM_test(void)
+bool EEPROM_test(void)
 {
   uint8 buffer[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
   uint8 test[sizeof(buffer)];
   PowerCon_setDeviceDomain(DEVICE_EEPROM, VOLTAGE_DOMAIN_0);
-
+  
   // basic read test
   EEPROM_read((uint8*)0,test,sizeof(test));
   EEPROM_write(buffer,(uint8*)0,sizeof(buffer));
@@ -321,5 +319,5 @@ void EEPROM_test(void)
   EEPROM_write(buffer,(uint8*)(8),sizeof(buffer));
   EEPROM_read((uint8*)(8),test,sizeof(test));
 
-  while(1);
+  return (0 == Util_compareMemory(buffer, test, sizeof(buffer)));
 }

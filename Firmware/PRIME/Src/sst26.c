@@ -1,22 +1,24 @@
-#include "stm32f2xx.h"
+#include "stm32f4xx_hal.h"
 #include "analog.h"
-#include "gpio.h"
 #include "types.h"
 #include "spi.h"
 #include "time.h"
 #include "util.h"
-#include "serialflash.h"
+#include "sst26.h"
+#include "powercon.h"
 
-#define FILE_ID SERIALFLASH_C
-
-#define SERIAL_FLASH_PIN_HOLD   (GPIO_Pin_2)
-#define SERIAL_FLASH_PIN_SELECT (GPIO_Pin_8)
+#define FILE_ID SST26_C
 
 // Can remove the wait by configuring the pins as push-pull, but risk leakage into the domain
-#define SELECT_CHIP_SF()    do { GPIOB->BSRRH |= 0x00000100; Time_delay(10); } while (0)
-#define DESELECT_CHIP_SF()  do { GPIOB->BSRRL |= 0x00000100; Time_delay(10); } while (0)
-#define SELECT_SF_HOLD()    do { GPIOB->BSRRH |= 0x00000004; Time_delay(10); } while (0)
-#define DESELECT_SF_HOLD()  do { GPIOB->BSRRL |= 0x00000004; Time_delay(10); } while (0)
+#define SELECT_CHIP_OF()   do {                                                              \
+                                 HAL_GPIO_WritePin(AF_CS_GPIO_Port, AF_CS_Pin, GPIO_PIN_RESET); \
+                                 Time_delay(1);                                               \
+                               } while (0)
+
+#define DESELECT_CHIP_OF() do {                                                              \
+                                 HAL_GPIO_WritePin(AF_CS_GPIO_Port, AF_CS_Pin, GPIO_PIN_SET); \
+                                 Time_delay(1);                                               \
+                               } while (0)
 
 // Write/Erase times defined in microseconds
 #define PAGE_WRITE_TIME      ((uint32)5000)
@@ -24,13 +26,17 @@
 #define SECTOR_ERASE_TIME    ((uint32)3000000)
 #define BULK_ERASE_TIME      ((uint32)80000000)
 
-#define SF_HIGH_SPEED_VMIN (2.7)
-#define SF_LOW_SPEED_VMIN  (2.3)
+#define SST26_MANUFACTURER_ID     (0XBF)
+#define SST26_MEMORY_TYPE         (0x26)
+#define SST26_DEVICE_ID           (0x41)
+                               
+#define SST26_HIGH_SPEED_VMIN (2.7)
+#define SST26_LOW_SPEED_VMIN  (2.3)
 
 typedef enum
 {
-  SF_UNPROTECT_GLOBAL = 0x00,
-  SF_PROTECT_GLOBAL   = 0x3C
+  SST26_UNPROTECT_GLOBAL = 0x00,
+  SST26_PROTECT_GLOBAL   = 0x3C
 } FlashGlobalProtect;
 
 typedef enum
@@ -67,9 +73,9 @@ typedef struct
   uint8 statusRegWP      : 1;
 } FlashStatusRegister;
 
-// Power profile voltage definitions, in SerialFlashPowerProfile / SerialFlashState order
+// Power profile voltage definitions, in SST26PowerProfile / SST26State order
 // SPI operation at 25(rd)/50(wr/all)MHz for 2.3 > Vcc > 3.6, 33(rd)/75(wr/all)MHz for 2.7 > Vcc > 3.6
-static const double SERIAL_FLASH_POWER_PROFILES[SERIAL_FLASH_PROFILE_MAX][SERIAL_FLASH_STATE_MAX] =
+static const double SST26_POWER_PROFILES[SST26_PROFILE_MAX][SST26_STATE_MAX] =
 { // Idle, Reading, Erasing, Writing, Waiting
   {3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile
   {3.0, 3.3, 3.3, 3.3, 3.0},  // 30VIW
@@ -80,61 +86,52 @@ static const double SERIAL_FLASH_POWER_PROFILES[SERIAL_FLASH_PROFILE_MAX][SERIAL
 
 static struct
 {
-  double              vDomain[SERIAL_FLASH_STATE_MAX]; // The vDomain for each state
-  SerialFlashState    state;
+  double              vDomain[SST26_STATE_MAX]; // The vDomain for each state
+  SST26State    state;
   FlashStatusRegister status;
-  FlashSubSector      subSector;
-  FlashSubSector      testSubSector;
+  SST26SubSector      subSector;
+  SST26SubSector      testSubSector;
   boolean             isInitialized;
-} sSerialFlash;
+} sSST26;
 
-static boolean SerialFlash_erase(uint8 *pDest, SerialFlashSize blockSize);
-static FlashStatusRegister SerialFlash_readStatusRegister(void);
+static boolean SST26_erase(uint8 *pDest, SST26Size blockSize);
+static FlashStatusRegister SST26_readStatusRegister(void);
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_init
-* DESCRIPTION Initializes the SerialFlash module
+* FUNCTION    SST26_init
+* DESCRIPTION Initializes the SST26 module
 * PARAMETERS  None
 * RETURNS     Nothing
 \**************************************************************************************************/
-void SerialFlash_init(void)
+void SST26_init(void)
 {
-  Util_fillMemory((uint8*)&sSerialFlash, sizeof(sSerialFlash), 0x00);
-  SerialFlash_setPowerProfile(SERIAL_FLASH_PROFILE_STANDARD);
-  SerialFlash_setup(FALSE);
-  sSerialFlash.state = SERIAL_FLASH_STATE_IDLE;
-  sSerialFlash.isInitialized = TRUE;
+  Util_fillMemory((uint8*)&sSST26, sizeof(sSST26), 0x00);
+  SST26_setPowerProfile(SST26_PROFILE_STANDARD);
+  SST26_setup(FALSE);
+  sSST26.state = SST26_STATE_IDLE;
+  sSST26.isInitialized = TRUE;
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_setup
+* FUNCTION    SST26_setup
 * DESCRIPTION Enables or Disables the peripheral pins required to operate the serial flash chip
 * PARAMETERS  state: If TRUE, required peripherals will be enabled. Otherwise control pins will be
 *                    set to input.
 * RETURNS     TRUE
 * NOTES       Also configures the state if the SPI pins
 \**************************************************************************************************/
-boolean SerialFlash_setup(boolean state)
+boolean SST26_setup(boolean state)
 {
-  // Initialize the EEPROM chip select and hold lines
-  GPIO_InitTypeDef sfCtrlPortB = {(SERIAL_FLASH_PIN_HOLD | SERIAL_FLASH_PIN_SELECT), GPIO_Mode_OUT,
-                                   GPIO_Speed_100MHz, GPIO_OType_PP, GPIO_PuPd_NOPULL,
-                                   GPIO_AF_SYSTEM };
-
-  sfCtrlPortB.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
-  GPIO_configurePins(GPIOB, &sfCtrlPortB);
-  GPIO_setPortClock(GPIOB, TRUE);
-  DESELECT_CHIP_SF();
-  DESELECT_SF_HOLD();
+  DESELECT_CHIP_OF();
 
   // Set up the SPI transaction with respect to domain voltage
-  if (sSerialFlash.vDomain[sSerialFlash.state] >= SF_HIGH_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_7500000);
-  else if (sSerialFlash.vDomain[sSerialFlash.state] >= SF_LOW_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_3250000);
+  if (sSST26.vDomain[sSST26.state] >= SST26_HIGH_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_45000000);
+  else if (sSST26.vDomain[sSST26.state] >= SST26_LOW_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_22500000);
   else
   {
-    SPI_setup(state, SPI_CLOCK_RATE_1625000);
+    SPI_setup(state, SPI_CLOCK_RATE_05625000);
     return FALSE; // Domain voltage is too low for serial flash operation, attempt anyway
   }
 
@@ -142,172 +139,173 @@ boolean SerialFlash_setup(boolean state)
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_getState
-* DESCRIPTION Returns the internal state of SerialFlash
+* FUNCTION    SST26_getState
+* DESCRIPTION Returns the internal state of SST26
 * PARAMETERS  None
-* RETURNS     The SerialFlashState
+* RETURNS     The SST26State
 \**************************************************************************************************/
-SerialFlashState SerialFlash_getState(void)
+SST26State SST26_getState(void)
 {
-  return sSerialFlash.state;
+  return sSST26.state;
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_getStateAsWord
-* DESCRIPTION Returns the internal state of SerialFlash
+* FUNCTION    SST26_getStateAsWord
+* DESCRIPTION Returns the internal state of SST26
 * PARAMETERS  None
-* RETURNS     The SerialFlashState
+* RETURNS     The SST26State
 \**************************************************************************************************/
-uint32 SerialFlash_getStateAsWord(void)
+uint32 SST26_getStateAsWord(void)
 {
-  return (uint32)sSerialFlash.state;
+  return (uint32)sSST26.state;
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_getStateVoltage
+* FUNCTION    SST26_getStateVoltage
 * DESCRIPTION Returns the ideal voltage of the current state (as dictated by the current profile)
 * PARAMETERS  None
 * RETURNS     The ideal state voltage
 \**************************************************************************************************/
-double SerialFlash_getStateVoltage(void)
+double SST26_getStateVoltage(void)
 {
-  return sSerialFlash.vDomain[sSerialFlash.state];
+  return sSST26.vDomain[sSST26.state];
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_setState
-* DESCRIPTION Sets the internal state of SerialFlash and applies the voltage of the associated state
+* FUNCTION    SST26_setState
+* DESCRIPTION Sets the internal state of SST26 and applies the voltage of the associated state
 * PARAMETERS  None
-* RETURNS     The SerialFlashState
+* RETURNS     The SST26State
 \**************************************************************************************************/
-static void SerialFlash_setState(SerialFlashState state)
+static void SST26_setState(SST26State state)
 {
-  if (sSerialFlash.isInitialized != TRUE)
+  if (sSST26.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
-  sSerialFlash.state = state;
-  Analog_setDomain(SPI_DOMAIN, TRUE, sSerialFlash.vDomain[state]);
+  sSST26.state = state;
+  PowerCon_setDeviceDomain(DEVICE_NORFLASH, VOLTAGE_DOMAIN_0);
+  //Analog_setDomain(SPI_DOMAIN, TRUE, sSST26.vDomain[state]);
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_setPowerState
-* DESCRIPTION Sets the buck feedback voltage for a particular state of SerialFlash
+* FUNCTION    SST26_setPowerState
+* DESCRIPTION Sets the buck feedback voltage for a particular state of SST26
 * PARAMETERS  None
 * RETURNS     TRUE if the voltage can be set for the state, false otherwise
 \**************************************************************************************************/
-boolean SerialFlash_setPowerState(SerialFlashState state, double vDomain)
+boolean SST26_setPowerState(SST26State state, double vDomain)
 {
-  if (state >= SERIAL_FLASH_STATE_MAX)
+  if (state >= SST26_STATE_MAX)
     return FALSE;
   else if (vDomain > 3.6)
     return FALSE;
   else if (vDomain < 2.3)
     return FALSE;
   else
-    sSerialFlash.vDomain[state] = vDomain;
+    sSST26.vDomain[state] = vDomain;
   return TRUE;
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_setPowerProfile
+* FUNCTION    SST26_setPowerProfile
 * DESCRIPTION Sets all power states of serial flash to the specified profile
 * PARAMETERS  None
 * RETURNS     TRUE if the voltage can be set for the state, false otherwise
 \**************************************************************************************************/
-boolean SerialFlash_setPowerProfile(SerialFlashPowerProfile profile)
+boolean SST26_setPowerProfile(SST26PowerProfile profile)
 {
   uint32 state;
-  if (profile >= SERIAL_FLASH_PROFILE_MAX)
+  if (profile >= SST26_PROFILE_MAX)
     return FALSE;  // Invalid profile, inform the caller
-  for (state = 0; state < SERIAL_FLASH_STATE_MAX; state++)
-    sSerialFlash.vDomain[state] = SERIAL_FLASH_POWER_PROFILES[profile][state];
+  for (state = 0; state < SST26_STATE_MAX; state++)
+    sSST26.vDomain[state] = SST26_POWER_PROFILES[profile][state];
   return TRUE;
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_transceive
+* FUNCTION    SST26_transceive
 * DESCRIPTION Sends the data in the txBuffer and receives the data into the rxBuffer afterwards
 * PARAMETERS  Obvious...
 * RETURNS     None
 \**************************************************************************************************/
-void SerialFlash_transceive(uint8 *txBuffer, uint16 txLength, uint8 *rxBuffer, uint16 rxLength)
+void SST26_transceive(uint8 *txBuffer, uint16 txLength, uint8 *rxBuffer, uint16 rxLength)
 {
-  SerialFlash_setup(TRUE);
-  SELECT_CHIP_SF();
+  SST26_setup(TRUE);
+  SELECT_CHIP_OF();
   SPI_write(txBuffer, txLength);
   if ((rxBuffer != NULL) && (rxLength > 0))
     SPI_read(rxBuffer, rxLength);
-  DESELECT_CHIP_SF();
-  SerialFlash_setup(FALSE);
+  DESELECT_CHIP_OF();
+  SST26_setup(FALSE);
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_sendWriteEnable
+* FUNCTION    SST26_sendWriteEnable
 * DESCRIPTION Sends the WREN command to the serial flash chip
 * PARAMETERS  None
 * RETURNS     None
 \**************************************************************************************************/
-void SerialFlash_sendWriteEnable(void)
+void SST26_sendWriteEnable(void)
 {
   uint8 wrenCommand = OP_WRITE_ENABLE;
-  SerialFlash_transceive(&wrenCommand, 1, NULL, 0);
+  SST26_transceive(&wrenCommand, 1, NULL, 0);
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_readFlashID
-* DESCRIPTION Reads the Flash Identification from the M25PX16 device
+* FUNCTION    SST26_readSST26FlashId
+* DESCRIPTION Reads the Flash Identification from the SST2616 device
 * PARAMETERS  None
 * RETURNS     The JEDEC Manufacturer, Device and Unique ID of the flash device
 \**************************************************************************************************/
-FlashID SerialFlash_readFlashID(void)
+static SST26FlashId SST26_readFlashId(void)
 {
-  FlashID flashID;
+  SST26FlashId SST26FlashId;
   uint8 readCmd = OP_READ_ID0;
-  SerialFlash_transceive(&readCmd, 1, (uint8 *)&flashID, 1);
-  return flashID;
+  SST26_transceive(&readCmd, 1, (uint8 *)&SST26FlashId, sizeof(SST26FlashId));
+  return SST26FlashId;
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_readStatusRegister
+* FUNCTION    SST26_readStatusRegister
 * DESCRIPTION Reads the status register from flash
 * PARAMETERS  None
 * RETURNS     The flash status register
 \**************************************************************************************************/
-static FlashStatusRegister SerialFlash_readStatusRegister(void)
+static FlashStatusRegister SST26_readStatusRegister(void)
 {
   uint8 readCmd = OP_READ_STATUS;
   FlashStatusRegister flashStatus;
-  SerialFlash_transceive(&readCmd, 1, (uint8 *)&flashStatus, 1);
+  SST26_transceive(&readCmd, 1, (uint8 *)&flashStatus, 1);
   return flashStatus;
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_clearStatusRegister
+* FUNCTION    SST26_clearStatusRegister
 * DESCRIPTION Clears the status register of flash
 * PARAMETERS  None
 * RETURNS     Nothing
 \**************************************************************************************************/
-static void SerialFlash_clearStatusRegister(void)
+static void SST26_clearStatusRegister(void)
 {
   uint8 writeCmd[2] = {OP_WRITE_STATUS, 0};
-  SerialFlash_transceive(writeCmd, 2, NULL, 0);
+  SST26_transceive(writeCmd, 2, NULL, 0);
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_waitForWriteComplete
+* FUNCTION    SST26_waitForWriteComplete
 * DESCRIPTION Wait for the status register to transition to specified value or timeout
 * PARAMETERS  pollChip: Routine will poll the status register for write complete indication
 *             timeout:  Timeout in milliseconds
 * RETURNS     TRUE if polling was not required, or if the timeout did not expire while polling
 \**************************************************************************************************/
-static boolean SerialFlash_waitForWriteComplete(boolean pollChip, uint32 timeout)
+static boolean SST26_waitForWriteComplete(boolean pollChip, uint32 timeout)
 {
   SoftTimerConfig sfTimeout = {TIME_SOFT_TIMER_SERIAL_MEM, 0, 0, NULL};
-  SerialFlash_setState(SERIAL_FLASH_STATE_WAITING);
+  SST26_setState(SST26_STATE_WAITING);
   if (pollChip)
   {
     sfTimeout.value = timeout;
     Time_startTimer(sfTimeout);
-    while (SerialFlash_readStatusRegister().writeInProgress && Time_getTimerValue(TIME_SOFT_TIMER_SERIAL_MEM));
+    while (SST26_readStatusRegister().writeInProgress && Time_getTimerValue(TIME_SOFT_TIMER_SERIAL_MEM));
     return (Time_getTimerValue(TIME_SOFT_TIMER_SERIAL_MEM) > 0);
   }
   else
@@ -318,52 +316,52 @@ static boolean SerialFlash_waitForWriteComplete(boolean pollChip, uint32 timeout
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_read
+* FUNCTION    SST26_read
 * DESCRIPTION Reads data out of Serial flash
 * PARAMETERS  pSrc - pointer to data in serial flash to read out
 *             pDest - pointer to destination RAM buffer
 *             length - number of bytes to read
 * RETURNS     nothing
 \**************************************************************************************************/
-SerialFlashResult SerialFlash_read(uint8 *pSrc, uint8 *pDest, uint16 length)
+SST26Result SST26_read(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
   uint32 readCommand = ((uint32)pSrc & 0x00FFFFFF) | (OP_READ_MEMORY << 24);
   Util_swap32(&readCommand);
 
-  SerialFlash_setState(SERIAL_FLASH_STATE_READING);
-  SerialFlash_transceive((uint8 *)&readCommand, sizeof(readCommand), pDest, length);
-  return SERIAL_FLASH_RESULT_OK;
+  SST26_setState(SST26_STATE_READING);
+  SST26_transceive((uint8 *)&readCommand, sizeof(readCommand), pDest, length);
+  return SST26_RESULT_OK;
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_directWrite
+* FUNCTION    SST26_directWrite
 * DESCRIPTION Reads data out of Serial flash
 * PARAMETERS  pSrc - pointer to data in RAM to write
 *             pDest - pointer to destination in flash
 *             length - number of bytes to read
 * RETURNS     nothing
 \**************************************************************************************************/
-static boolean SerialFlash_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
+static boolean SST26_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
   uint32 bytesToWrite, writeCommand;
 
   while (length > 0)
   {
-    bytesToWrite = (length > SERIAL_FLASH_SIZE_PAGE) ? SERIAL_FLASH_SIZE_PAGE : length;
+    bytesToWrite = (length > SST26_SIZE_PAGE) ? SST26_SIZE_PAGE : length;
     writeCommand = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_WRITE_PAGE << 24);
     Util_swap32(&writeCommand);
 
-    SerialFlash_setState(SERIAL_FLASH_STATE_WRITING);
-    SerialFlash_sendWriteEnable();
+    SST26_setState(SST26_STATE_WRITING);
+    SST26_sendWriteEnable();
 
-    SerialFlash_setup(TRUE);
-    SELECT_CHIP_SF();
+    SST26_setup(TRUE);
+    SELECT_CHIP_OF();
     SPI_write((uint8 *)&writeCommand, sizeof(writeCommand));
     SPI_write(pSrc, bytesToWrite);
-    DESELECT_CHIP_SF();
-    SerialFlash_setup(FALSE);
+    DESELECT_CHIP_OF();
+    SST26_setup(FALSE);
 
-    SerialFlash_waitForWriteComplete(FALSE, PAGE_WRITE_TIME);
+    SST26_waitForWriteComplete(FALSE, PAGE_WRITE_TIME);
 
     length -= bytesToWrite;
     pDest  += bytesToWrite;
@@ -374,29 +372,29 @@ static boolean SerialFlash_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
 }
 
 /*****************************************************************************\
-* FUNCTION    SerialFlash_write
+* FUNCTION    SST26_write
 * DESCRIPTION Writes a buffer to Serial Flash
 * PARAMETERS  pSrc - pointer to source RAM buffer
-*             pDest - pointer to destination in SerialFlash
+*             pDest - pointer to destination in SST26
 *             length - number of bytes to write
 * RETURNS     TRUE if the write succeeds
 \*****************************************************************************/
-SerialFlashResult SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
+SST26Result SST26_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
-  SerialFlashResult result = SERIAL_FLASH_RESULT_OK;
-  uint8  *pCache   = (uint8 *)&sSerialFlash.subSector.byte[0];
-  uint8  *pTestSub = (uint8 *)&sSerialFlash.testSubSector.byte[0];
+  SST26Result result = SST26_RESULT_OK;
+  uint8  *pCache   = (uint8 *)&sSST26.subSector.byte[0];
+  uint8  *pTestSub = (uint8 *)&sSST26.testSubSector.byte[0];
   uint8  *pSubSector, *pCacheDest;
   uint8   retries;
   uint16  numToWrite;
   
   // Ensure that the chip has enough voltage and time to power up
-  SerialFlash_setState(SERIAL_FLASH_STATE_IDLE);
+  SST26_setState(SST26_STATE_IDLE);
   
-  while ((result != SERIAL_FLASH_RESULT_ERROR) && (length > 0))
+  while ((result != SST26_RESULT_ERROR) && (length > 0))
   {
     // Write must not go past a page boundary, but must erase a whole sub sector at a time
-    numToWrite = SERIAL_FLASH_SIZE_PAGE - ((uint32)pDest & (SERIAL_FLASH_SIZE_PAGE - 1));
+    numToWrite = SST26_SIZE_PAGE - ((uint32)pDest & (SST26_SIZE_PAGE - 1));
     if (length < numToWrite)
       numToWrite = length;
 
@@ -407,42 +405,42 @@ SerialFlashResult SerialFlash_write(uint8 *pSrc, uint8 *pDest, uint16 length)
     for (retries = 3; retries > 0; retries--)
     {
       // Read the sub sector to be written into local cache
-      SerialFlash_read(pSubSector, pCache, SERIAL_FLASH_SIZE_SUBSECTOR);
+      SST26_read(pSubSector, pCache, SST26_SIZE_SUBSECTOR);
       
       // Erase sub sector, it is now in local cache
-      SerialFlash_erase(pSubSector, SERIAL_FLASH_SIZE_SUBSECTOR);
+      SST26_erase(pSubSector, SST26_SIZE_SUBSECTOR);
 
       // Overwrite local cache with the source data at the specified destination
       Util_copyMemory(pSrc, pCacheDest, numToWrite);
       
       // Write the whole sub-sector back to flash
-      SerialFlash_directWrite(pCache, pSubSector, SERIAL_FLASH_SIZE_SUBSECTOR);
+      SST26_directWrite(pCache, pSubSector, SST26_SIZE_SUBSECTOR);
 
       // Compare memory to determine if the write was successful
-      SerialFlash_read(pSubSector, pTestSub, SERIAL_FLASH_SIZE_SUBSECTOR);
+      SST26_read(pSubSector, pTestSub, SST26_SIZE_SUBSECTOR);
       
-      if (0 == Util_compareMemory(pCache, pTestSub, SERIAL_FLASH_SIZE_SUBSECTOR))
+      if (0 == Util_compareMemory(pCache, pTestSub, SST26_SIZE_SUBSECTOR))
         break;
       else
-        result = SERIAL_FLASH_RESULT_NEEDED_RETRY;
+        result = SST26_RESULT_NEEDED_RETRY;
     }
-    result  = (retries == 0) ? SERIAL_FLASH_RESULT_ERROR : result;
+    result  = (retries == 0) ? SST26_RESULT_ERROR : result;
     pSrc   += numToWrite; // update source pointer
     pDest  += numToWrite; // update destination pointer
     length -= numToWrite;
   }
-  SerialFlash_setState(SERIAL_FLASH_STATE_IDLE);
+  SST26_setState(SST26_STATE_IDLE);
   return result;
 }
 
 /**************************************************************************************************\
-* FUNCTION    SerialFlash_erase
+* FUNCTION    SST26_erase
 * DESCRIPTION Erase a block of flash
 * PARAMETERS  pDest - pointer to destination location
 *             length - number of bytes to erase
 * RETURNS     status byte for serial flash
 \**************************************************************************************************/
-static boolean SerialFlash_erase(uint8 *pDest, SerialFlashSize size)
+static boolean SST26_erase(uint8 *pDest, SST26Size size)
 {
   uint32 eraseCmd = ((uint32)pDest & 0x00FFFFFF);
   boolean success;
@@ -451,15 +449,15 @@ static boolean SerialFlash_erase(uint8 *pDest, SerialFlashSize size)
   // Put the erase command into the transmit buffer and set timeouts, both according to size
   switch (size)
   {
-    case SERIAL_FLASH_SIZE_SUBSECTOR:
+    case SST26_SIZE_SUBSECTOR:
       eraseCmd = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_SUBSECTOR_ERASE << 24);
       timeout  = (SUBSECTOR_ERASE_TIME);
       break;
-    case SERIAL_FLASH_SIZE_SECTOR:
+    case SST26_SIZE_SECTOR:
       eraseCmd = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_SECTOR_ERASE << 24);
       timeout  = (SECTOR_ERASE_TIME);
       break;
-    case SERIAL_FLASH_SIZE_CHIP:
+    case SST26_SIZE_CHIP:
       eraseCmd = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_BULK_ERASE << 24);
       timeout  = (BULK_ERASE_TIME);
       break;
@@ -468,45 +466,25 @@ static boolean SerialFlash_erase(uint8 *pDest, SerialFlashSize size)
   }
   Util_swap32(&eraseCmd);
 
-  SerialFlash_setState(SERIAL_FLASH_STATE_ERASING);
-  SerialFlash_sendWriteEnable();
-  SerialFlash_transceive((uint8 *)&eraseCmd, sizeof(eraseCmd), NULL, 0);
-  success = SerialFlash_waitForWriteComplete(FALSE, timeout);
+  SST26_setState(SST26_STATE_ERASING);
+  SST26_sendWriteEnable();
+  SST26_transceive((uint8 *)&eraseCmd, sizeof(eraseCmd), NULL, 0);
+  success = SST26_waitForWriteComplete(FALSE, timeout);
 
   return success;
 }
 
 /*****************************************************************************\
-* FUNCTION    SerialFlash_test
-* DESCRIPTION Executes reads and writes to SerialFlash to test the code
+* FUNCTION    SST26_test
+* DESCRIPTION Executes reads and writes to SST26 to test the code
 * PARAMETERS  none
 * RETURNS     nothing
 \*****************************************************************************/
-void SerialFlash_test(void)
+bool SST26_test(void)
 {
-  uint8 buffer[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-  uint8 test[sizeof(buffer)];
-
-  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,  FALSE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
-  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_delay(1000000); // Wait 1000ms for domains to settle
-
-  SerialFlash_clearStatusRegister();
-  while(1)
-  {
-    // basic read test
-    SerialFlash_read((uint8*)0,test,sizeof(test));
-    SerialFlash_write(buffer,(uint8*)0,sizeof(buffer));
-    SerialFlash_read((uint8*)0,test,sizeof(test));
-
-    // boundary test
-    SerialFlash_write(buffer,(uint8*)(8),sizeof(buffer));
-    SerialFlash_read((uint8*)(8),test,sizeof(test));
-  }
+  SST26_clearStatusRegister();
+  SST26FlashId flashId = SST26_readFlashId();
+  return ((flashId.manufacturerId == SST26_MANUFACTURER_ID) &&
+          (flashId.memoryType     == SST26_MEMORY_TYPE)     &&
+          (flashId.deviceId       == SST26_DEVICE_ID));
 }

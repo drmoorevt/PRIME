@@ -5,6 +5,7 @@
 #define FT232H_SUSPEND         (0x04)
 #define FT232H_CONFIGURED      (0x08)
 #define FT232H_BUFFER_SIZE     (1024)
+
 static char helloString[FT232H_BUFFER_SIZE];
 
 uint8_t volatile * const pDataPipe = (uint8_t *)0x64000000;
@@ -57,6 +58,9 @@ bool ExtUSB_rx(uint8_t *pDst, uint32_t len)
 bool ExtUSB_testUSB(void)
 {
   uint32_t len = sprintf((char *)helloString, "Hello world!");
-  ExtUSB_tx((uint8_t *)helloString, len);
-  return true;
+  bool isConfigured   = (*pStatPipe & FT232H_CONFIGURED);
+  bool spaceAvailable = (*pStatPipe & FT232H_SPACE_AVAILABLE);
+  if (isConfigured && spaceAvailable)
+    ExtUSB_tx((uint8_t *)helloString, len);
+  return isConfigured;
 }

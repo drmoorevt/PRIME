@@ -660,7 +660,7 @@ static void SPIx_Init(void)
        - l3gd20 SPI interface max baudrate is 10MHz for write/read
        - PCLK2 frequency is set to 90 MHz 
     */  
-    SpiHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
+    SpiHandle.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
 
     /* On STM32F429I-Discovery, LCD ID cannot be read then keep a common configuration */
     /* for LCD and GYRO (SPI_DIRECTION_2LINES) */
