@@ -172,5 +172,6 @@ bool PowerCon_powerSupplyPOST(VoltageDomain domain)
     if ((domVolts > hiVolts) || (domVolts < loVolts))
       return false;
   }
+  PowerCon_setDomainVoltage(domain, 3.3); // Set both domains to a known value
   return true;
 }

@@ -492,6 +492,11 @@
               <FilePath>..\Src\analog.c</FilePath>
             </File>
             <File>
+              <FileName>analog.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Src\analog.h</FilePath>
+            </File>
+            <File>
               <FileName>extusb.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Src\extusb.c</FilePath>
@@ -560,6 +565,16 @@
               <FileName>types.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\Src\types.h</FilePath>
+            </File>
+            <File>
+              <FileName>plr5010d.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\plr5010d.c</FilePath>
+            </File>
+            <File>
+              <FileName>plr5010d.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Src\plr5010d.h</FilePath>
             </File>
           </Files>
         </Group>

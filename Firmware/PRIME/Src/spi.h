@@ -2,6 +2,7 @@
 #define SPI_H
 
 #include "types.h"
+#include "stm32f4xx_hal.h"
 
 typedef enum
 {
