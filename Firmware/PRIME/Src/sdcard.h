@@ -54,6 +54,6 @@ boolean SDCard_setPowerProfile(SDCardPowerProfile profile);
 uint32 SDCard_getStateAsWord(void);
 SDCardState SDCard_getState(void);
 double SDCard_getStateVoltage(void);
-void    SDCard_test(void);
+bool    SDCard_test(void);
 
 #endif

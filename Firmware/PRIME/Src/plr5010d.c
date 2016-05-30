@@ -102,26 +102,24 @@ bool PLR5010D_test(PLR5010DSelect select)
   DESELECT_ALL_PLR5010D_CLR();
   Time_delay(10000);
   
-  double initialInCurrent, initialOutCurrent;
-  double test1InCurrent,   test2OutCurrent;
+  // double initialInCurrent, initialOutCurrent;
+  // double test1InCurrent,   test2OutCurrent;
   
   
   switch (select)
   {
     case PLR5010D_DOMAIN0:
-      initialOutCurrent = Analog_getADCVoltage(ADC_DOM0_OUTCURRENT);
-      PLR5010D_setVoltage(select,
-      break;
+      //initialOutCurrent = Analog_getADCVoltage(ADC_DOM0_OUTCURRENT);
+      //PLR5010D_setVoltage(select,
+      return false;
     case PLR5010D_DOMAIN1:
       Analog_getADCVoltage(ADC_DOM1_INCURRENT);
       Analog_getADCVoltage(ADC_DOM1_OUTCURRENT);
-    
-      break;
+      return false;
     case PLR5010D_DOMAIN2:
       Analog_getADCVoltage(ADC_DOM2_INCURRENT);
       Analog_getADCVoltage(ADC_DOM2_OUTCURRENT);
-    
-      break;
+      return false;
   }
   
   

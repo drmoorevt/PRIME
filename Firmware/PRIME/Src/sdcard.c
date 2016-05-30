@@ -1,16 +1,13 @@
-#include "stm32f2xx.h"
 #include "analog.h"
 #include "crc.h"
-#include "gpio.h"
-#include "types.h"
+#include "powercon.h"
 #include "spi.h"
 #include "time.h"
 #include "util.h"
 #include "sdcard.h"
+#include "stm32f4xx_hal.h"
 
 #define FILE_ID SDCARD_C
-
-#define SD_SELECT_PIN   (GPIO_Pin_4)
 
 #define SD_MAX_WAIT_PRE_WRITE_BYTES (10)
 #define SD_MAX_WAIT_BUS_BYTES       (65535)
@@ -18,8 +15,16 @@
 #define SD_MAX_WAIT_WRITE_BYTES     (65536) // (4095)
 #define SD_MAX_WAIT_RESP_BYTES      (65536) // (4096) // (255)
 
-#define SELECT_CHIP_SD()    do { GPIOB->BSRRH |= 0x00000010; Time_delay(1); } while (0)
-#define DESELECT_CHIP_SD()  do { GPIOB->BSRRL |= 0x00000010; Time_delay(1); } while (0)
+// Can remove the wait by configuring the pins as push-pull, but risk leakage into the domain
+#define SELECT_CHIP_SD()   do {                                                              \
+                                 HAL_GPIO_WritePin(SD_CS_GPIO_Port, SD_CS_Pin, GPIO_PIN_RESET); \
+                                 Time_delay(1);                                               \
+                               } while (0)
+
+#define DESELECT_CHIP_SD() do {                                                              \
+                                 HAL_GPIO_WritePin(SD_CS_GPIO_Port, SD_CS_Pin, GPIO_PIN_SET); \
+                                 Time_delay(1);                                               \
+                               } while (0)
 
 #define START_SINGLE_BLOCK_TOKEN    (0xFE)
 #define START_MULTIPLE_BLOCK_TOKEN  (0xFC)
@@ -346,22 +351,16 @@ void SDCard_init(void)
 boolean SDCard_setup(boolean state)
 {
   // Initialize the SDCard chip select line
-  GPIO_InitTypeDef sdCtrlPortB = {SD_SELECT_PIN, GPIO_Mode_OUT, GPIO_Speed_100MHz,
-                                  GPIO_OType_PP, GPIO_PuPd_NOPULL, GPIO_AF_SYSTEM };
-  sdCtrlPortB.GPIO_Mode = (state == TRUE) ? GPIO_Mode_OUT : GPIO_Mode_IN;
-  GPIO_configurePins(GPIOB, &sdCtrlPortB);
-  GPIO_setPortClock(GPIOB, TRUE);
   DESELECT_CHIP_SD();
   
   // Set up the SPI transaction with respect to domain voltage
   if (sSDCard.vDomain[sSDCard.state] >= SD_HIGH_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_7500000);
+    SPI_setup(state, SPI_CLOCK_RATE_00703125);
   else if (sSDCard.vDomain[sSDCard.state] >= SD_LOW_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_3250000);
+    SPI_setup(state, SPI_CLOCK_RATE_00703125);
   else
-    SPI_setup(state, SPI_CLOCK_RATE_1625000); // Voltage too low, attempt at very low speed
+    SPI_setup(state, SPI_CLOCK_RATE_01406250); // Voltage too low, attempt at very low speed
   
-//  SPI_setup(state, SPI_CLOCK_RATE_406250); // Voltage too low, attempt at very low speed
   return (sSDCard.vDomain[sSDCard.state] >= SD_LOW_SPEED_VMIN);
 }
 
@@ -409,7 +408,8 @@ static void SDCard_setState(SDCardState state)
   if (sSDCard.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
   sSDCard.state = state;
-  Analog_setDomain(SPI_DOMAIN, TRUE, sSDCard.vDomain[state]);
+  PowerCon_setDeviceDomain(DEVICE_SDCARD, VOLTAGE_DOMAIN_0);
+  //Analog_setDomain(SPI_DOMAIN, TRUE, sEEPROM.vDomain[state]);
 }
 
 /**************************************************************************************************\
@@ -504,10 +504,10 @@ static SDCommandResponseR1 SDCard_sendCommand(SDCommand cmd, uint32 arg, uint32 
 
   sSDCard.cmdWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_BUS_BYTES); // Wait for bus to be idle
   SPI_write(cmdTx, 6);
-    do
-    {
-      SPI_read((uint8 *)&resp, 1);  // Continuous read until the first byte is non-zero
-    } while ((resp.filler) && (waitBytes--));
+  do
+  {
+    SPI_read((uint8_t *)&resp, 1);  // Continuous read until the first byte is non-zero
+  } while ((resp.filler) && (waitBytes--));
 
   return resp;
 }
@@ -520,7 +520,7 @@ static SDCommandResponseR1 SDCard_sendCommand(SDCommand cmd, uint32 arg, uint32 
 \**************************************************************************************************/
 boolean SDCard_initDisk(void)
 {
-  uint8 OP_SD_SPI_MODE[10] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  uint8 OP_SD_SPI_MODE[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   SDCommandResponseR2 cardStatusResp;
   SDCommandResponseR7 ifCondResp;
   SDCommandResponseR1 cmdResp;
@@ -889,41 +889,11 @@ static SDCommandResult SDCard_getStatusSDC(void)
 * PARAMETERS  none
 * RETURNS     nothing
 \**************************************************************************************************/
-void SDCard_test(void)
+bool SDCard_test(void)
 {
-  uint8 buffer[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
   volatile uint16 crcNorm, crcRev;
-
-  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,  FALSE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
-  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_delay(1000000); // Wait 1000ms for domains to settle
-
+  PowerCon_setDeviceDomain(DEVICE_EEPROM, VOLTAGE_DOMAIN_0);
+  Time_delay(100000); // Wait 100ms for domains to settle
   SDCard_initDisk();
-
-  while(1)
-  {
-    while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
-    if ((GPIOC->IDR & 0x00008000) == 0)
-    {
-      SDCard_write(buffer, (uint8 *)128, sizeof(buffer), 0);
-    }
-    else if ((GPIOC->IDR & 0x00004000) == 0)
-    {
-      Util_fillMemory((uint8 *)&sSDCard.respBlock.arg.reference[0], sSDCard.blockLen, 0x00);
-      SDCard_read(0, (uint8 *)&sSDCard.respBlock.arg.reference[0], sSDCard.blockLen);
-    }
-    else
-    {
-      Util_fillMemory((uint8 *)&sSDCard.respBlock.arg.reference[0], sSDCard.blockLen, 0xFF);
-      crcNorm = CRC_crc16(0, CRC16_POLY_CCITT_STD, sSDCard.respBlock.arg.reference, sSDCard.blockLen);
-      crcRev = CRC_crc16(0, CRC16_POLY_ANSI_STD, sSDCard.respBlock.arg.reference, sSDCard.blockLen);
-      Util_fillMemory((uint8 *)&sSDCard.respBlock.arg.reference[0], sSDCard.blockLen, 0xFF);
-    }
-  }
+  return (sSDCard.cardCapacity > 0);
 }

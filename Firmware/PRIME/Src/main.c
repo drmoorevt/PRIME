@@ -42,6 +42,7 @@
 #include "m25px.h"
 #include "plr5010d.h"
 #include "powercon.h"
+#include "sdcard.h"
 #include "spi.h"
 #include "sst26.h"
 #include "time.h"
@@ -345,6 +346,7 @@ int main(void)
   EEPROM_init();
   M25PX_init();
   SST26_init();
+  SDCard_init();
   
   BSP_LED_Init(LED3);
   BSP_LED_Init(LED4);
@@ -383,7 +385,7 @@ int main(void)
   Main_printResult(150, sMain.nandFlashTest);
   
   BSP_LCD_DisplayStringAt(0, 165,  sdTest, LEFT_MODE);
-//
+  sMain.sdCardTest = SDCard_test();
   Main_printResult(165, sMain.sdCardTest);
   
   BSP_LCD_DisplayStringAt(0, 180,  siTest, LEFT_MODE);

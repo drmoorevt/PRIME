@@ -3,12 +3,6 @@
 
 #define FILE_ID SPI_C
 
-#define SPI_MSCK_PIN (GPIO_Pin_13)
-#define SPI_MISO_PIN (GPIO_Pin_14)
-#define SPI_MOSI_PIN (GPIO_Pin_15)
-
-#define SPI_TX(x)    do { SPI2->DR = x; while(!(SPI2->SR&SPI_SR_TXE)); } while(0)
-
 static SPI_HandleTypeDef *spSPI;
 
 /**************************************************************************************************\
@@ -120,7 +114,8 @@ void SPI_read(uint8 *pBytes, uint32 numBytes)
 {
   if (numBytes == 0)
     return;
-
+  
+  memset(pBytes, 0xFF, numBytes);
   
   HAL_SPI_Receive(spSPI, (uint8_t *)pBytes, numBytes, 100);
   while(spSPI->State != HAL_SPI_STATE_READY); // Wait for tx to complete
