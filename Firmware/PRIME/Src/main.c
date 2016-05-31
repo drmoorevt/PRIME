@@ -39,6 +39,8 @@
 #include "analog.h"
 #include "eeprom.h"
 #include "extusb.h"
+#include "hih613x.h"
+#include "i2c.h"
 #include "m25px.h"
 #include "plr5010d.h"
 #include "powercon.h"
@@ -329,6 +331,7 @@ int main(void)
   MX_USART1_UART_Init();
   BSP_LCD_Init();                                 // Initialize the LCD
   SPI_init(&hspi5);  // Reinitialize SPI after the LCD messes with it...
+  I2C_init(&hi2c3);
   
 
   /* USER CODE BEGIN 2 */
@@ -344,6 +347,7 @@ int main(void)
   Analog_init(&anInit);
   PowerCon_init(&hdac);
   EEPROM_init();
+  HIH613X_init();
   M25PX_init();
   SST26_init();
   SDCard_init();
@@ -393,7 +397,7 @@ int main(void)
   Main_printResult(180, sMain.si114xTest);
   
   BSP_LCD_DisplayStringAt(0, 195,  hihTest, LEFT_MODE);
-//
+  sMain.hih6130Test = HIH613X_test();
   Main_printResult(195, sMain.hih6130Test);
   
   BSP_LCD_DisplayStringAt(0, 210,  usbTest, LEFT_MODE);

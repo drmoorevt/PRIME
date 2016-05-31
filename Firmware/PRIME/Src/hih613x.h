@@ -31,6 +31,7 @@ typedef enum
 } HIHPowerProfile;
 
 void HIH613X_init(void);
+bool HIH613X_test(void);
 boolean HIH613X_setup(boolean state);
 HIHState HIH613X_getState(void);
 uint32 HIH613X_getStateAsWord(void);

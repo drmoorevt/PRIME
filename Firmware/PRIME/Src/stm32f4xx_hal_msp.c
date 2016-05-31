@@ -363,22 +363,27 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* hi2c)
     */
     GPIO_InitStruct.Pin = GPIO_PIN_9;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF4_I2C3;
     HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
     GPIO_InitStruct.Pin = GPIO_PIN_8;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF4_I2C3;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     /* Peripheral clock enable */
-    __I2C3_CLK_ENABLE();
+  __I2C3_CLK_ENABLE();
   /* USER CODE BEGIN I2C3_MspInit 1 */
-
+  __I2C3_FORCE_RESET();
+  __I2C3_RELEASE_RESET();
+  
+  hi2c->Instance->CR1 |=   I2C_CR1_SWRST;
+  hi2c->Instance->CR1 &= (~I2C_CR1_SWRST);
+  
   /* USER CODE END I2C3_MspInit 1 */
   }
 

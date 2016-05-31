@@ -1,23 +1,17 @@
-#include "stm32f2xx.h"
 #include "analog.h"
-#include "gpio.h"
 #include "hih613x.h"
-#include "i2cbb.h"
-#include "spi.h"
+#include "i2c.h"
+#include "powercon.h"
 #include "time.h"
 #include "types.h"
 #include "util.h"
+#include "stm32f4xx_hal.h"
 
 #define FILE_ID HIH613X_C
 
-#define HIHALM_PIN      (GPIO_Pin_3) // Labeled as HIHALM -- (pin pulled, used as I2CBBSDA)
 #define HIH_I2C_ADDRESS (0x27)
 #define HIH_MEASURE_CMD (HIH_I2C_ADDRESS << 1)
 #define HIH_READ_CMD    (HIH_MEASURE_CMD  + 1)
-
-// These macros will only apply to the SPI version of the chip
-#define SELECT_CHIP_HIH613X()   do { GPIOB->BSRRH |= 0x00000200; } while (0)
-#define DESELECT_CHIP_HIH613X() do { GPIOB->BSRRL |= 0x00000200; } while (0)
 
 #define HIH_HIGH_SPEED_VMIN (2.7)
 #define HIH_LOW_SPEED_VMIN (2.0)
@@ -47,6 +41,7 @@ static struct
   HIH613XData currData;
   double      currTmp;
   double      currHum;
+  uint8_t     buf[64];
 } sHIH613X;
 
 /**************************************************************************************************\
@@ -70,16 +65,16 @@ void HIH613X_init(void)
 * PARAMETERS  state: If TRUE, required peripherals will be enabled. Otherwise control pins will be
 *                    set to input.
 * RETURNS     TRUE
-* NOTES       Also configures the state of the I2CBB pins
+* NOTES       Also configures the state of the I2C pins
 \**************************************************************************************************/
 boolean HIH613X_setup(boolean state)
 {
   if (sHIH613X.vDomain[state] > HIH_HIGH_SPEED_VMIN)
-    I2CBB_setup(state, I2CBB_CLOCK_RATE_1500000);  // Configure the I2C lines for HS txrx
+    I2C_setup(state, I2C_CLOCK_RATE_100000);  // Configure the I2C lines for HS txrx
   else if (sHIH613X.vDomain[state] > HIH_LOW_SPEED_VMIN)
-    I2CBB_setup(state, I2CBB_CLOCK_RATE_800000);  // Configure the I2C lines for LS txrx
+    I2C_setup(state, I2C_CLOCK_RATE_050000);  // Configure the I2C lines for LS txrx
   else
-    I2CBB_setup(state, I2CBB_CLOCK_RATE_400000);  // Configure the I2C lines for XLS txrx
+    I2C_setup(state, I2C_CLOCK_RATE_025000);  // Configure the I2C lines for XLS txrx
   return TRUE;
 }
 
@@ -127,7 +122,8 @@ static void HIH613X_setState(HIHState state)
   if (sHIH613X.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
   sHIH613X.state = state;
-  Analog_setDomain(SPI_DOMAIN, TRUE, sHIH613X.vDomain[state]);
+  PowerCon_setDeviceDomain(DEVICE_TEMPSENSE, VOLTAGE_DOMAIN_0);
+  //Analog_setDomain(SPI_DOMAIN, TRUE, sHIH613X.vDomain[state]);
 }
 
 /**************************************************************************************************\
@@ -164,56 +160,41 @@ boolean HIH613X_setPowerProfile(HIHPowerProfile profile)
 }
 
 /**************************************************************************************************\
- * FUNCTION    HIH613X_getHumidity
- * DESCRIPTION Returns the last humidity measurement
- * PARAMETERS  None
- * RETURNS     The last humidity measurement
- \**************************************************************************************************/
- double HIH613X_getHumidity(void)
- {
-   return sHIH613X.currHum;
- }
-
- /**************************************************************************************************\
- * FUNCTION    HIH613X_getTemperature
- * DESCRIPTION Returns the last temperature measurement
- * PARAMETERS  None
- * RETURNS     the last temperature measurement
- \**************************************************************************************************/
- double HIH613X_getTemperature(void)
- {
-   return sHIH613X.currTmp;
- }
-
- /**************************************************************************************************\
- * FUNCTION    HIH613X_notifyVoltageChange
- * DESCRIPTION Called when any other task changes the voltage of the domain
- * PARAMETERS  newVoltage: The voltage that the domain is now experiencing
- * RETURNS     Nothing
- \**************************************************************************************************/
- void HIH613X_notifyVoltageChange(double newVoltage)
- {
-   if (newVoltage < 2.3)
-     sHIH613X.state = HIH_STATE_IDLE;
- }
-
-/**************************************************************************************************\
-* FUNCTION    HIH613X_readTempHumidSPI
-* DESCRIPTION Reads the temperature out of the sensor
+* FUNCTION    HIH613X_getHumidity
+* DESCRIPTION Returns the last humidity measurement
 * PARAMETERS  None
-* RETURNS     Nothing
+* RETURNS     The last humidity measurement
 \**************************************************************************************************/
-void HIH613X_readTempHumidSPI(void)
+double HIH613X_getHumidity(void)
 {
-  int16 hihDataBuffer[2];
-
-  SELECT_CHIP_HIH613X();
-  SPI_read((uint8*)&hihDataBuffer, 4); // Note that SPI can only write at 800kHz
-  DESELECT_CHIP_HIH613X();
+  return sHIH613X.currHum;
 }
 
 /**************************************************************************************************\
-* FUNCTION    HIH613X_readTempHumidI2CBB
+* FUNCTION    HIH613X_getTemperature
+* DESCRIPTION Returns the last temperature measurement
+* PARAMETERS  None
+* RETURNS     the last temperature measurement
+\**************************************************************************************************/
+double HIH613X_getTemperature(void)
+{
+  return sHIH613X.currTmp;
+}
+
+/**************************************************************************************************\
+* FUNCTION    HIH613X_notifyVoltageChange
+* DESCRIPTION Called when any other task changes the voltage of the domain
+* PARAMETERS  newVoltage: The voltage that the domain is now experiencing
+* RETURNS     Nothing
+\**************************************************************************************************/
+void HIH613X_notifyVoltageChange(double newVoltage)
+{
+  if (newVoltage < 2.3)
+    sHIH613X.state = HIH_STATE_IDLE;
+}
+
+/**************************************************************************************************\
+* FUNCTION    HIH613X_readTempHumidI2C
 * DESCRIPTION Interfaces with the HIH613X-000 (I2C) temperature andS humidity sensor
 * PARAMETERS  measure - sends a measurement command
 *             read - reads the temperature and humidity from the HIH613X
@@ -223,13 +204,15 @@ void HIH613X_readTempHumidSPI(void)
 *                delay occurring between the measurement and read
 *             2) The results are stored in the HIH613X structure
 \**************************************************************************************************/
-HIHStatus HIH613X_readTempHumidI2CBB(boolean measure, boolean read, boolean convert)
+HIHStatus HIH613X_readTempHumidI2C(boolean measure, boolean read, boolean convert)
 {
+  uint8_t dummyWrite[1] = {0xFF};
+  
   if (measure)
   {
     HIH613X_setState(HIH_STATE_SENDING_CMD);
     HIH613X_setup(TRUE);
-    I2CBB_readData(HIH_MEASURE_CMD, NULL, 0); // send measure command
+    I2C_write(HIH_I2C_ADDRESS, dummyWrite, 1); // send measure command
     HIH613X_setup(FALSE);
     HIH613X_setState(HIH_STATE_WAITING);
   }
@@ -244,7 +227,7 @@ HIHStatus HIH613X_readTempHumidI2CBB(boolean measure, boolean read, boolean conv
   {
     HIH613X_setState(HIH_STATE_READING);
     HIH613X_setup(TRUE);
-    I2CBB_readData(HIH_READ_CMD, (uint8*)&sHIH613X.currData, sizeof(sHIH613X.currData));
+    I2C_read(HIH_I2C_ADDRESS, (uint8*)&sHIH613X.currData, sizeof(sHIH613X.currData));
     Util_swap32((uint32*)&sHIH613X.currData);
     HIH613X_setup(FALSE);
     HIH613X_setState(HIH_STATE_DATA_READY);
@@ -257,4 +240,19 @@ HIHStatus HIH613X_readTempHumidI2CBB(boolean measure, boolean read, boolean conv
     sHIH613X.currTmp = (sHIH613X.currTmp * 1.8) + 32.0;
   }
   return (HIHStatus)sHIH613X.currData.status;
+}
+
+/**************************************************************************************************\
+* FUNCTION    HIH613X_test
+* DESCRIPTION Interfaces with the HIH613X-000 (I2C) temperature andS humidity sensor
+* PARAMETERS  measure - sends a measurement command
+*             read - reads the temperature and humidity from the HIH613X
+*             convert - converts the temperature and humidity bit counts into degF and %RH
+* RETURNS     Nothing
+\**************************************************************************************************/
+bool HIH613X_test(void)
+{
+  HIH613X_readTempHumidI2C(true, true, true);
+  return ((sHIH613X.currHum > 0) && (sHIH613X.currHum < 100) &&
+          (sHIH613X.currTmp > 0) && (sHIH613X.currTmp < 100));
 }
