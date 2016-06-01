@@ -44,6 +44,7 @@
 #include "m25px.h"
 #include "plr5010d.h"
 #include "powercon.h"
+#include "sbt263.h"
 #include "sdcard.h"
 #include "si114x.h"
 #include "spi.h"
@@ -350,6 +351,7 @@ int main(void)
   EEPROM_init();
   HIH613X_init();
   M25PX_init();
+  SBT263_init(&huart5);
   SST26_init();
   SDCard_init();
   SI114X_init();
@@ -407,7 +409,7 @@ int main(void)
   Main_printResult(210, sMain.usbTest);
   
   BSP_LCD_DisplayStringAt(0, 225,  btTest, LEFT_MODE);
-//
+  sMain.bluetoothTest = SBT263_test();
   Main_printResult(225, sMain.bluetoothTest);
   
   BSP_LCD_DisplayStringAt(0, 240,  wifiTest, LEFT_MODE);
