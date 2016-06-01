@@ -108,10 +108,14 @@ bool I2C_read(uint8_t devAddr, uint8 *pBytes, uint16 numBytes)
 *              numBytes -- the number of bytes to write
 * RETURNS      nothing
 \*****************************************************************************/
-void I2C_memWrite(uint8_t devAddr, uint16_t memAddr, uint8 *pBytes, uint16 numBytes)
+bool I2C_memWrite(uint8_t devAddr, uint16_t memAddr, uint8 *pBytes, uint16 numBytes)
 {
-  HAL_I2C_Master_Transmit(spI2C, devAddr << 1, pBytes, numBytes, 100);
-  while(spI2C->State != HAL_I2C_STATE_READY); // Wait for tx to complete
+  HAL_I2C_Mem_Write(spI2C, devAddr << 1, memAddr, I2C_MEMADD_SIZE_8BIT, pBytes, numBytes, 100);
+  // Wait for the last byte and stop to be transmitted
+  uint32_t timeout = 1000;
+  while ((timeout-- > 0) && (spI2C->Instance->SR2 & I2C_SR2_BUSY))
+    Time_delay(1);
+  return (timeout > 0);
 }
 
 /*****************************************************************************\
@@ -122,8 +126,12 @@ void I2C_memWrite(uint8_t devAddr, uint16_t memAddr, uint8 *pBytes, uint16 numBy
 *              numBytes - the number of bytes to read
 * RETURNS      nothing
 \*****************************************************************************/
-void I2C_memRead(uint8_t devAddr, uint16_t memAddr, uint8 *pBytes, uint16 numBytes)
+bool I2C_memRead(uint8_t devAddr, uint16_t memAddr, uint8 *pBytes, uint16 numBytes)
 {
-  HAL_I2C_Master_Receive(spI2C, devAddr << 1, pBytes, numBytes, 100);
-  while(spI2C->State != HAL_I2C_STATE_READY); // Wait for tx to complete
+  HAL_I2C_Mem_Read(spI2C, devAddr << 1, memAddr, I2C_MEMADD_SIZE_8BIT, pBytes, numBytes, 100);
+  // Wait for the last byte and stop to be transmitted
+  uint32_t timeout = 1000;
+  while ((timeout-- > 0) && (spI2C->Instance->SR2 & I2C_SR2_BUSY))
+    Time_delay(1);
+  return (timeout > 0);
 }

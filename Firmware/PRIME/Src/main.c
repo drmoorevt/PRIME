@@ -45,6 +45,7 @@
 #include "plr5010d.h"
 #include "powercon.h"
 #include "sdcard.h"
+#include "si114x.h"
 #include "spi.h"
 #include "sst26.h"
 #include "time.h"
@@ -351,6 +352,7 @@ int main(void)
   M25PX_init();
   SST26_init();
   SDCard_init();
+  SI114X_init();
   
   BSP_LED_Init(LED3);
   BSP_LED_Init(LED4);
@@ -393,7 +395,7 @@ int main(void)
   Main_printResult(165, sMain.sdCardTest);
   
   BSP_LCD_DisplayStringAt(0, 180,  siTest, LEFT_MODE);
-//
+  sMain.si114xTest = SI114X_test();
   Main_printResult(180, sMain.si114xTest);
   
   BSP_LCD_DisplayStringAt(0, 195,  hihTest, LEFT_MODE);
@@ -424,7 +426,11 @@ int main(void)
   PLR5010D_test(PLR5010D_DOMAIN2);
   Main_printResult(285, sMain.plr5010d2Test);
   
-  while(1);
+  while(1)
+  {
+    SI114X_ReadAndMeasure(NULL);
+    Time_delay(100000);
+  }
 }
 
 /** System Clock Configuration

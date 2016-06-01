@@ -18,8 +18,8 @@ void I2C_init(I2C_HandleTypeDef *pI2C);
 bool I2C_setup(boolean state, I2CClockRate rate);
 bool I2C_read(uint8_t devAddr, uint8 *pBytes, uint16 numBytes);
 bool I2C_write(uint8_t devAddr, uint8 *pBytes, uint16 numBytes);
-void I2C_memRead(uint8_t devAddr, uint16_t memAddr, uint8 *pBytes, uint16 numBytes);
-void I2C_memWrite(uint8_t devAddr, uint16_t memAddr, uint8 *pBytes, uint16 numBytes);
+bool I2C_memRead(uint8_t devAddr, uint16_t memAddr, uint8 *pBytes, uint16 numBytes);
+bool I2C_memWrite(uint8_t devAddr, uint16_t memAddr, uint8 *pBytes, uint16 numBytes);
 
 
 #endif // I2C_H
