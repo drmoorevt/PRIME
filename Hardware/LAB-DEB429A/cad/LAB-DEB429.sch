@@ -10060,6 +10060,8 @@ V1,  V2,    Vadj
 <text x="10.16" y="182.88" size="2.54" layer="91">May be able to power the MCU off of Vdd pin using a PPS330D</text>
 <text x="-99.06" y="86.36" size="2.54" layer="91">SPI Devices can turn on when disconnected due to SPI activity</text>
 <text x="-99.06" y="81.28" size="2.54" layer="91">Add standoffs to board to prevent flex</text>
+<text x="-88.9" y="96.52" size="2.54" layer="91">Move the capacitors away from the ESP12E</text>
+<text x="-88.9" y="101.6" size="2.54" layer="91">Fix the Pullups and Pulldowns on the ESP12E</text>
 </plain>
 <instances>
 <instance part="J1" gate="-1" x="40.64" y="271.78"/>
