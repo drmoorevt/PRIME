@@ -616,6 +616,36 @@
               <FileType>5</FileType>
               <FilePath>..\Src\i2c.h</FilePath>
             </File>
+            <File>
+              <FileName>si114x.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\si114x.c</FilePath>
+            </File>
+            <File>
+              <FileName>si114x.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Src\si114x.h</FilePath>
+            </File>
+            <File>
+              <FileName>sbt263.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\sbt263.c</FilePath>
+            </File>
+            <File>
+              <FileName>sbt263.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Src\sbt263.h</FilePath>
+            </File>
+            <File>
+              <FileName>esp12.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\esp12.c</FilePath>
+            </File>
+            <File>
+              <FileName>esp12.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Src\esp12.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>

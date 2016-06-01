@@ -38,6 +38,7 @@
 #include "stm32f429i_discovery_lcd.h"
 #include "analog.h"
 #include "eeprom.h"
+#include "esp12.h"
 #include "extusb.h"
 #include "hih613x.h"
 #include "i2c.h"
@@ -243,7 +244,7 @@ static uint8_t plr2Test[]  = "PLR5010D2........";
 
 static void Display_DemoDescription(void)
 {
-  uint8_t desc[50];
+  //uint8_t desc[50];
   
   /* Set LCD Foreground Layer  */
   BSP_LCD_SelectLayer(0);
@@ -349,6 +350,7 @@ int main(void)
   Analog_init(&anInit);
   PowerCon_init(&hdac);
   EEPROM_init();
+  ESP12_init(&huart1);
   HIH613X_init();
   M25PX_init();
   SBT263_init(&huart5);
@@ -413,7 +415,7 @@ int main(void)
   Main_printResult(225, sMain.bluetoothTest);
   
   BSP_LCD_DisplayStringAt(0, 240,  wifiTest, LEFT_MODE);
-//
+  sMain.wifiTest = ESP12_test();
   Main_printResult(240, sMain.wifiTest);
   
   BSP_LCD_DisplayStringAt(0, 255,  plr0Test, LEFT_MODE);
@@ -771,7 +773,8 @@ void MX_USART1_UART_Init(void)
 {
 
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
+//  huart1.Init.BaudRate = 115200;
+  huart1.Init.BaudRate = 9600;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;

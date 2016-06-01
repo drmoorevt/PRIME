@@ -1,6 +1,5 @@
 #include "analog.h"
 #include "sbt263.h"
-#include "i2c.h"
 #include "powercon.h"
 #include "time.h"
 #include "types.h"
@@ -8,13 +7,6 @@
 #include "stm32f4xx_hal.h"
 
 #define FILE_ID SBT263_C
-
-#define HIH_I2C_ADDRESS (0x27)
-#define HIH_MEASURE_CMD (HIH_I2C_ADDRESS << 1)
-#define HIH_READ_CMD    (HIH_MEASURE_CMD  + 1)
-
-#define HIH_HIGH_SPEED_VMIN (2.7)
-#define HIH_LOW_SPEED_VMIN (2.0)
 
 // Power profile voltage definitions, in HIHPowerProfile / HIHState order
 static const double SBT_POWER_PROFILES[SBT_PROFILE_MAX][SBT_STATE_MAX] =
@@ -34,7 +26,7 @@ static struct
   uint8_t     rxBuf[1024];
 } sSBT263;
 
-UART_HandleTypeDef *spUART;
+static UART_HandleTypeDef *spUART;
 
 /**************************************************************************************************\
 * FUNCTION    SBT263_init
