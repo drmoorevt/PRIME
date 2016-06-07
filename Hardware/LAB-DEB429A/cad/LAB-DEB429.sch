@@ -10021,7 +10021,7 @@ at 27/07/2012 14:48:47</description>
 <text x="91.44" y="236.22" size="1.778" layer="91">(Red)</text>
 <text x="10.16" y="177.8" size="2.54" layer="91">Remove R29, R30 on Discovery board -- I2C needs to be pulled to domain voltage</text>
 <text x="10.16" y="172.72" size="2.54" layer="91">Can't use LTDC and NAND/NOR flash at the same time.</text>
-<text x="10.16" y="167.64" size="2.54" layer="91">Remove R69 and R72 from DISCO board to remove USB_OTG host circuitry</text>
+<text x="10.16" y="167.64" size="2.54" layer="91">Remove C57, R69 and R72 from DISCO board to remove USB_OTG host circuitry</text>
 <text x="5.08" y="5.08" size="1.778" layer="91">ASDM300F:
 Vadj     Vout
 0.00 = 3.32V
