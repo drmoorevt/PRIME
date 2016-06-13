@@ -26,13 +26,16 @@
 #define EE_MID_SPEED_VMIN  (2.5)
 #define EE_LOW_SPEED_VMIN  (1.8)
 
+#define MCP25AA512_MFG_ID (0x29)
+                               
 typedef enum
 {
   OP_WRITE_ENABLE = 0x06,
   OP_WRITE_MEMORY = 0x02,
   OP_READ_MEMORY  = 0x03,
   OP_WRITE_STATUS = 0x01,
-  OP_READ_STATUS  = 0x05
+  OP_READ_STATUS  = 0x05,
+  OP_READ_ID      = 0xAB
 } EEPROMCommand;
 
 // Power profile voltage definitions, in EEPROMPowerProfile / EEPROMState order
@@ -298,6 +301,32 @@ boolean EEPROM_fill(uint8 *pDest, uint16 length, uint8 fillVal)
 }
 
 /**************************************************************************************************\
+* FUNCTION    EEPROM_readMfgId
+* DESCRIPTION Reads the manufacturers ID from the EEPROM
+* PARAMETERS  None
+* RETURNS     The JEDEC manufacturer of the EEPROM
+\**************************************************************************************************/
+static uint8_t EEPROM_readMfgId(void)
+{
+  uint8_t mfgId;
+  uint8 cmd[3] = {OP_READ_ID, 0, 0};
+
+  // Set state before enabling the pins to avoid glitches
+  EEPROM_setState(EEPROM_STATE_READING); // Set for monitoring and voltage control purposes
+  EEPROM_setup(TRUE); // Enable the EEPROM control and SPI pins for the transaction
+
+  SELECT_CHIP_EE0();
+  SPI_write(cmd, sizeof(cmd));
+  SPI_read(&mfgId, sizeof(mfgId));
+  DESELECT_CHIP_EE0();
+
+  EEPROM_setup(FALSE); // Disable the EEPROM control and SPI pins for the transaction
+  EEPROM_setState(EEPROM_STATE_IDLE);
+
+  return mfgId;
+}
+
+/**************************************************************************************************\
 * FUNCTION    EEPROM_test
 * DESCRIPTION Executes reads and writes to EEPROM to test the code
 * PARAMETERS  none
@@ -305,10 +334,11 @@ boolean EEPROM_fill(uint8 *pDest, uint16 length, uint8 fillVal)
 \**************************************************************************************************/
 bool EEPROM_test(void)
 {
-  uint8 buffer[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-
-  uint8 test[sizeof(buffer)];
+  return (MCP25AA512_MFG_ID == EEPROM_readMfgId());
+  /*
   PowerCon_setDeviceDomain(DEVICE_EEPROM, VOLTAGE_DOMAIN_0);
+  uint8 buffer[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  uint8 test[sizeof(buffer)];
   
   // basic read test
   EEPROM_read((uint8*)0,test,sizeof(test));
@@ -320,4 +350,5 @@ bool EEPROM_test(void)
   EEPROM_read((uint8*)(8),test,sizeof(test));
 
   return (0 == Util_compareMemory(buffer, test, sizeof(buffer)));
+  */
 }
