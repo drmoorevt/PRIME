@@ -127,12 +127,12 @@ boolean M25PX_setup(boolean state)
 
   // Set up the SPI transaction with respect to domain voltage
   if (sM25PX.vDomain[sM25PX.state] >= M25PX_HIGH_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_45000000);
+    SPI_setup(state, SPI_CLOCK_RATE_45000000, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
   else if (sM25PX.vDomain[sM25PX.state] >= M25PX_LOW_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_22500000);
+    SPI_setup(state, SPI_CLOCK_RATE_22500000, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
   else
   {
-    SPI_setup(state, SPI_CLOCK_RATE_05625000);
+    SPI_setup(state, SPI_CLOCK_RATE_05625000, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
     return FALSE; // Domain voltage is too low for serial flash operation, attempt anyway
   }
 

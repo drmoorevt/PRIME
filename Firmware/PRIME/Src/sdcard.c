@@ -355,11 +355,11 @@ boolean SDCard_setup(boolean state)
   
   // Set up the SPI transaction with respect to domain voltage
   if (sSDCard.vDomain[sSDCard.state] >= SD_HIGH_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_00703125);
+    SPI_setup(state, SPI_CLOCK_RATE_00703125, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
   else if (sSDCard.vDomain[sSDCard.state] >= SD_LOW_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_00703125);
+    SPI_setup(state, SPI_CLOCK_RATE_00703125, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
   else
-    SPI_setup(state, SPI_CLOCK_RATE_01406250); // Voltage too low, attempt at very low speed
+    SPI_setup(state, SPI_CLOCK_RATE_01406250, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL); // Voltage too low, attempt at very low speed
   
   return (sSDCard.vDomain[sSDCard.state] >= SD_LOW_SPEED_VMIN);
 }

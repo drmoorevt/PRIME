@@ -53,7 +53,7 @@ void SPI_init(SPI_HandleTypeDef *pSPI)
   HAL_GPIO_WritePin(CSX_GPIO_Port,     CSX_Pin,     GPIO_PIN_SET);
   
   spSPI = pSPI;
-  SPI_setup(FALSE, SPI_CLOCK_RATE_MAX);
+  SPI_setup(FALSE, SPI_CLOCK_RATE_MAX, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
 }
 
 /**************************************************************************************************\
@@ -62,7 +62,7 @@ void SPI_init(SPI_HandleTypeDef *pSPI)
 * PARAMETERS   none
 * RETURNS      TRUE
 \**************************************************************************************************/
-boolean SPI_setup(boolean state, SPIClockRate rate)
+boolean SPI_setup(boolean state, SPIRate rate, uint32_t phase, uint32_t pol, SPITIMode mode)
 {
   HAL_SPI_DeInit(spSPI);
   if (state)
@@ -81,6 +81,9 @@ boolean SPI_setup(boolean state, SPIClockRate rate)
       default: return FALSE;
     }
     spSPI->Init.BaudRatePrescaler = prescalar;
+    spSPI->Init.CLKPhase = (phase == SPI_PHASE_2EDGE) ? SPI_PHASE_2EDGE : SPI_PHASE_1EDGE;
+    spSPI->Init.CLKPolarity = (pol == SPI_POLARITY_HIGH) ? SPI_POLARITY_HIGH : SPI_POLARITY_LOW;
+    spSPI->Init.TIMode = (mode == SPI_MODE_TI) ? SPI_TIMODE_ENABLE : SPI_TIMODE_DISABLE;
     HAL_SPI_Init(spSPI);
   }
   return TRUE;

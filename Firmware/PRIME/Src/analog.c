@@ -79,3 +79,18 @@ double Analog_getADCVoltage(ADCSelect adc)
   uint16_t domCode = Analog_getADCVal(adc);
   return (refVoltage / (double)refCode) * (double)domCode;
 }
+
+/**************************************************************************************************\
+* FUNCTION    Analog_getADCCurrent
+* DESCRIPTION 
+* PARAMETERS  
+* RETURNS     The value of the current channel in mA
+\**************************************************************************************************/
+double Analog_getADCCurrent(ADCSelect adc)
+{
+  double volts = Analog_getADCVoltage(adc); // I = (V/R) / Gain
+  double current = ((volts / 0.1) / 100) * 1000;
+  return current;
+}
+
+

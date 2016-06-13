@@ -417,18 +417,30 @@ int main(void)
   BSP_LCD_DisplayStringAt(0, 240,  wifiTest, LEFT_MODE);
   sMain.wifiTest = ESP12_test();
   Main_printResult(240, sMain.wifiTest);
-  
+    
   BSP_LCD_DisplayStringAt(0, 255,  plr0Test, LEFT_MODE);
-  PLR5010D_test(PLR5010D_DOMAIN0);
+  sMain.plr5010d0Test = PLR5010D_test(PLR5010D_DOMAIN0);
   Main_printResult(255, sMain.plr5010d0Test);
   
   BSP_LCD_DisplayStringAt(0, 270,  plr1Test, LEFT_MODE);
-  PLR5010D_test(PLR5010D_DOMAIN1);
+  sMain.plr5010d1Test = PLR5010D_test(PLR5010D_DOMAIN1);
   Main_printResult(270, sMain.plr5010d1Test);
   
   BSP_LCD_DisplayStringAt(0, 285,  plr2Test, LEFT_MODE);
-  PLR5010D_test(PLR5010D_DOMAIN2);
+  sMain.plr5010d2Test = PLR5010D_test(PLR5010D_DOMAIN2);
   Main_printResult(285, sMain.plr5010d2Test);
+  
+  if (sMain.bluetoothTest && sMain.eepromTest    && sMain.hih6130Test   &&sMain.nandFlashTest  &&
+      sMain.norFlashTest  && sMain.plr5010d0Test && sMain.plr5010d1Test && sMain.plr5010d2Test &&
+      sMain.ramTest       && sMain.sdCardTest    && sMain.sdCardTest    && sMain.si114xTest    && 
+      sMain.usbTest       && sMain.vDomain0Test  && sMain.vDomain1Test  && sMain.vDomain2Test  &&
+      sMain.wifiTest)
+  {
+    BSP_LCD_DisplayStringAt(0, 300,  "all systems go...", CENTER_MODE);
+  }
+  else
+    BSP_LCD_DisplayStringAt(0, 300,  "an error was reported...", CENTER_MODE);
+    
   
   while(1)
   {

@@ -126,12 +126,12 @@ boolean SST26_setup(boolean state)
 
   // Set up the SPI transaction with respect to domain voltage
   if (sSST26.vDomain[sSST26.state] >= SST26_HIGH_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_45000000);
+    SPI_setup(state, SPI_CLOCK_RATE_45000000, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
   else if (sSST26.vDomain[sSST26.state] >= SST26_LOW_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_22500000);
+    SPI_setup(state, SPI_CLOCK_RATE_22500000, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
   else
   {
-    SPI_setup(state, SPI_CLOCK_RATE_05625000);
+    SPI_setup(state, SPI_CLOCK_RATE_05625000, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
     return FALSE; // Domain voltage is too low for serial flash operation, attempt anyway
   }
 

@@ -83,14 +83,14 @@ boolean EEPROM_setup(boolean state)
 
   // Set up the SPI transaction with respect to domain voltage
   if (sEEPROM.vDomain[sEEPROM.state] >= EE_HIGH_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_11250000);
+    SPI_setup(state, SPI_CLOCK_RATE_11250000, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
   else if (sEEPROM.vDomain[sEEPROM.state] >= EE_MID_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_05625000);
+    SPI_setup(state, SPI_CLOCK_RATE_05625000, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
   else if (sEEPROM.vDomain[sEEPROM.state] >= EE_LOW_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_01406250);
+    SPI_setup(state, SPI_CLOCK_RATE_01406250, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
   else
   {
-    SPI_setup(state, SPI_CLOCK_RATE_01406250);
+    SPI_setup(state, SPI_CLOCK_RATE_01406250, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
     return FALSE; // Domain voltage is too low for EEPROM operation, attempt very low speed
   }
   return TRUE;
