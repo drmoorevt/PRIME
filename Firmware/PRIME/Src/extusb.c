@@ -1,4 +1,5 @@
 #include "extusb.h"
+#include "time.h"
 
 #define FT232H_DATA_AVAILABLE  (0x01)
 #define FT232H_SPACE_AVAILABLE (0x02)
@@ -41,12 +42,39 @@ bool ExtUSB_tx(uint8_t *pSrc, uint32_t len)
 /**************************************************************************************************\
 * FUNCTION    ExtUSB_rx
 * DESCRIPTION 
+* PARAMETERS  timeout is in ms.
+* RETURNS     
+\**************************************************************************************************/
+uint32_t ExtUSB_rx(uint8_t *pDst, const uint32_t len, uint32_t timeout)
+{
+  uint32_t bytesRx = 0;
+  while ((bytesRx < len) && (timeout > 0))
+  {
+    if (*pStatPipe & FT232H_DATA_AVAILABLE) // is there a byte available?
+    {
+      *pDst++ = *(pDataPipe);
+      bytesRx++;
+    }
+    else
+    {
+      Time_delay(1000);
+      timeout--;
+    }
+  }
+  return bytesRx;
+}
+
+/**************************************************************************************************\
+* FUNCTION    ExtUSB_testUSB
+* DESCRIPTION 
 * PARAMETERS  
 * RETURNS     
 \**************************************************************************************************/
-bool ExtUSB_rx(uint8_t *pDst, uint32_t len)
+void ExtUSB_flushRxBuffer(void)
 {
-  return true;
+  volatile uint8_t nowhere;
+  while(*pStatPipe & FT232H_DATA_AVAILABLE)
+    nowhere = *(pDataPipe);
 }
 
 /**************************************************************************************************\

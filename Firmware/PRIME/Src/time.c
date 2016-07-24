@@ -101,14 +101,14 @@ void Time_initTimer2(uint16 reloadValue)
 }
 
 /**************************************************************************************************\
-* FUNCTION      TIM2_IRQHandler
-* DESCRIPTION   Handles interrupts originating from Timer2
+* FUNCTION      TIM3_IRQHandler
+* DESCRIPTION   Handles interrupts originating from Timer3
 * PARAMETERS    none
 * RETURN        none
 \**************************************************************************************************/
-void TIM2_IRQHandler(void)
+void TIM3_IRQHandler(void)
 {
-  CLEAR_BIT(TIM2->SR, TIM_SR_UIF); // Clear the update interrupt flag
+  CLEAR_BIT(TIM3->SR, TIM_SR_UIF); // Clear the update interrupt flag
 }
 
 /**************************************************************************************************\
@@ -131,16 +131,16 @@ void Time_initTimer3(uint16 reloadValue)
 }
 
 /**************************************************************************************************\
-* FUNCTION      TIM3_IRQHandler
-* DESCRIPTION   Handles interrupts originating from Timer3
+* FUNCTION      TIM2_IRQHandler
+* DESCRIPTION   Handles interrupts originating from Timer2
 * PARAMETERS    none
 * RETURN        none
 \**************************************************************************************************/
-void TIM3_IRQHandler(void)
+void TIM2_IRQHandler(void)
 {
-  TIM3->EGR = TIM_EGR_TG;
-  CLEAR_BIT(TIM3->SR, TIM_SR_UIF); // Clear the update interrupt flag
-  //Tests_notifySampleTrigger();
+  TIM2->EGR = TIM_EGR_UG;
+  CLEAR_BIT(TIM2->SR, TIM_SR_UIF); // Clear the update interrupt flag
+  Tests_notifySampleTrigger();
 }
 
 /**************************************************************************************************\

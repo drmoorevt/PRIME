@@ -3,6 +3,7 @@
 
 #include "stm32f4xx_hal.h"
 #include <stdbool.h>
+#include "time.h"
 
 typedef enum
 {
@@ -18,19 +19,42 @@ typedef enum
   ADC_SELECT_MAX      = 0x09,
 } ADCSelect;
 
-typedef struct
-{
-  ADC_HandleTypeDef hadc1;
-  ADC_HandleTypeDef hadc2;
-  ADC_HandleTypeDef hadc3;
-  DMA_HandleTypeDef hdma_adc1;
-  DMA_HandleTypeDef hdma_adc2;
-  DMA_HandleTypeDef hdma_adc3;
-} AnalogInit;
-
-bool Analog_init(AnalogInit *pAnInit);
+bool Analog_init(void);
 uint16_t Analog_getADCVal(ADCSelect adc);
 double Analog_getADCVoltage(ADCSelect adc);
 double Analog_getADCCurrent(ADCSelect adc);
+
+typedef enum
+{
+  ADC_PORT1     = 0,
+  ADC_PORT2     = 1,
+  ADC_PORT3     = 2,
+  NUM_ADC_PORTS = 3
+} ADCPort;
+
+typedef struct
+{
+  bool scan;
+  bool continuous;
+  uint8_t   numChannels;
+  struct
+  {
+    uint8_t sampleTime;
+    uint8_t chanNum;
+  } chan[16];
+  uint32_t numSamps;
+} ADCConfig;
+
+typedef struct
+{
+  ADCConfig adcConfig;  // Not using this yet, but ultimately allow apps to decide these params
+  uint16_t *appSampleBuffer;
+  void  (*appNotifyConversionComplete)(uint8_t, uint32_t);
+} AppADCConfig;
+
+void Analog_openPort(ADCSelect adcSelect, AppADCConfig appConfig);
+void Analog_configureADC(ADCSelect adcSel, void *pDst, uint32_t numSamps);
+boolean Analog_startSampleTimer(uint32_t sampRate);
+boolean Analog_stopSampleTimer(void);
 
 #endif

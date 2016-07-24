@@ -33,14 +33,15 @@ typedef enum
 void HIH613X_init(void);
 bool HIH613X_test(void);
 boolean HIH613X_setup(boolean state);
+
 HIHState HIH613X_getState(void);
 uint32 HIH613X_getStateAsWord(void);
 double HIH613X_getStateVoltage(void);
-void HIH613X_readTempHumidSPI(void);
+
 void HIH613X_notifyVoltageChange(double newVoltage);
 boolean HIH613X_setPowerProfile(HIHPowerProfile profile);
 boolean HIH613X_setPowerState(HIHState state, double vDomain);
-HIHStatus HIH613X_readTempHumidI2CBB(boolean measure, boolean read, boolean convert);
+HIHStatus HIH613X_readTempHumidI2C(boolean measure, boolean read, boolean convert);
 
 double HIH613X_getHumidity(void);
 double HIH613X_getTemperature(void);

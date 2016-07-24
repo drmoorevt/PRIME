@@ -1,36 +1,3 @@
-/**
-  ******************************************************************************
-  * File Name          : main.c
-  * Description        : Main program body
-  ******************************************************************************
-  *
-  * COPYRIGHT(c) 2016 STMicroelectronics
-  *
-  * Redistribution and use in source and binary forms, with or without modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright notice,
-  *      this list of conditions and the following disclaimer in the documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-  *
-  ******************************************************************************
-  */
-/* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
 
 /* USER CODE BEGIN Includes */
@@ -40,6 +7,7 @@
 #include "eeprom.h"
 #include "esp12.h"
 #include "extusb.h"
+#include "extmem.h"
 #include "hih613x.h"
 #include "i2c.h"
 #include "m25px.h"
@@ -50,15 +18,8 @@
 #include "si114x.h"
 #include "spi.h"
 #include "sst26.h"
+#include "tests.h"
 #include "time.h"
-
-/* USER CODE END Includes */
-
-/* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc1;
-ADC_HandleTypeDef hadc2;
-ADC_HandleTypeDef hadc3;
-DMA_HandleTypeDef hdma_adc1;
 
 CRC_HandleTypeDef hcrc;
 
@@ -81,18 +42,8 @@ UART_HandleTypeDef huart1;
 SRAM_HandleTypeDef hsram1;
 SDRAM_HandleTypeDef hsdram1;
 
-/* USER CODE BEGIN PV */
-/* Private variables ---------------------------------------------------------*/
-
-/* USER CODE END PV */
-
-/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_DMA_Init(void);
-static void MX_ADC1_Init(void);
-static void MX_ADC2_Init(void);
-static void MX_ADC3_Init(void);
 static void MX_CRC_Init(void);
 static void MX_DAC_Init(void);
 static void MX_DMA2D_Init(void);
@@ -104,15 +55,6 @@ static void MX_TIM6_Init(void);
 static void MX_TIM7_Init(void);
 static void MX_UART5_Init(void);
 static void MX_USART1_UART_Init(void);
-
-/* USER CODE BEGIN PFP */
-/* Private function prototypes -----------------------------------------------*/
-
-/* USER CODE END PFP */
-
-/* USER CODE BEGIN 0 */
-
-/* USER CODE END 0 */
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -137,94 +79,6 @@ static struct
   bool plr5010d2Test;
 } sMain;
 
-#define SDRAM_DEVICE_ADDR         ((uint32_t)0xD0000000)
-#define SDRAM_DEVICE_SIZE         ((uint32_t)0x800000)  /* SDRAM device size in MBytes */
-bool Main_testSDRAM(void)
-{
-  uint32_t i;  // Avoid stomping on LCD SDRAM during the test by starting at BUFFER_OFFSET
-  for (i = BUFFER_OFFSET; i < SDRAM_DEVICE_SIZE; i++)
-  {
-    *(uint8_t *)(SDRAM_DEVICE_ADDR + i) = i;
-  }
-  for (i = BUFFER_OFFSET; i < SDRAM_DEVICE_SIZE; i++)
-  {
-    if (*(uint8_t *)(SDRAM_DEVICE_ADDR + i) != (i & 0x000000FF))
-      return false;
-  }
-  return true;
-}
-
-#define REFRESH_COUNT           ((uint32_t)1386)   /* SDRAM refresh counter */
-#define SDRAM_TIMEOUT           ((uint32_t)0xFFFF)
-
-#define SDRAM_MODEREG_BURST_LENGTH_1             ((uint16_t)0x0000)
-#define SDRAM_MODEREG_BURST_LENGTH_2             ((uint16_t)0x0001)
-#define SDRAM_MODEREG_BURST_LENGTH_4             ((uint16_t)0x0002)
-#define SDRAM_MODEREG_BURST_LENGTH_8             ((uint16_t)0x0004)
-#define SDRAM_MODEREG_BURST_TYPE_SEQUENTIAL      ((uint16_t)0x0000)
-#define SDRAM_MODEREG_BURST_TYPE_INTERLEAVED     ((uint16_t)0x0008)
-#define SDRAM_MODEREG_CAS_LATENCY_2              ((uint16_t)0x0020)
-#define SDRAM_MODEREG_CAS_LATENCY_3              ((uint16_t)0x0030)
-#define SDRAM_MODEREG_OPERATING_MODE_STANDARD    ((uint16_t)0x0000)
-#define SDRAM_MODEREG_WRITEBURST_MODE_PROGRAMMED ((uint16_t)0x0000)
-#define SDRAM_MODEREG_WRITEBURST_MODE_SINGLE     ((uint16_t)0x0200)
-
-void BSP_SDRAM_Initialization_sequence(uint32_t RefreshCount, SDRAM_HandleTypeDef *SdramHandle)
-{
-  FMC_SDRAM_CommandTypeDef Command;
-  __IO uint32_t tmpmrd =0;
-  
-  /* Step 1:  Configure a clock configuration enable command */
-  Command.CommandMode             = FMC_SDRAM_CMD_CLK_ENABLE;
-  Command.CommandTarget           = FMC_SDRAM_CMD_TARGET_BANK2;
-  Command.AutoRefreshNumber       = 1;
-  Command.ModeRegisterDefinition  = 0;
-
-  /* Send the command */
-  HAL_SDRAM_SendCommand(SdramHandle, &Command, SDRAM_TIMEOUT);
-
-  /* Step 2: Insert 100 us minimum delay */ 
-  /* Inserted delay is equal to 1 ms due to systick time base unit (ms) */
-  HAL_Delay(1);
-
-  /* Step 3: Configure a PALL (precharge all) command */ 
-  Command.CommandMode             = FMC_SDRAM_CMD_PALL;
-  Command.CommandTarget           = FMC_SDRAM_CMD_TARGET_BANK2;
-  Command.AutoRefreshNumber       = 1;
-  Command.ModeRegisterDefinition  = 0;
-
-  /* Send the command */
-  HAL_SDRAM_SendCommand(SdramHandle, &Command, SDRAM_TIMEOUT);  
-  
-  /* Step 4: Configure an Auto Refresh command */ 
-  Command.CommandMode             = FMC_SDRAM_CMD_AUTOREFRESH_MODE;
-  Command.CommandTarget           = FMC_SDRAM_CMD_TARGET_BANK2;
-  Command.AutoRefreshNumber       = 4;
-  Command.ModeRegisterDefinition  = 0;
-
-  /* Send the command */
-  HAL_SDRAM_SendCommand(SdramHandle, &Command, SDRAM_TIMEOUT);
-  
-  /* Step 5: Program the external memory mode register */
-  tmpmrd = (uint32_t)SDRAM_MODEREG_BURST_LENGTH_1          |
-                     SDRAM_MODEREG_BURST_TYPE_SEQUENTIAL   |
-                     SDRAM_MODEREG_CAS_LATENCY_3           |
-                     SDRAM_MODEREG_OPERATING_MODE_STANDARD |
-                     SDRAM_MODEREG_WRITEBURST_MODE_SINGLE;
-  
-  Command.CommandMode             = FMC_SDRAM_CMD_LOAD_MODE;
-  Command.CommandTarget           = FMC_SDRAM_CMD_TARGET_BANK2;
-  Command.AutoRefreshNumber       = 1;
-  Command.ModeRegisterDefinition  = tmpmrd;
-
-  /* Send the command */
-  HAL_SDRAM_SendCommand(SdramHandle, &Command, SDRAM_TIMEOUT);
-  
-  /* Step 6: Set the refresh rate counter */
-  /* Set the device refresh rate */
-  HAL_SDRAM_ProgramRefreshRate(SdramHandle, RefreshCount); 
-}
-
 static uint8_t sdramTest[] = "SDRAM............";
 static uint8_t vdom0Test[] = "Vdomain0.........";
 static uint8_t vdom1Test[] = "Vdomain1.........";
@@ -237,7 +91,7 @@ static uint8_t siTest[]    = "Si114x...........";
 static uint8_t hihTest[]   = "HIH6130..........";
 static uint8_t usbTest[]   = "USB Hi-Speed.....";
 static uint8_t btTest[]    = "Bluetooth........";
-static uint8_t wifiTest[]  = "WIFI.............";
+static uint8_t wifiTest[]  = "ESP12-WiFi.......";
 static uint8_t plr0Test[]  = "PLR5010D0........";
 static uint8_t plr1Test[]  = "PLR5010D1........";
 static uint8_t plr2Test[]  = "PLR5010D2........";
@@ -317,10 +171,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_ADC1_Init();
-  MX_ADC2_Init();
-  MX_ADC3_Init();
   MX_CRC_Init();
   MX_DAC_Init();
   MX_DMA2D_Init();
@@ -338,36 +188,30 @@ int main(void)
   
 
   /* USER CODE BEGIN 2 */
-  BSP_SDRAM_Initialization_sequence(REFRESH_COUNT, &hsdram1);
+  ExtMem_SDRAM_Initialization_sequence(REFRESH_COUNT, &hsdram1);
   /* USER CODE END 2 */
-  
-  AnalogInit anInit;
-  anInit.hadc1 = hadc1;
-  anInit.hadc2 = hadc2;
-  anInit.hadc3 = hadc3;
-  anInit.hdma_adc1 = hdma_adc1;
-  
-  Analog_init(&anInit);
+    
+  Analog_init();
   PowerCon_init(&hdac);
   EEPROM_init();
-  ESP12_init(&huart1);
-  HIH613X_init();
-  M25PX_init();
-  SBT263_init(&huart5);
-  SST26_init();
-  SDCard_init();
-  SI114X_init();
-  
+  //ESP12_init(&huart1);
+  //HIH613X_init();
+  //M25PX_init();
+  //SBT263_init(&huart5);
+  //SST26_init();
+  //SDCard_init();
+  //SI114X_init();
+/*
   BSP_LED_Init(LED3);
   BSP_LED_Init(LED4);
   BSP_LED_On(LED3);
   BSP_LED_On(LED4);
-  
+
   BSP_LCD_LayerDefaultInit(0, LCD_FRAME_BUFFER);  // Initialize the LCD Layers
   Display_DemoDescription();                      // Display test information
   
   BSP_LCD_DisplayStringAt(0, 60,  sdramTest, LEFT_MODE);
-  sMain.ramTest       = Main_testSDRAM();
+  sMain.ramTest       = ExtMem_testSDRAM();
   Main_printResult(60, sMain.ramTest);
   
   BSP_LCD_DisplayStringAt(0, 75,  vdom0Test, LEFT_MODE);
@@ -440,7 +284,13 @@ int main(void)
   }
   else
     BSP_LCD_DisplayStringAt(0, 300,  "an error was reported...", CENTER_MODE);
-    
+*/
+  Tests_init();
+  
+  while(1)
+  {
+    Tests_run();
+  }
   
   while(1)
   {
@@ -492,96 +342,6 @@ void SystemClock_Config(void)
 
   /* SysTick_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
-}
-
-/* ADC1 init function */
-void MX_ADC1_Init(void)
-{
-
-  ADC_ChannelConfTypeDef sConfig;
-
-    /**Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
-    */
-  hadc1.Instance = ADC1;
-  hadc1.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV6;
-  hadc1.Init.Resolution = ADC_RESOLUTION12b;
-  hadc1.Init.ScanConvMode = DISABLE;
-  hadc1.Init.ContinuousConvMode = DISABLE;
-  hadc1.Init.DiscontinuousConvMode = DISABLE;
-  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
-  hadc1.Init.DMAContinuousRequests = DISABLE;
-  hadc1.Init.EOCSelection = EOC_SINGLE_CONV;
-  HAL_ADC_Init(&hadc1);
-
-    /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
-    */
-  sConfig.Channel = ADC_CHANNEL_VREFINT;
-  sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  HAL_ADC_ConfigChannel(&hadc1, &sConfig);
-
-}
-
-/* ADC2 init function */
-void MX_ADC2_Init(void)
-{
-
-  ADC_ChannelConfTypeDef sConfig;
-
-    /**Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
-    */
-  hadc2.Instance = ADC2;
-  hadc2.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV6;
-  hadc2.Init.Resolution = ADC_RESOLUTION12b;
-  hadc2.Init.ScanConvMode = DISABLE;
-  hadc2.Init.ContinuousConvMode = DISABLE;
-  hadc2.Init.DiscontinuousConvMode = DISABLE;
-  hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc2.Init.NbrOfConversion = 1;
-  hadc2.Init.DMAContinuousRequests = DISABLE;
-  hadc2.Init.EOCSelection = EOC_SINGLE_CONV;
-  HAL_ADC_Init(&hadc2);
-
-    /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
-    */
-  sConfig.Channel = ADC_CHANNEL_15;
-  sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  HAL_ADC_ConfigChannel(&hadc2, &sConfig);
-
-}
-
-/* ADC3 init function */
-void MX_ADC3_Init(void)
-{
-
-  ADC_ChannelConfTypeDef sConfig;
-
-    /**Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
-    */
-  hadc3.Instance = ADC3;
-  hadc3.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV6;
-  hadc3.Init.Resolution = ADC_RESOLUTION12b;
-  hadc3.Init.ScanConvMode = DISABLE;
-  hadc3.Init.ContinuousConvMode = DISABLE;
-  hadc3.Init.DiscontinuousConvMode = DISABLE;
-  hadc3.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-  hadc3.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc3.Init.NbrOfConversion = 1;
-  hadc3.Init.DMAContinuousRequests = DISABLE;
-  hadc3.Init.EOCSelection = EOC_SINGLE_CONV;
-  HAL_ADC_Init(&hadc3);
-
-    /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
-    */
-  sConfig.Channel = ADC_CHANNEL_11;
-  sConfig.Rank = 1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  HAL_ADC_ConfigChannel(&hadc3, &sConfig);
-
 }
 
 /* CRC init function */
@@ -797,19 +557,6 @@ void MX_USART1_UART_Init(void)
 
 }
 
-/** 
-  * Enable DMA controller clock
-  */
-void MX_DMA_Init(void) 
-{
-  /* DMA controller clock enable */
-  __DMA2_CLK_ENABLE();
-
-  /* DMA interrupt init */
-  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
-
-}
 /* FMC initialization function */
 void MX_FMC_Init(void)
 {
@@ -951,37 +698,3 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 }
-
-/* USER CODE BEGIN 4 */
-
-/* USER CODE END 4 */
-
-#ifdef USE_FULL_ASSERT
-
-/**
-   * @brief Reports the name of the source file and the source line number
-   * where the assert_param error has occurred.
-   * @param file: pointer to the source file name
-   * @param line: assert_param error line source number
-   * @retval None
-   */
-void assert_failed(uint8_t* file, uint32_t line)
-{
-  /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-    ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
-  /* USER CODE END 6 */
-
-}
-
-#endif
-
-/**
-  * @}
-  */ 
-
-/**
-  * @}
-*/ 
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

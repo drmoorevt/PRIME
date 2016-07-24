@@ -646,6 +646,26 @@
               <FileType>5</FileType>
               <FilePath>..\Src\esp12.h</FilePath>
             </File>
+            <File>
+              <FileName>tests.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\tests.c</FilePath>
+            </File>
+            <File>
+              <FileName>tests.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Src\tests.h</FilePath>
+            </File>
+            <File>
+              <FileName>extmem.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Src\extmem.c</FilePath>
+            </File>
+            <File>
+              <FileName>extmem.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Src\extmem.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
