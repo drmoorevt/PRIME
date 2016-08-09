@@ -38,3 +38,5 @@
 *.o
 /Firmware/PRIMEa
 /Firmware/PRIMEorg
+*.project
+*.cproject
