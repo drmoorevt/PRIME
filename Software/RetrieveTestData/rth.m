@@ -6,14 +6,14 @@ function [title, channels, time, bitRes, numChannels, ...
     dataBytes = 0;
     % wait for the size of the header, timeout after 2 seconds
     if (false == wfb(s, 4, 1000))
-        fprintf('No header bytes received');
+        fprintf('No header bytes received\n');
         return;
     end
     sizeofHeader = fread(s, 1, 'uint32');
     
     % wait for the rest of the header, (should have already arrived)
     if (false == wfb(s, sizeofHeader - 4, 100))
-        fprintf('Not enough header bytes received');
+        fprintf('Not enough header bytes received\n');
         return;
     end
     titleRead         = fread(s, 64, 'uint8');

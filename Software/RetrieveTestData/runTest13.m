@@ -29,15 +29,8 @@ function [numFailures, chans, data, time] = runTest13(CommPort, baudRate, numSwe
                 %close all;
                 %testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), 80);
             catch
-                closeFixtureComms(s);
-                delete(instrfindall);
-                pause(1);
-                s = openFixtureComms(CommPort, baudRate);
-                fwrite(s, uint8(hex2dec('54'))); % Attempt DUT reset
-                closeFixtureComms(s);
+                s = resetFixtureComms(s, CommPort, baudRate);
                 disp('Test failure ... retrying');
-                pause(0.5); % Give the DUT 500ms to process the reset
-                s = openFixtureComms(CommPort, baudRate);
             end
         end
         filename = sprintf('./results/Test13-Profile%d-%dSweeps.mat', ...

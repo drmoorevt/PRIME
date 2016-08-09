@@ -536,6 +536,7 @@ bool Tests_sendBinaryResults(Samples *adcBuffer)
   
   while(1)
   {
+    ExtUSB_flushRxBuffer();
     ExtUSB_tx(pData, sTests.testHeader.bytesPerChan);  // Send the data
     ExtUSB_tx((uint8_t *)&crc, sizeof(crc));           // Send the CRC
     Tests_receiveData(1, 5000);                        // Wait for the ack

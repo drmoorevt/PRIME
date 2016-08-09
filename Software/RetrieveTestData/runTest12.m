@@ -17,15 +17,8 @@ function [name, chans, data, time] = runTest12(CommPort, baudRate, numSweeps)
                 avgData = mean(data, 3);
                 sweepIter = sweepIter + 1;
             catch
-                closeFixtureComms(s);
-                delete(instrfindall);
-                pause(1);
-                s = openFixtureComms(CommPort, baudRate);
-                fwrite(s, uint8(hex2dec('54'))); % Attempt DUT reset
-                closeFixtureComms(s);
+                s = resetFixtureComms(s, CommPort, baudRate);
                 disp('Test failure ... retrying');
-                pause(0.5); % Give the DUT 500ms to process the reset
-                s = openFixtureComms(CommPort, baudRate);
             end
         end
         filename = sprintf('./results/Test12-Profile%d-%dSweeps.mat', ...
