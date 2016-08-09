@@ -407,9 +407,23 @@ static void SDCard_setState(SDCardState state)
 {
   if (sSDCard.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
+  
+  VoltageDomain curDomain;
+  switch (state)
+  {
+    case SDCARD_STATE_IDLE:      curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for idle
+    case SDCARD_STATE_SETUP:     curDomain = VOLTAGE_DOMAIN_2; break;  // MCU domain for reading
+    case SDCARD_STATE_READY:     curDomain = VOLTAGE_DOMAIN_2; break;  // MCU domain for writing
+    case SDCARD_STATE_READING:   curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for reading
+    case SDCARD_STATE_WRITING:   curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for writing
+    case SDCARD_STATE_WAITING:   curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for waiting
+    case SDCARD_STATE_VERIFYING: curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for verifying
+    default:                     curDomain = VOLTAGE_DOMAIN_2; break;  // Error...
+  }
+  
   sSDCard.state = state;
-  PowerCon_setDeviceDomain(DEVICE_SDCARD, VOLTAGE_DOMAIN_0);
-  //Analog_setDomain(SPI_DOMAIN, TRUE, sEEPROM.vDomain[state]);
+  PowerCon_setDeviceDomain(DEVICE_SDCARD, curDomain);
+  PowerCon_setDomainVoltage(curDomain, sSDCard.vDomain[state]);  // Set the domain voltage
 }
 
 /**************************************************************************************************\

@@ -182,9 +182,19 @@ static void M25PX_setState(M25PXState state)
 {
   if (sM25PX.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
+  
+  VoltageDomain curDomain;
+  switch (state)
+  {
+    case M25PX_STATE_IDLE:    curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for idle
+    case M25PX_STATE_READING: curDomain = VOLTAGE_DOMAIN_2; break;  // MCU domain for reading
+    case M25PX_STATE_WRITING: curDomain = VOLTAGE_DOMAIN_2; break;  // MCU domain for writing
+    case M25PX_STATE_WAITING: curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for waiting
+    default:                  curDomain = VOLTAGE_DOMAIN_2; break;  // Error...
+  }
+  PowerCon_setDeviceDomain(DEVICE_NORFLASH, curDomain);  // Move the device to the new domain
+  PowerCon_setDomainVoltage(curDomain, sM25PX.vDomain[state]);  // Set the domain voltage
   sM25PX.state = state;
-  PowerCon_setDeviceDomain(DEVICE_NORFLASH, VOLTAGE_DOMAIN_0);
-  //Analog_setDomain(SPI_DOMAIN, TRUE, sM25PX.vDomain[state]);
 }
 
 /**************************************************************************************************\

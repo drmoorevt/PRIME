@@ -17,12 +17,9 @@
 
 #define FILE_ID TESTS_C
 
-//#define TESTS_MAX_SAMPLES (10240)
-//#define TESTS_MAX_SAMPLES (10060)
 #define SDRAM_NUM_CHANNELS        (4)
 #define SDRAM_NUM_TOTAL_SAMPLES   ((SDRAM_DEVICE_SIZE - BUFFER_OFFSET) / sizeof(uint16_t))
-#define SDRAM_NUM_CHANNEL_SAMPLES (SDRAM_NUM_TOTAL_SAMPLES / SDRAM_NUM_CHANNELS)
-#define TESTS_MAX_SAMPLES         (SDRAM_NUM_CHANNEL_SAMPLES)
+#define TESTS_MAX_SAMPLES         (SDRAM_NUM_TOTAL_SAMPLES / SDRAM_NUM_CHANNELS)
 
 typedef enum
 {
@@ -53,7 +50,6 @@ typedef struct
   uint8_t   channel;
   uint32_t  numSamples;
   bool      isSampling;
-//  uint16  adcBuffer[TESTS_MAX_SAMPLES];
   uint16_t  *pSampleBuffer;
 } Samples;
 
@@ -128,7 +124,7 @@ typedef union
 
 typedef struct
 {
-  uint16_t samples[4][1000000];
+  uint16_t samples[4][TESTS_MAX_SAMPLES];
 } SDRAMMap;
 
 SDRAMMap *GPSDRAM = (SDRAMMap *)(SDRAM_DEVICE_ADDR + BUFFER_OFFSET);
@@ -181,33 +177,9 @@ uint16 Tests_test16(void *pArgs);
 uint16 Tests_test17(void *pArgs);
 
 void Tests_sendData(uint16 numBytes);
-void Tests_sendBinaryResults(Samples *adcBuffer);
-boolean Tests_sendHeaderInfo(void);
-/*
-void Tests_notifyCommsEvent(USBVCPEvent event, uint32 arg)
-{
-  switch (event)
-  {
-    case USBVCP_EVENT_RX_COMPLETE:
-      USBVCP_stopReceive();
-      sTests.comms.receiving = FALSE;
-      sTests.comms.bytesReceived = sTests.comms.bytesToReceive;
-      break;
-    case USBVCP_EVENT_RX_TIMEOUT:
-      sTests.comms.bytesReceived = arg;
-      sTests.comms.receiving = FALSE;
-      sTests.comms.rxTimeout = TRUE;
-      break;
-    case USBVCP_EVENT_RX_INTERRUPT:
-      break;
-    case USBVCP_EVENT_TX_COMPLETE:
-      sTests.comms.transmitting = FALSE;
-      break;
-    default:
-      break;
-  }
-}
-*/
+bool Tests_sendBinaryResults(Samples *adcBuffer);
+bool Tests_sendHeaderInfo(void);
+
 // A test function returns the number of data bytes and takes argc/argv parameters
 typedef uint16 (*TestFunction)(void *pArgs);
 
@@ -245,6 +217,7 @@ void Tests_init(void)
   sTests.adc2.pSampleBuffer        = &GPSDRAM->samples[1][0];
   sTests.adc3.pSampleBuffer        = &GPSDRAM->samples[2][0];
   sTests.periphState.pSampleBuffer = &GPSDRAM->samples[3][0];
+  //memset(&GPSDRAM->samples, 0x00, sizeof(GPSDRAM->samples));
   ExtUSB_flushRxBuffer();
 }
 
@@ -295,9 +268,7 @@ void Tests_receiveData(uint32 numBytes, uint32 timeout)
 \**************************************************************************************************/
 void Tests_sendData(uint16 numBytes)
 {
-  sTests.comms.transmitting = TRUE;
   ExtUSB_tx((uint8 *)&sTests.comms.txBuffer[0], numBytes);
-  //while(sTests.comms.transmitting);
 }
 
 /**************************************************************************************************\
@@ -346,7 +317,7 @@ void Tests_notifySampleTrigger(void)
 {
   if (FALSE == sTests.periphState.isSampling)
     return;
-  if (sTests.periphState.numSamples-- > 1) // More than one sample remains
+  if (sTests.periphState.numSamples-- > 0) // More than one sample remains
     *sTests.periphState.pSampleBuffer++ = sTests.getPeriphState();
   else
     sTests.periphState.isSampling = FALSE;
@@ -463,10 +434,10 @@ void Tests_run(void)
   
   // SDCard_test();
 //  Time_delay(1000*1000*5); // Let USB synchronize for 5s
-  
   switch (sTests.state)
   {
     case TEST_IDLE:  // Clear test data and setup listening for commands on the comm port
+      Tests_init();
       sTests.testToRun = Tests_getTestToRun();
       sTests.state = TEST_WAITING;
       break;
@@ -475,6 +446,10 @@ void Tests_run(void)
       break;
     case TEST_RUNNING:
       testFunctions[sTests.testToRun](&sTests.testArgs);
+      sTests.adc1.pSampleBuffer        = &GPSDRAM->samples[0][0];  // Reset sample buffers to
+      sTests.adc2.pSampleBuffer        = &GPSDRAM->samples[1][0];  // initial values so we can
+      sTests.adc3.pSampleBuffer        = &GPSDRAM->samples[2][0];  // send out the data
+      sTests.periphState.pSampleBuffer = &GPSDRAM->samples[3][0];  // chronologically
       // Notify user that test is complete and to expect sizeofTestData bytes
       if (Tests_sendHeaderInfo())
       {
@@ -506,7 +481,7 @@ void Tests_run(void)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-boolean Tests_sendHeaderInfo(void)
+bool Tests_sendHeaderInfo(void)
 {
   uint8 i, txBufOffset = 0;
   boolean tfAck = FALSE;
@@ -554,20 +529,30 @@ boolean Tests_sendHeaderInfo(void)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-void Tests_sendBinaryResults(Samples *adcBuffer)
+bool Tests_sendBinaryResults(Samples *adcBuffer)
 {
-  uint32_t bytesToTransmit;
-  uint32_t bytesLeft = sTests.testHeader.bytesPerChan;
   uint8 *pData = (uint8 *)adcBuffer->pSampleBuffer;
-  while (bytesLeft > 0)
+  uint16_t crc = CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, pData, sTests.testHeader.bytesPerChan);
+  
+  while(1)
   {
-    bytesToTransmit = MIN(sizeof(sTests.comms.txBuffer), bytesLeft);
-    Util_copyMemory(pData, (uint8 *)&sTests.comms.txBuffer[0], bytesToTransmit);
-    Tests_sendData(bytesToTransmit);
-    pData+= bytesToTransmit;
-    bytesLeft -= bytesToTransmit;
+    ExtUSB_tx(pData, sTests.testHeader.bytesPerChan);  // Send the data
+    ExtUSB_tx((uint8_t *)&crc, sizeof(crc));           // Send the CRC
+    Tests_receiveData(1, 5000);                        // Wait for the ack
+    if (sTests.comms.bytesReceived > 0)
+    {
+      switch (sTests.comms.rxBuffer[0])
+      {
+        case 0x54: return false;  // Hard reset, inform caller we need to go to zero
+        case 0x42: return true;   // All good in the hood, proceed
+        default:   break;         // Anything else is a 'please resend'
+      } 
+    }
+    else
+    {
+      return false; // No ACK or NAK. Quit.
+    }
   }
-  //while(sTests.comms.transmitting);
 }
 
 /**************************************************************************************************\
@@ -580,7 +565,8 @@ void Tests_sendBinaryResults(Samples *adcBuffer)
 static void Tests_setupSPITests(Device device, uint32_t sampRate, uint32_t numSamps, double initVolts)
 {
   // Match the continuously variable domain (CVD) to the MCU domain voltage:
-  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, Analog_getADCVoltage(ADC_DOM0_VOLTAGE));
+  //PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, Analog_getADCVoltage(ADC_DOM0_VOLTAGE));
+  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 3.3);
   
   // Place every device other than the DUT into the MCU domain. Place the DUT in the CVD:
   uint32_t i;
@@ -591,23 +577,23 @@ static void Tests_setupSPITests(Device device, uint32_t sampRate, uint32_t numSa
   Time_delay(50000); // Let the domain settle for 50ms (allow device power on reset to finish)
   
   // Prepare data structures for retrieval
-  sTests.testHeader.timeScale = sampRate; // in microseconds
-  sTests.testHeader.numChannels = 4;
+  sTests.testHeader.timeScale    = sampRate; // in microseconds
+  sTests.testHeader.numChannels  = 4;
   sTests.testHeader.bytesPerChan = numSamps * sizeof(uint16_t);
-  sTests.chanHeader[0].chanNum  = 0;
-  sTests.chanHeader[0].bitRes   = (3.3 / 4096.0) * 2;  // Voltage measurements are div2
-  sTests.chanHeader[1].chanNum  = 1;
-  sTests.chanHeader[1].bitRes   = (3.3 / 4096.0) * (1000.0 / 1000.0); // (Gain = 100, R=0.1)
-  sTests.chanHeader[2].chanNum  = 2;
-  sTests.chanHeader[2].bitRes   = (3.3 / 4096.0) * (1000.0 / 1000.0); // (Gain = 100, R=0.1)
-  sTests.chanHeader[3].chanNum  = sTests.periphState.channel;
+  sTests.chanHeader[0].chanNum   = 0;
+  sTests.chanHeader[0].bitRes    = (3.3 / 4096.0) * 2;  // Voltage measurements are div2
+  sTests.chanHeader[1].chanNum   = 1;
+  sTests.chanHeader[1].bitRes    = (3.3 / 4096.0) * (1000.0 / 1000.0); // (Gain = 100, R=0.1)
+  sTests.chanHeader[2].chanNum   = 2;
+  sTests.chanHeader[2].bitRes    = (3.3 / 4096.0) * (1000.0 / 1000.0); // (Gain = 100, R=0.1)
+  sTests.chanHeader[3].chanNum   = sTests.periphState.channel;
   switch (sTests.testToRun)  // Normalize these resolutions based on max number of states
   {
-    case 11: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / EEPROM_STATE_MAX)    / 4096.0); break;
-    case 12: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / M25PX_STATE_MAX)     / 4096.0); break;
-    case 13: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / SDCARD_STATE_MAX)    / 4096.0); break;
-    case 14: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / HIH_STATE_MAX)       / 4096.0); break;
-    default: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / 5)                   / 4096.0); break;
+    case 11: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / EEPROM_STATE_MAX) / 4096.0); break;
+    case 12: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / M25PX_STATE_MAX)  / 4096.0); break;
+    case 13: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / SDCARD_STATE_MAX) / 4096.0); break;
+    case 14: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / HIH_STATE_MAX)    / 4096.0); break;
+    default: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / 5)                / 4096.0); break;
   }
   
   // Disable all interrupts (except for the adc trigger which will be enabled last)
@@ -615,8 +601,8 @@ static void Tests_setupSPITests(Device device, uint32_t sampRate, uint32_t numSa
   for (i = 0; i <= DMA2D_IRQn; i++)
     NVIC_DisableIRQ((IRQn_Type)i);
 
-  Analog_configureADC(ADC_DOM2_INCURRENT,  sTests.adc1.pSampleBuffer, numSamps);
-  Analog_configureADC(ADC_DOM2_VOLTAGE,    sTests.adc2.pSampleBuffer, numSamps);
+  Analog_configureADC(ADC_DOM2_VOLTAGE,    sTests.adc1.pSampleBuffer, numSamps);
+  Analog_configureADC(ADC_DOM2_INCURRENT,  sTests.adc2.pSampleBuffer, numSamps);
   Analog_configureADC(ADC_DOM2_OUTCURRENT, sTests.adc3.pSampleBuffer, numSamps);
   
   switch (device)
@@ -1208,7 +1194,7 @@ uint16 Tests_test11(void *pArgs)
 
   Tests_setupSPITests(DEVICE_EEPROM, pTestArgs->commonArgs.sampleRate, 10000, EEPROM_getStateVoltage());
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
-  //result = EEPROM_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
+  result = EEPROM_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);
   Tests_teardownSPITests((EEPROM_RESULT_OK == result));
 
@@ -1231,7 +1217,7 @@ uint16 Tests_test12(void *pArgs)
   sTests.powerProfile = pTestArgs->profile;
   M25PX_setPowerProfile(pTestArgs->profile);
 
-  Tests_setupSPITests(DEVICE_NORFLASH, pTestArgs->commonArgs.sampleRate, 1000, M25PX_getStateVoltage());
+  Tests_setupSPITests(DEVICE_NORFLASH, pTestArgs->commonArgs.sampleRate, 275000, M25PX_getStateVoltage());
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
   result = M25PX_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);
@@ -1255,7 +1241,6 @@ uint16 Tests_test13(void *pArgs)
 
   sTests.powerProfile = pTestArgs->profile;
   SDCard_setPowerProfile(pTestArgs->profile);
-//  Analog_setDomain(SPI_DOMAIN, TRUE, SDCard_getStateVoltage());
   for (i = 0; i < 5; i++)
   {
     Time_delay(300000);
@@ -1263,7 +1248,7 @@ uint16 Tests_test13(void *pArgs)
       break;
   }
   
-  Tests_setupSPITests(DEVICE_SDCARD, pTestArgs->commonArgs.sampleRate, 1000, SDCard_getStateVoltage());
+  Tests_setupSPITests(DEVICE_SDCARD, pTestArgs->commonArgs.sampleRate, 225000, SDCard_getStateVoltage());
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
   writeResult = SDCard_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength, pTestArgs->writeWait);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);
@@ -1287,7 +1272,7 @@ uint16 Tests_test14(void *pArgs)
   sTests.powerProfile = pTestArgs->profile;
   HIH613X_setPowerProfile(pTestArgs->profile);
 
-  Tests_setupSPITests(DEVICE_TEMPSENSE, pTestArgs->commonArgs.sampleRate, 1000, HIH613X_getStateVoltage());
+  Tests_setupSPITests(DEVICE_TEMPSENSE, pTestArgs->commonArgs.sampleRate, 50000, HIH613X_getStateVoltage());
   Time_delay(pTestArgs->commonArgs.preTestDelayUs);
   hihResult = HIH613X_readTempHumidI2C(pTestArgs->measure, pTestArgs->read, pTestArgs->convert);
   Time_delay(pTestArgs->commonArgs.postTestDelayUs);

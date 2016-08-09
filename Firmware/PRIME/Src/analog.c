@@ -1,5 +1,6 @@
 #include "analog.h"
 #include "tests.h"
+#include "util.h"
 #include <string.h>
 
 #define FILE_ID ANALOG_C
@@ -51,6 +52,17 @@ bool Analog_init(void)
   return true;
 }
 
+ADCPortCfg *Analog_getPortCfg(ADC_HandleTypeDef *hadc)
+{ 
+  uint32_t i;
+  for (i = 0; i < NUM_ADC_PORTS; i++)
+  {
+    if (hadc == &sAnalog.adc[i].hadc)
+      return &sAnalog.adc[i];
+  }
+  return NULL;
+}
+
 /**************************************************************************************************\
 * FUNCTION    Analog_xferComplete
 * DESCRIPTION 
@@ -59,15 +71,32 @@ bool Analog_init(void)
 \**************************************************************************************************/
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
-  ADCPort port = ADC_PORT1;
-  if (ADC1 == hadc->Instance)
-    port = ADC_PORT1;
-  else if (ADC2 == hadc->Instance)
-    port = ADC_PORT2;
-  else if (ADC3 == hadc->Instance)
-    port = ADC_PORT3;
-  Tests_notifyConversionComplete(port, sAnalog.adc[port].cfg.adcConfig.chan[0].chanNum,
-                                            sAnalog.adc[port].cfg.adcConfig.numSamps);
+  ADCPortCfg *portCfg = Analog_getPortCfg(hadc);
+  // Subtract off the number we just completed, and calculate the number of remaining samples
+  uint32_t numCompleted = MIN(0xFFFF, portCfg->cfg.adcConfig.numSamps);
+  portCfg->cfg.adcConfig.numSamps -= numCompleted;
+  uint32_t numToFetch   = MIN(0xFFFF, portCfg->cfg.adcConfig.numSamps);
+  // Increment the destination pointer by the number of completed samples
+  portCfg->cfg.appSampleBuffer += numCompleted;
+  
+  if (numToFetch > 0)
+  {
+    HAL_ADC_Stop_DMA(hadc);
+    if(HAL_ADC_Start_DMA(hadc, (uint32 *)portCfg->cfg.appSampleBuffer, numToFetch) != HAL_OK)
+      Error_Handler();
+  }
+  else
+  {
+    ADCPort port = ADC_PORT1;
+    if (ADC1 == hadc->Instance)
+      port = ADC_PORT1;
+    else if (ADC2 == hadc->Instance)
+      port = ADC_PORT2;
+    else if (ADC3 == hadc->Instance)
+      port = ADC_PORT3;
+    Tests_notifyConversionComplete(port, sAnalog.adc[port].cfg.adcConfig.chan[0].chanNum,
+                                         sAnalog.adc[port].cfg.adcConfig.numSamps);
+  }
 }
 
 /**************************************************************************************************\
@@ -161,6 +190,7 @@ void Analog_initADC(ADCSelect adcSel)
   pADC->hadc.Init.NbrOfConversion       = 1;
   pADC->hadc.Init.DMAContinuousRequests = DISABLE;
   pADC->hadc.Init.EOCSelection          = ADC_EOC_SINGLE_CONV;
+  HAL_ADC_Init(&pADC->hadc);
   
   /*##-2- Configure ADC regular channel ######################################*/
   ADC_ChannelConfTypeDef chanConfig;
@@ -168,9 +198,8 @@ void Analog_initADC(ADCSelect adcSel)
   chanConfig.Rank = 1;
   chanConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
   chanConfig.Offset = 0;
-  
-  HAL_ADC_Init(&pADC->hadc);
   HAL_ADC_ConfigChannel(&pADC->hadc, &chanConfig);
+  
   Analog_dmaInit(adcNum);
 }
 
@@ -251,14 +280,38 @@ ADC_HandleTypeDef *Analog_getADCHandle(ADCSelect adcSelect)
 \**************************************************************************************************/
 uint16_t Analog_getADCVal(ADCSelect adc)
 {
+  ADCPort adcNum   = Analog_getPortNumber(adc);
+  
+  ADC_HandleTypeDef *hadc = Analog_getADCHandle(adc);
+  
+  /*##-1- Configure the ADC peripheral #######################################*/
+  switch (adcNum)
+  {
+    case ADC_PORT1: hadc->Instance = ADC1; break;
+    case ADC_PORT2: hadc->Instance = ADC2; break;
+    case ADC_PORT3: hadc->Instance = ADC3; break;
+    default: return 0;
+  } // 180MHz div6 = 30Mhz clock
+  hadc->Init.ClockPrescaler        = ADC_CLOCKPRESCALER_PCLK_DIV6;
+  hadc->Init.Resolution            = ADC_RESOLUTION_12B;
+  hadc->Init.ScanConvMode          = DISABLE;
+  hadc->Init.ContinuousConvMode    = DISABLE;
+  hadc->Init.DiscontinuousConvMode = DISABLE;
+  hadc->Init.NbrOfDiscConversion   = 0;
+  hadc->Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc->Init.ExternalTrigConv      = ADC_SOFTWARE_START;
+  hadc->Init.DataAlign             = ADC_DATAALIGN_RIGHT;
+  hadc->Init.NbrOfConversion       = 1;
+  hadc->Init.DMAContinuousRequests = DISABLE;
+  hadc->Init.EOCSelection          = ADC_EOC_SINGLE_CONV;
+  HAL_ADC_Init(hadc);
+  
   ADC_ChannelConfTypeDef sConfig;
   sConfig.Rank = 1;
   sConfig.Channel = Analog_getChannelNumber(adc);
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  
-  ADC_HandleTypeDef *hadc = Analog_getADCHandle(adc);
-  
   HAL_ADC_ConfigChannel(hadc, &sConfig);
+  
   HAL_ADC_Start(hadc);
   HAL_Delay(1);
   return HAL_ADC_GetValue(hadc);
@@ -275,6 +328,8 @@ double Analog_getADCVoltage(ADCSelect adc)
   const double refVoltage = 1.21;
   uint16_t refCode = Analog_getADCVal(ADC_VREF_INTERNAL);
   uint16_t domCode = Analog_getADCVal(adc);
+  if ((ADC_DOM0_VOLTAGE == adc) || (ADC_DOM1_VOLTAGE == adc) || (ADC_DOM2_VOLTAGE == adc))
+    domCode <<= 1;  // Domain voltages are divided by two before the ADC. Compensate here.
   return (refVoltage / (double)refCode) * (double)domCode;
 }
 
@@ -319,42 +374,37 @@ void Analog_openPort(ADCSelect adcSelect, AppADCConfig appConfig)
 /**************************************************************************************************\
 * FUNCTION    Analog_setupTimer
 * DESCRIPTION Configures the ADCs to use DMA
-* PARAMETERS  irqRate: The IRQ period in microseconds
+* PARAMETERS  irqPeriod: The IRQ period in microseconds
 * RETURNS     Nothing
 \**************************************************************************************************/
-boolean Analog_setupTimer(uint32_t irqRate)
+boolean Analog_setupTimer(uint32_t irqPeriod)
 {
-  //uint32_t clockRate = HAL_RCC_GetHCLKFreq();
-  //uint32_t preScale, period;
+  //uint32_t timFreq = HAL_RCC_GetPCLK1Freq() * 2;
   
-  // Find the largest whole divisor of the clockRate/irqRate
-  // for (preScale = 0xFFFF; ((clockRate / irqRate) % preScale) != 0; preScale--);
-  // if (preScale > 0)  // Found a whole divisor:
-  //   period = ((clockRate / irqRate) / preScale) + 1;
-  // else // dis not find a whole divisor, give it your best shot ...
-  // {
-  //   preScale = ((clockRate / irqRate) / 65535) + 1;  // Choose smallest prescalar possible
-  //   period = (clockRate / irqRate) / preScale;
-  // }
-  
+  const uint32_t timFreq = 90000000;
   sAnalog.htim.Instance = TIM2;
-  sAnalog.htim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  sAnalog.htim.Init.CounterMode = TIM_COUNTERMODE_DOWN;
-  
-  sAnalog.htim.Init.Period = irqRate;
-  sAnalog.htim.Init.Prescaler = 180; // yields 1us per tick
-  
-  //sAnalog.htim.Init.Period = period;
-  //sAnalog.htim.Init.Prescaler = preScale; // yields 1us per tick
-  sAnalog.htim.Init.RepetitionCounter = 1;
-  sAnalog.htim.Channel = HAL_TIM_ACTIVE_CHANNEL_1;
+  sAnalog.htim.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+  sAnalog.htim.Init.CounterMode       = TIM_COUNTERMODE_UP;
+  //sAnalog.htim.Init.Period            = irqPeriod;
+  //sAnalog.htim.Init.Prescaler         = (timFreq / (1000 * 1000)); // yields 1us per tick
+  sAnalog.htim.Init.Period            = irqPeriod * (timFreq / (1000 * 1000));
+  sAnalog.htim.Init.Prescaler         = 0;
+  sAnalog.htim.Init.RepetitionCounter = 0;
+  sAnalog.htim.Channel                = HAL_TIM_ACTIVE_CHANNEL_1;
   HAL_TIM_Base_Init(&sAnalog.htim);
   
+  //TIM_ClockConfigTypeDef clockDef;
+  //clockDef.ClockSource    = TIM_CLOCKSOURCE_INTERNAL;
+  //clockDef.ClockPolarity  = TIM_CLOCKPOLARITY_BOTHEDGE;
+  //clockDef.ClockPrescaler = TIM_CLOCKPRESCALER_DIV1;
+  //clockDef.ClockFilter    = 0;
+  //HAL_TIM_ConfigClockSource(&sAnalog.htim, &clockDef);
   
-  //TIM_MasterConfigTypeDef sMasterConfig;
-  //sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
-  //sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  //HAL_TIMEx_MasterConfigSynchronization(&sAnalog.htim, &sMasterConfig);
+  TIM_MasterConfigTypeDef sMasterConfig;
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
+  //sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  HAL_TIMEx_MasterConfigSynchronization(&sAnalog.htim, &sMasterConfig);
   
   return TRUE;
 }
@@ -372,7 +422,9 @@ void Analog_configureADC(ADCSelect adcSel, void *pDst, uint32_t numSamps)
   Analog_initADC(adcSel);
   ADCPortCfg *pCfg = Analog_getADCPortConfig(adcSel);
   pCfg->cfg.adcConfig.numSamps = numSamps;
+  pCfg->cfg.appSampleBuffer = pDst;
   pCfg->cfg.adcConfig.chan[0].chanNum = Analog_getChannelNumber(adcSel);
+  numSamps = MIN(0xFFFF, numSamps);
   if(HAL_ADC_Start_DMA(&pCfg->hadc, (uint32 *)pDst, numSamps) != HAL_OK)
     Error_Handler();
 }
@@ -388,6 +440,7 @@ boolean Analog_startSampleTimer(uint32_t sampRate)
 {
   Analog_setupTimer(sampRate);
   HAL_TIM_Base_Start_IT(&sAnalog.htim);
+  
   NVIC_EnableIRQ(TIM2_IRQn);
   NVIC_ClearPendingIRQ(ADC_IRQn);
   return SUCCESS;
@@ -409,6 +462,27 @@ boolean Analog_stopSampleTimer(void)
   HAL_ADC_Stop_DMA(&sAnalog.adc[ADC_PORT3].hadc);
   NVIC_DisableIRQ(TIM2_IRQn);
   return SUCCESS;
+}
+
+#include "stm32f429i_discovery.h"
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  
+}
+
+/**************************************************************************************************\
+* FUNCTION      TIM2_IRQHandler
+* DESCRIPTION   Handles interrupts originating from Timer2
+* PARAMETERS    none
+* RETURN        none
+\**************************************************************************************************/
+void TIM2_IRQHandler(void)
+{
+//  HAL_TIM_IRQHandler(&sAnalog.htim);
+  LED3_GPIO_PORT->ODR ^= LED3_PIN;
+  //TIM2->EGR = TIM_EGR_UG;
+  TIM2->SR = ~(TIM_IT_UPDATE);
+  Tests_notifySampleTrigger();
 }
 
 /**************************************************************************************************\
@@ -445,9 +519,4 @@ void DMA2_Stream1_IRQHandler(void)
 void DMA2_Stream2_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(sAnalog.adc[ADC_PORT2].hadc.DMA_Handle);
-}
-
-void ADC_IRQHandler(void)
-{
-  //HAL_ADC_IRQHandler(&sAnalog.adc[ADC_PORT1].hadc);
 }

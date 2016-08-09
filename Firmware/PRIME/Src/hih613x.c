@@ -53,9 +53,11 @@ static struct
 void HIH613X_init(void)
 {
   Util_fillMemory(&sHIH613X, sizeof(sHIH613X), 0x00);
+  
   HIH613X_setPowerProfile(HIH_PROFILE_STANDARD);  // Set all states to 3.3v
-  sHIH613X.state = HIH_STATE_IDLE;
   HIH613X_setup(FALSE);
+  
+  sHIH613X.state = HIH_STATE_IDLE;
   sHIH613X.isInitialized = TRUE;
 }
 
@@ -121,9 +123,21 @@ static void HIH613X_setState(HIHState state)
 {
   if (sHIH613X.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
+  
+  VoltageDomain curDomain;
+  switch (state)
+  {
+    case HIH_STATE_IDLE:        curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for idle
+    case HIH_STATE_DATA_READY:  curDomain = VOLTAGE_DOMAIN_2; break;  // MCU domain for reading
+    case HIH_STATE_SENDING_CMD: curDomain = VOLTAGE_DOMAIN_2; break;  // MCU domain for writing
+    case HIH_STATE_WAITING:     curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for waiting
+    case HIH_STATE_READING:     curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for waiting
+    default:                    curDomain = VOLTAGE_DOMAIN_2; break;  // Error...
+  }
+  
   sHIH613X.state = state;
-  PowerCon_setDeviceDomain(DEVICE_TEMPSENSE, VOLTAGE_DOMAIN_0);
-  //Analog_setDomain(SPI_DOMAIN, TRUE, sHIH613X.vDomain[state]);
+  PowerCon_setDeviceDomain(DEVICE_TEMPSENSE, curDomain);
+  PowerCon_setDomainVoltage(curDomain, sHIH613X.vDomain[state]);  // Set the domain voltage
 }
 
 /**************************************************************************************************\

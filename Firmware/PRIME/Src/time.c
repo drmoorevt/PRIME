@@ -119,7 +119,7 @@ void TIM3_IRQHandler(void)
 \**************************************************************************************************/
 void Time_initTimer3(uint16 reloadValue)
 {
-  RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Turn on Timer3 clocks (60 MHz)
+  RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Turn on Timer3 clocks
   NVIC_ClearPendingIRQ(TIM3_IRQn);
   TIM3->ARR     = reloadValue;
   TIM3->CNT     = reloadValue;
@@ -128,19 +128,6 @@ void Time_initTimer3(uint16 reloadValue)
   TIM3->CR2    |= (TIM_TRGOSource_Update);
   TIM3->DIER   |= TIM_DIER_UIE; // Turn on the timer (update) interrupt
   NVIC_EnableIRQ(TIM3_IRQn);
-}
-
-/**************************************************************************************************\
-* FUNCTION      TIM2_IRQHandler
-* DESCRIPTION   Handles interrupts originating from Timer2
-* PARAMETERS    none
-* RETURN        none
-\**************************************************************************************************/
-void TIM2_IRQHandler(void)
-{
-  TIM2->EGR = TIM_EGR_UG;
-  CLEAR_BIT(TIM2->SR, TIM_SR_UIF); // Clear the update interrupt flag
-  Tests_notifySampleTrigger();
 }
 
 /**************************************************************************************************\
@@ -165,21 +152,23 @@ void Time_startTimer(SoftTimerConfig timerConfig)
 \**************************************************************************************************/
 void Time_delay(volatile uint32 microSeconds)
 {
+  //uint32_t timFreq = HAL_RCC_GetPCLK1Freq() * 2;
   if (0 == microSeconds)
     return;
-  __HAL_RCC_TIM5_CLK_ENABLE();
   
-  RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;  // Turn on Timer5 clocks (60 MHz)
-  TIM5->CR1     = (0x0000);            // Turn off the counter entirely
-  TIM5->PSC     = (90);                // Set prescalar to 60. Timer operates at 60MHz.
-  TIM5->ARR     = (microSeconds);      // Set up the counter to count down
-  TIM5->SR      = (0x0000);            // Clear all status (and interrupt) bits
-  TIM5->DIER    = (0x0000);            // Turn off the timer (update) interrupt
-  TIM5->CR2     = (0x0000);            // Ensure CR2 is at default settings
-  TIM5->CR1     = (0x0000) | (TIM_CR1_CEN   | // Turn on the timer
-                              TIM_CR1_URS   | // Only overflow/underflow generates an update IRQ
-                              TIM_CR1_OPM);   // One pulse mode, disable after count hits zero
-  while (!(TIM5->SR & TIM_SR_UIF));           // Wait until timer hits the ARR value
+  const uint32_t timFreq = 90000000;
+  RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;          // Turn on Timer5 clocks (90 MHz)
+  TIM5->CR1     = (0x0000);                    // Turn off the counter entirely
+  TIM5->PSC     = (timFreq / (1000 * 1000));   // Set prescalar to count up on microsecond bounds.
+  TIM5->ARR     = (microSeconds);               // Set up the counter to count down
+  TIM5->SR      = (0x0000);                    // Clear all status (and interrupt) bits
+  TIM5->DIER    = (0x0000);                    // Turn off the timer (update) interrupt
+  TIM5->CR2     = (0x0000);                    // Ensure CR2 is at default settings
+  TIM5->CR1     = (0x0000) | (TIM_CR1_CEN   |  // Turn on the timer
+                              TIM_CR1_URS   |  // Only overflow/underflow generates an update IRQ
+                              TIM_CR1_OPM   |  // One pulse mode, disable after count hits zero
+                              TIM_CR1_ARPE);   // Buffer the ARPE
+  while (!(TIM5->SR & TIM_SR_UIF));            // Wait until timer hits the ARR value
 }
 
 /**************************************************************************************************\

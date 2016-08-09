@@ -867,7 +867,7 @@ static void HAL_FMC_MspInit(void){
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN FMC_MspInit 1 */
-
+	GPIOD->OSPEEDR &= (0xFFFFF3FF);  // Decrease the speed on NWE to allow data to setup before USB
   /* USER CODE END FMC_MspInit 1 */
 }
 

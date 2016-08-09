@@ -86,9 +86,9 @@ boolean EEPROM_setup(boolean state)
 
   // Set up the SPI transaction with respect to domain voltage
   if (sEEPROM.vDomain[sEEPROM.state] >= EE_HIGH_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_11250000, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
-  else if (sEEPROM.vDomain[sEEPROM.state] >= EE_MID_SPEED_VMIN)
     SPI_setup(state, SPI_CLOCK_RATE_05625000, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
+  else if (sEEPROM.vDomain[sEEPROM.state] >= EE_MID_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_02812500, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
   else if (sEEPROM.vDomain[sEEPROM.state] >= EE_LOW_SPEED_VMIN)
     SPI_setup(state, SPI_CLOCK_RATE_01406250, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
   else
@@ -118,7 +118,7 @@ EEPROMState EEPROM_getState(void)
 \**************************************************************************************************/
 uint32 EEPROM_getStateAsWord(void)
 {
-  return (uint32)sEEPROM.state;
+  return (uint32_t)sEEPROM.state;
 }
 
 /**************************************************************************************************\
@@ -142,9 +142,19 @@ static void EEPROM_setState(EEPROMState state)
 {
   if (sEEPROM.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
+  
+  VoltageDomain curDomain;
+  switch (state)
+  {
+    case EEPROM_STATE_IDLE:    curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for idle
+    case EEPROM_STATE_READING: curDomain = VOLTAGE_DOMAIN_2; break;  // MCU domain for reading
+    case EEPROM_STATE_WRITING: curDomain = VOLTAGE_DOMAIN_2; break;  // MCU domain for writing
+    case EEPROM_STATE_WAITING: curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for waiting
+    default:                   curDomain = VOLTAGE_DOMAIN_2; break;  // Error...
+  }
+  PowerCon_setDeviceDomain(DEVICE_EEPROM, curDomain);  // Move the device to the new domain
+  PowerCon_setDomainVoltage(curDomain, sEEPROM.vDomain[state]);  // Set the domain voltage
   sEEPROM.state = state;
-  PowerCon_setDeviceDomain(DEVICE_EEPROM, VOLTAGE_DOMAIN_0);
-  //Analog_setDomain(SPI_DOMAIN, TRUE, sEEPROM.vDomain[state]);
 }
 
 /**************************************************************************************************\
@@ -220,19 +230,15 @@ EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 {
   uint8 retries;
   uint16 numBytes;
-  boolean writeFailed = FALSE;
+  boolean writeOk = FALSE;
   uint8 writeBuf[ADDRBYTES_EE + 1], readBuf[WRITEPAGESIZE_EE];
 
   while (length > 0)
   {
     // for EE, write must not go past a page boundary
-    numBytes = WRITEPAGESIZE_EE - ((uint32)pDest & (WRITEPAGESIZE_EE-1));
-    if (length < numBytes)
-      numBytes = length;
+    numBytes = MIN(length, WRITEPAGESIZE_EE - ((uint32)pDest & (WRITEPAGESIZE_EE-1)));
 
-    retries = EE_NUM_RETRIES; // change this to a for loop
-
-    do
+    for (retries = EE_NUM_RETRIES, writeOk = FALSE; (writeOk == FALSE) && (retries > 0); retries--)
     {
       // Must set state (voltage) before setting control pins!
       EEPROM_setState(EEPROM_STATE_WRITING); // For monitoring and voltage control purposes
@@ -259,15 +265,14 @@ EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
       Time_delay(5000); // EE_PAGE_WRITE_TIME
 
       EEPROM_read(pDest, readBuf, numBytes); // Verify the write, re-enables then disables EEPROM
+      writeOk = (Util_compareMemory(pSrc, readBuf, (uint8)numBytes) == 0);
+    }
 
-      writeFailed = (Util_compareMemory(pSrc, readBuf, (uint8)numBytes) != 0);
-    } while (writeFailed && (retries-- != 0));
-
-    pSrc   += numBytes;  // update source pointer
-    pDest  +=  numBytes; // update destination pointer
+    pSrc   += numBytes; // update source pointer
+    pDest  += numBytes; // update destination pointer
     length -= numBytes;
   }
-  return (writeFailed) ? EEPROM_RESULT_ERROR : EEPROM_RESULT_OK;
+  return (writeOk) ? EEPROM_RESULT_OK : EEPROM_RESULT_ERROR;
 }
 
 /**************************************************************************************************\

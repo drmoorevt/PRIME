@@ -156,19 +156,27 @@ void Main_printResult(uint32_t yPos, bool result)
 
 int main(void)
 {
-
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration----------------------------------------------------------*/
-
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
   /* Configure the system clock */
   SystemClock_Config();
 
+  // Disable all interrupts (except for the adc trigger which will be enabled last)
+  //uint32_t i;
+  //DISABLE_SYSTICK_INTERRUPT();
+  //for (i = 0; i <= DMA2D_IRQn; i++)
+  //  NVIC_DisableIRQ((IRQn_Type)i);
+  //  
+  //MX_GPIO_Init();
+  //BSP_LED_Init(LED3);
+  //BSP_LED_Init(LED4);
+  //while(1)
+  //{
+  //  LED3_GPIO_PORT->ODR ^= LED3_PIN;
+  //  Time_delay(1000);
+  //}
+  
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_CRC_Init();
@@ -195,15 +203,14 @@ int main(void)
   PowerCon_init(&hdac);
   EEPROM_init();
   //ESP12_init(&huart1);
-  //HIH613X_init();
-  //M25PX_init();
+  HIH613X_init();
+  M25PX_init();
   //SBT263_init(&huart5);
   //SST26_init();
-  //SDCard_init();
+  SDCard_init();
   //SI114X_init();
-/*
-  BSP_LED_Init(LED3);
-  BSP_LED_Init(LED4);
+
+  /*
   BSP_LED_On(LED3);
   BSP_LED_On(LED4);
 
@@ -285,7 +292,13 @@ int main(void)
   else
     BSP_LCD_DisplayStringAt(0, 300,  "an error was reported...", CENTER_MODE);
 */
-  Tests_init();
+  // Disable all interrupts (except for the adc trigger which will be enabled last)
+//  uint32_t i;
+//  DISABLE_SYSTICK_INTERRUPT();
+//  for (i = 0; i <= DMA2D_IRQn; i++)
+//    NVIC_DisableIRQ((IRQn_Type)i);
+//  Analog_startSampleTimer(1);
+//  while(1);
   
   while(1)
   {
@@ -593,7 +606,6 @@ void MX_FMC_Init(void)
   /* ExtTiming */
 
   HAL_SRAM_Init(&hsram1, &Timing, &Timing);
-	GPIOD->OSPEEDR &= (0xFFFFF3FF);  // Decrease the speed on NWE to allow data to setup before USB
 
   /** Perform the SDRAM1 memory initialization sequence
   */
@@ -647,7 +659,7 @@ void MX_GPIO_Init(void)
                           |PV_VSEL2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pins : _WF_RESET_Pin PV_D0_Pin PV_D1_Pin _BT_RESET_Pin */
@@ -655,7 +667,7 @@ void MX_GPIO_Init(void)
                           |_BT_RESET_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : B1_Pin TP_INT1_Pin */
@@ -675,7 +687,7 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = _USB_RST_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_OD;  // Should be OD output
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pin : TE_Pin */
@@ -688,13 +700,13 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = RDX_Pin|WRX_DCX_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
   
   /*Configure GPIO pins : LD3_Pin LD4_Pin */
   GPIO_InitStruct.Pin = LD3_Pin|LD4_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 }

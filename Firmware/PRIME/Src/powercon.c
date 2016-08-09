@@ -76,8 +76,8 @@ bool PowerCon_setDeviceDomain(Device dev, VoltageDomain dom)
   GPIO_PinState vSel2 = ((uint8_t)dev & 0x04) ? GPIO_PIN_SET : GPIO_PIN_RESET;
   
   // PVD flipped for PPS330D miswire
-  GPIO_PinState pvd0  = ((uint8_t)dom & 0x01) ? GPIO_PIN_SET : GPIO_PIN_RESET;
-  GPIO_PinState pvd1  = ((uint8_t)dom & 0x02) ? GPIO_PIN_SET : GPIO_PIN_RESET;
+  GPIO_PinState pvd1  = ((uint8_t)dom & 0x01) ? GPIO_PIN_SET : GPIO_PIN_RESET;
+  GPIO_PinState pvd0  = ((uint8_t)dom & 0x02) ? GPIO_PIN_SET : GPIO_PIN_RESET;
   
   // Setup Device Address
   HAL_GPIO_WritePin(PV_VSEL0_GPIO_Port, PV_VSEL0_Pin, vSel0);
