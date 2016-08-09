@@ -1,0 +1,692 @@
+--------------------------------------------------------------------------------
+                              Batch Process Report
+
+                     CADSTAR Design Editor Version 13.0.0.3
+
+Design:     C:\_DATA\AFFAIRES\STM\MB1075\pcb-scm\MB1075B.pcb
+
+Design Title:
+design
+
+Units:            Millimetres
+Decimal Places:   2
+
+Date:      mardi 4 juin 2013
+Time:      11:35
+
+--------------------------------------------------------------------------------
+
+Results Summary
+---------------
+
+Row 1 completed successfully.
+Row 2 completed successfully.
+Row 3 completed successfully.
+Row 4 completed successfully.
+Row 5 completed successfully.
+Row 6 completed successfully.
+Row 7 completed successfully.
+Row 8 completed successfully.
+Row 9 completed successfully.
+Row 10 completed successfully.
+Row 11 completed successfully.
+Row 12 completed successfully.
+Row 13 completed successfully.
+
+Results
+-------
+
+************************************ ROW 1 ************************************
+
+
+ [<None>] :: [N.C. Drill] :: [DRILL DRAWING.col] :: [NCDrill File] :: [excellon-A4V.usr] :: [EXCELLON.sel] :: [MB1075-B-M.EXC.spl] 
+
+ Drill No.  Tool No.      Size    Length     Count   File Name
+----------------------------------------------------------------------
+         0         1      0.30      0.00       504
+         1         2      0.65      0.00         2
+         2         3      0.70      0.00         4
+         3         4      0.80      0.80         2
+         4         5      1.00      0.00       146
+----------------------------------------------------------------------
+                                   TOTAL       658
+
+Row 1 completed successfully.
+
+************************************ ROW 2 ************************************
+
+
+ [<None>] :: [N.C. Drill] :: [DRILL DRAWING.col] :: [NCDrill File] :: [excellon-A4V.usr] :: [EXCELLON-NM.sel] :: [MB1075-B-NM.EXC.spl] 
+
+ Drill No.  Tool No.      Size    Length     Count   File Name
+----------------------------------------------------------------------
+         0         1      0.90      0.00         2
+         1         2      1.00      0.00         2
+         2         3      1.10      0.00         3
+         3         4      1.20      0.00         2
+----------------------------------------------------------------------
+                                   TOTAL         9
+
+Row 2 completed successfully.
+
+************************************ ROW 3 ************************************
+
+
+ [<None>] :: [Artwork] :: [LAYER 1 TOP.col] :: [Photo Plotter] :: [RS274-X-A4V.USR] :: [GERBER - MB1075.sel] :: [MB1075-B-L1.gbr] 
+
+~~~~~~~~~~~~~~~~~~~ Warning ~~~~~~~~~~~~~~~~~~~~
+
+The following items are displayed:
+    Component Areas
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Symbol Availability Report
+--------------------------
+
+Position    Shape          Usage           Size    Orient        Length     Count
+--------    -----          -----           ----    ------        ------     -----
+
+Predefined Symbols
+------------------
+
+
+Auto Allocated Symbols
+----------------------
+
+11          CIRCLE         Drawn          0.254                                  
+12          CIRCLE         Drawn         0.1651                                  
+13          CIRCLE         Drawn           0.25                                  
+14          CIRCLE         Drawn          0.635                                  
+15          CIRCLE         Drawn           1.27                                  
+16          CIRCLE         Drawn           0.50                                  
+17          CIRCLE         Drawn           0.12                                  
+18          CIRCLE         Drawn           0.21                                  
+19          CIRCLE         Drawn         0.2032                                  
+20          CIRCLE         Drawn          0.508                                  
+21          RECTANGLE      Flashed        0.762    90.000        0.1778        56
+22          RECTANGLE      Flashed        1.778   270.000          0.00         7
+23          CIRCLE         Flashed        1.778                               138
+24          RECTANGLE      Flashed        0.762   180.000        0.1778        14
+25          RECTANGLE      Flashed         1.30   180.000          0.70         4
+26          RECTANGLE      Flashed         1.52   180.000          0.64         8
+27          RECTANGLE      Flashed         0.45     0.000          0.15         6
+28          RECTANGLE      Flashed         1.10   270.000          0.10         6
+29          RECTANGLE      Flashed       0.4064   270.000        0.3556         5
+30          CIRCLE         Flashed         0.60                               504
+31          CIRCLE         Flashed       1.5748                                 4
+32          RECTANGLE      Flashed         1.20     0.000          2.20         8
+33          CIRCLE         Flashed       1.1684                                 2
+34          RECTANGLE      Flashed         1.27     0.000         0.254         2
+35          RECTANGLE      Flashed      1.40004    90.000       0.79984         2
+36          FINGER         Flashed         0.90    90.000          0.00         1
+37          FINGER         Flashed      0.89992    90.000          0.00         1
+38          CIRCLE         Flashed      1.05004                                 2
+39          RECTANGLE      Flashed         1.10     0.000          0.10        12
+40          RECTANGLE      Flashed        1.778   180.000          0.00         1
+41          RECTANGLE      Flashed         0.20     0.000          0.80        24
+42          RECTANGLE      Flashed         0.20    90.000          0.80        24
+43          FINGER         Flashed         0.30   180.000          0.65         8
+44          FINGER         Flashed         0.30    90.000          0.65         8
+45          RECTANGLE      Flashed        0.508    90.000         1.792         5
+46          RECTANGLE      Flashed         2.00    90.000          1.50         4
+47          RECTANGLE      Flashed         1.20     0.000          5.00         1
+48          CIRCLE         Flashed         1.00                                 5
+49          RECTANGLE      Flashed         0.40   270.000          3.00        48
+50          CIRCLE         Flashed         0.90                                 2
+51          RECTANGLE      Flashed         1.10    90.000          0.40         4
+52          CIRCLE         Drawn         0.0254                                  
+53          CIRCLE         Flashed        0.254                                 4
+54          CIRCLE         Drawn           0.63                                  
+55          CIRCLE         Drawn          0.381                                  
+56          CIRCLE         Drawn           0.40                                  
+
+
+Row 3 completed successfully.
+
+************************************ ROW 4 ************************************
+
+
+ [<None>] :: [Artwork] :: [LAYER 2 INNER.col] :: [Photo Plotter] :: [RS274-X-A4V.USR] :: [GERBER - MB1075.sel] :: [MB1075-B-L2.gbr] 
+
+
+Symbol Availability Report
+--------------------------
+
+Position    Shape          Usage           Size    Orient        Length     Count
+--------    -----          -----           ----    ------        ------     -----
+
+Predefined Symbols
+------------------
+
+
+Auto Allocated Symbols
+----------------------
+
+11          CIRCLE         Drawn          0.254                                  
+12          CIRCLE         Drawn           0.21                                  
+13          CIRCLE         Drawn           0.15                                  
+14          CIRCLE         Drawn         0.2032                                  
+15          CIRCLE         Drawn          0.508                                  
+16          RECTANGLE      Flashed        1.778   270.000          0.00         7
+17          CIRCLE         Flashed        1.778                               138
+18          CIRCLE         Flashed         0.60                               504
+19          CIRCLE         Flashed       1.5748                                 4
+20          CIRCLE         Flashed       1.1684                                 2
+21          RECTANGLE      Flashed      1.40004    90.000       0.79984         2
+22          FINGER         Flashed         0.90    90.000          0.00         1
+23          FINGER         Flashed      0.89992    90.000          0.00         1
+24          CIRCLE         Flashed      1.05004                                 2
+25          RECTANGLE      Flashed        1.778   180.000          0.00         1
+26          CIRCLE         Flashed         1.00                                 5
+27          CIRCLE         Drawn           0.63                                  
+28          CIRCLE         Drawn           0.40                                  
+29          CIRCLE         Drawn          0.381                                  
+
+
+Row 4 completed successfully.
+
+************************************ ROW 5 ************************************
+
+
+ [<None>] :: [Artwork] :: [LAYER 3 INNER.col] :: [Photo Plotter] :: [RS274-X-A4V.USR] :: [GERBER - MB1075.sel] :: [MB1075-B-L3.gbr] 
+
+
+Symbol Availability Report
+--------------------------
+
+Position    Shape          Usage           Size    Orient        Length     Count
+--------    -----          -----           ----    ------        ------     -----
+
+Predefined Symbols
+------------------
+
+
+Auto Allocated Symbols
+----------------------
+
+11          CIRCLE         Drawn          0.254                                  
+12          CIRCLE         Drawn         0.1651                                  
+13          CIRCLE         Drawn           0.25                                  
+14          CIRCLE         Drawn           1.27                                  
+15          CIRCLE         Drawn           0.15                                  
+16          CIRCLE         Drawn           0.10                                  
+17          CIRCLE         Drawn         0.2032                                  
+18          CIRCLE         Drawn          0.508                                  
+19          RECTANGLE      Flashed        1.778   270.000          0.00         7
+20          CIRCLE         Flashed        1.778                               138
+21          CIRCLE         Flashed         0.60                               504
+22          CIRCLE         Flashed       1.5748                                 4
+23          CIRCLE         Flashed       1.1684                                 2
+24          RECTANGLE      Flashed      1.40004    90.000       0.79984         2
+25          FINGER         Flashed         0.90    90.000          0.00         1
+26          FINGER         Flashed      0.89992    90.000          0.00         1
+27          CIRCLE         Flashed      1.05004                                 2
+28          RECTANGLE      Flashed        1.778   180.000          0.00         1
+29          CIRCLE         Flashed         1.00                                 5
+30          CIRCLE         Drawn           0.63                                  
+31          CIRCLE         Drawn          0.381                                  
+32          CIRCLE         Drawn           0.40                                  
+
+
+Row 5 completed successfully.
+
+************************************ ROW 6 ************************************
+
+
+ [<None>] :: [Artwork] :: [LAYER X BOTTOM.col] :: [Photo Plotter] :: [RS274-X-A4V.USR] :: [GERBER - MB1075.sel] :: [MB1075-B-L4.gbr] 
+
+
+Symbol Availability Report
+--------------------------
+
+Position    Shape          Usage           Size    Orient        Length     Count
+--------    -----          -----           ----    ------        ------     -----
+
+Predefined Symbols
+------------------
+
+
+Auto Allocated Symbols
+----------------------
+
+11          CIRCLE         Drawn          0.254                                  
+12          CIRCLE         Drawn         0.1651                                  
+13          CIRCLE         Drawn           0.25                                  
+14          CIRCLE         Drawn           0.50                                  
+15          CIRCLE         Drawn           1.27                                  
+16          CIRCLE         Drawn           0.12                                  
+17          CIRCLE         Drawn           0.21                                  
+18          CIRCLE         Drawn         0.2032                                  
+19          CIRCLE         Drawn          0.508                                  
+20          RECTANGLE      Flashed        1.778   270.000          0.00         7
+21          CIRCLE         Flashed        1.778                               138
+22          RECTANGLE      Flashed        0.762     0.000        0.1778        70
+23          RECTANGLE      Flashed        0.762   270.000        0.1778        72
+24          RECTANGLE      Flashed         1.10     0.000          0.10        20
+25          RECTANGLE      Flashed         1.27     0.000         0.254         6
+26          CIRCLE         Flashed         0.60                               504
+27          RECTANGLE      Flashed         0.30   180.000          0.50         8
+28          RECTANGLE      Flashed         0.30   270.000          0.50         8
+29          RECTANGLE      Flashed         1.50     0.000          0.00         1
+30          CIRCLE         Flashed       1.5748                                 4
+31          CIRCLE         Drawn         0.0254                                  
+32          CIRCLE         Flashed        0.254                                50
+33          CIRCLE         Flashed       1.1684                                 2
+34          RECTANGLE      Flashed         1.27    90.000         0.254         4
+35          RECTANGLE      Flashed      0.40004    90.000       0.94996         5
+36          RECTANGLE      Flashed         2.00     0.000        0.8001         1
+37          RECTANGLE      Flashed      1.40004    90.000       0.79984         2
+38          FINGER         Flashed         0.90    90.000          0.00         1
+39          FINGER         Flashed      0.89992    90.000          0.00         1
+40          CIRCLE         Flashed      1.05004                                 2
+41          RECTANGLE      Flashed        1.778   180.000          0.00         1
+42          RECTANGLE      Flashed         0.55   270.000          0.90         5
+43          CIRCLE         Flashed         1.00                                 5
+44          CIRCLE         Flashed         0.32                                11
+45          RECTANGLE      Flashed       0.9144     0.000          0.00         2
+46          RECTANGLE      Flashed       0.9144   270.000        0.3556         1
+47          RECTANGLE      Flashed         0.33    90.000          1.67        72
+48          RECTANGLE      Flashed         0.33   180.000          1.67        72
+49          CIRCLE         Flashed        1.524                                 1
+50          RECTANGLE      Flashed        0.889   270.000         0.127         2
+51          RECTANGLE      Flashed         0.60    90.000          1.25        54
+52          CIRCLE         Drawn           0.63                                  
+53          CIRCLE         Drawn          0.381                                  
+54          CIRCLE         Drawn           0.40                                  
+
+
+Row 6 completed successfully.
+
+************************************ ROW 7 ************************************
+
+
+ [<None>] :: [Artwork] :: [SILKSCREEN 1 TOP.col] :: [Photo Plotter] :: [RS274-X-A4V.USR] :: [GERBER - MB1075.sel] :: [MB1075-B-S1.gbr] 
+
+~~~~~~~~~~~~~~~~~~~ Warning ~~~~~~~~~~~~~~~~~~~~
+
+The following items are displayed:
+    Component Areas
+    Areas
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Symbol Availability Report
+--------------------------
+
+Position    Shape          Usage           Size    Orient        Length     Count
+--------    -----          -----           ----    ------        ------     -----
+
+Predefined Symbols
+------------------
+
+
+Auto Allocated Symbols
+----------------------
+
+11          CIRCLE         Drawn          0.254                                  
+12          CIRCLE         Drawn         0.2032                                  
+13          CIRCLE         Drawn         0.1524                                  
+14          CIRCLE         Drawn          0.508                                  
+15          CIRCLE         Drawn           0.08                                  
+16          CIRCLE         Drawn           0.20                                  
+17          CIRCLE         Drawn           0.16                                  
+18          CIRCLE         Drawn          0.127                                  
+19          CIRCLE         Drawn           0.25                                  
+20          CIRCLE         Drawn           0.10                                  
+21          CIRCLE         Drawn           0.63                                  
+22          CIRCLE         Drawn           0.05                                  
+23          CIRCLE         Drawn          0.381                                  
+24          CIRCLE         Drawn           0.40                                  
+
+
+Row 7 completed successfully.
+
+************************************ ROW 8 ************************************
+
+
+ [<None>] :: [Artwork] :: [SILKSCREEN X BOTTOM.col] :: [Photo Plotter] :: [RS274-X-A4V.USR] :: [GERBER - MB1075.sel] :: [MB1075-B-S4.gbr] 
+
+~~~~~~~~~~~~~~~~~~~ Warning ~~~~~~~~~~~~~~~~~~~~
+
+The following items are displayed:
+    Component Areas
+    Areas
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Symbol Availability Report
+--------------------------
+
+Position    Shape          Usage           Size    Orient        Length     Count
+--------    -----          -----           ----    ------        ------     -----
+
+Predefined Symbols
+------------------
+
+
+Auto Allocated Symbols
+----------------------
+
+11          CIRCLE         Drawn          0.254                                  
+12          CIRCLE         Drawn           0.20                                  
+13          CIRCLE         Drawn         0.2032                                  
+14          CIRCLE         Drawn          0.508                                  
+15          CIRCLE         Drawn         0.0254                                  
+16          CIRCLE         Drawn           0.08                                  
+17          CIRCLE         Drawn           0.16                                  
+18          CIRCLE         Drawn         0.1524                                  
+19          CIRCLE         Drawn          0.127                                  
+20          CIRCLE         Drawn           0.10                                  
+21          CIRCLE         Drawn           0.60                                  
+22          CIRCLE         Drawn           0.25                                  
+23          CIRCLE         Drawn           0.63                                  
+24          CIRCLE         Drawn           0.15                                  
+25          CIRCLE         Drawn           0.40                                  
+26          CIRCLE         Drawn          0.381                                  
+
+
+Row 8 completed successfully.
+
+************************************ ROW 9 ************************************
+
+
+ [<None>] :: [Artwork] :: [SOLDER 1 TOP.col] :: [Photo Plotter] :: [RS274-X-A4V.USR] :: [GERBER - MB1075.sel] :: [MB1075-B-V1.gbr] 
+
+~~~~~~~~~~~~~~~~~~~ Warning ~~~~~~~~~~~~~~~~~~~~
+
+The following items are displayed:
+    Component Areas
+    Areas
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Symbol Availability Report
+--------------------------
+
+Position    Shape          Usage           Size    Orient        Length     Count
+--------    -----          -----           ----    ------        ------     -----
+
+Predefined Symbols
+------------------
+
+
+Auto Allocated Symbols
+----------------------
+
+11          CIRCLE         Drawn          0.254                                  
+12          CIRCLE         Drawn         0.2032                                  
+13          CIRCLE         Drawn          0.508                                  
+14          RECTANGLE      Flashed        0.862    90.000        0.1778        56
+15          RECTANGLE      Flashed        1.878   270.000          0.00         7
+16          CIRCLE         Flashed        1.878                               138
+17          RECTANGLE      Flashed        0.862   180.000        0.1778        14
+18          RECTANGLE      Flashed         1.40   180.000          0.70         4
+19          RECTANGLE      Flashed         1.62   180.000          0.64         8
+20          RECTANGLE      Flashed         0.55     0.000          0.15         6
+21          RECTANGLE      Flashed         1.20   270.000          0.10         6
+22          RECTANGLE      Flashed       0.5064   270.000        0.3556         5
+23          CIRCLE         Flashed       1.6748                                 4
+24          RECTANGLE      Flashed         1.30     0.000          2.20         8
+25          CIRCLE         Flashed         1.27                                 2
+26          RECTANGLE      Flashed         1.37     0.000         0.254         2
+27          RECTANGLE      Flashed         1.50    90.000       0.79984         2
+28          FINGER         Flashed         1.10    90.000          0.00         2
+29          CIRCLE         Flashed         1.15                                 2
+30          RECTANGLE      Flashed         1.20     0.000          0.10        12
+31          RECTANGLE      Flashed        1.878   180.000          0.00         1
+32          RECTANGLE      Flashed         0.30     0.000          0.80        24
+33          RECTANGLE      Flashed         0.30    90.000          0.80        24
+34          FINGER         Flashed         0.40   180.000          0.65         8
+35          FINGER         Flashed         0.40    90.000          0.65         8
+36          RECTANGLE      Flashed        0.608    90.000         1.792         5
+37          RECTANGLE      Flashed         2.10    90.000          1.50         4
+38          RECTANGLE      Flashed         1.30     0.000          5.00         1
+39          CIRCLE         Flashed         1.10                                 5
+40          RECTANGLE      Flashed         0.50   270.000          3.00        48
+41          CIRCLE         Flashed         1.00                                 2
+42          RECTANGLE      Flashed         1.20    90.000          0.40         4
+43          CIRCLE         Drawn         0.0254                                  
+44          CIRCLE         Flashed        0.354                                 4
+45          CIRCLE         Drawn           0.63                                  
+46          CIRCLE         Drawn           0.40                                  
+47          CIRCLE         Drawn          0.381                                  
+
+
+Row 9 completed successfully.
+
+************************************ ROW 10 ************************************
+
+
+ [<None>] :: [Artwork] :: [SOLDER X BOTTOM.col] :: [Photo Plotter] :: [RS274-X-A4V.USR] :: [GERBER - MB1075.sel] :: [MB1075-B-V4.gbr] 
+
+~~~~~~~~~~~~~~~~~~~ Warning ~~~~~~~~~~~~~~~~~~~~
+
+The following items are displayed:
+    Component Areas
+    Areas
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Symbol Availability Report
+--------------------------
+
+Position    Shape          Usage           Size    Orient        Length     Count
+--------    -----          -----           ----    ------        ------     -----
+
+Predefined Symbols
+------------------
+
+
+Auto Allocated Symbols
+----------------------
+
+11          CIRCLE         Drawn          0.254                                  
+12          CIRCLE         Drawn         0.2032                                  
+13          CIRCLE         Drawn          0.508                                  
+14          RECTANGLE      Flashed        1.878   270.000          0.00         7
+15          CIRCLE         Flashed        1.878                               138
+16          RECTANGLE      Flashed         0.86     0.000        0.1778        70
+17          RECTANGLE      Flashed         0.86   270.000        0.1778        72
+18          RECTANGLE      Flashed         1.20     0.000          0.10        20
+19          RECTANGLE      Flashed         1.37     0.000         0.254         6
+20          RECTANGLE      Flashed         0.40   180.000          0.50         8
+21          RECTANGLE      Flashed         0.40   270.000          0.50         8
+22          RECTANGLE      Flashed         1.60     0.000          0.00         1
+23          CIRCLE         Flashed       1.6748                                 4
+24          CIRCLE         Drawn         0.0254                                  
+25          CIRCLE         Flashed         0.35                                50
+26          CIRCLE         Flashed         1.27                                 2
+27          RECTANGLE      Flashed         1.37    90.000         0.254         4
+28          RECTANGLE      Flashed         0.50    90.000       0.94996         5
+29          RECTANGLE      Flashed         2.10     0.000        0.8001         1
+30          RECTANGLE      Flashed         1.50    90.000       0.79984         2
+31          FINGER         Flashed         1.10    90.000          0.00         2
+32          CIRCLE         Flashed         1.15                                 2
+33          RECTANGLE      Flashed        1.878   180.000          0.00         1
+34          RECTANGLE      Flashed         0.65   270.000          0.90         5
+35          CIRCLE         Flashed         1.10                                 5
+36          CIRCLE         Flashed         0.42                                11
+37          RECTANGLE      Flashed         1.01     0.000          0.00         2
+38          RECTANGLE      Flashed         1.01   270.000        0.3556         1
+39          RECTANGLE      Flashed         0.43    90.000          1.67        72
+40          RECTANGLE      Flashed         0.43   180.000          1.67        72
+41          CIRCLE         Flashed         1.62                                 1
+42          RECTANGLE      Flashed         0.99   270.000         0.127         2
+43          RECTANGLE      Flashed         0.70    90.000          1.25        54
+44          CIRCLE         Drawn           0.63                                  
+45          CIRCLE         Drawn          0.381                                  
+46          CIRCLE         Drawn           0.40                                  
+
+
+Row 10 completed successfully.
+
+************************************ ROW 11 ************************************
+
+
+ [<None>] :: [Drill Drawing] :: [DRILL DRAWING.col] :: [Photo Plotter] :: [RS274-X-A4V.USR] :: [GERBER - MB1075.sel] :: [MB1075-B-DD.gbr] 
+
+~~~~~~~~~~~~~~~~~~~ Warning ~~~~~~~~~~~~~~~~~~~~
+
+The following items are displayed:
+    Component Areas
+    Areas
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Drill Report
+------------
+
+      Size    Length    Plate Through    Letter     Count
+      ----    ------    -------------    ------     -----
+      0.30      0.00              Yes         @       504
+      0.65      0.00              Yes         A         2
+      0.70      0.00              Yes         B         4
+      0.80      0.80              Yes         C         2
+      0.90      0.00               No         D         2
+      1.00      0.00              Yes         E       146
+      1.00      0.00               No         F         2
+      1.10      0.00               No         G         3
+      1.20      0.00               No         H         2
+
+
+Symbol Availability Report
+--------------------------
+
+Position    Shape          Usage           Size    Orient        Length     Count Isolation   Thermal
+--------    -----          -----           ----    ------        ------     ----- ---------   -------
+
+Predefined Symbols
+------------------
+
+
+Auto Allocated Symbols
+----------------------
+
+11          CIRCLE         Drawn          0.254                                                      
+12          CIRCLE         Drawn         0.2032                                                      
+13          CIRCLE         Drawn          0.508                                                      
+14          CIRCLE         Drawn         0.1143                                                      
+15          CIRCLE         Drawn           0.63                                                      
+16          CIRCLE         Drawn          0.381                                                      
+17          CIRCLE         Drawn           0.40                                                      
+18          ANNULUS        Flashed         0.80                    0.40       665                    
+19          ISO_FINGER     Flashed         0.60    90.000          0.80         2      0.20          
+20          CIRCLE         Drawn           0.08                                                      
+
+
+Row 11 completed successfully.
+
+************************************ ROW 12 ************************************
+
+
+ [<None>] :: [Artwork] :: [PASTE 1 TOP.col] :: [Photo Plotter] :: [RS274-X-A4V.USR] :: [GERBER - MB1075.sel] :: [MB1075-B-P1.gbr] 
+
+~~~~~~~~~~~~~~~~~~~ Warning ~~~~~~~~~~~~~~~~~~~~
+
+The following items are displayed:
+    Component Areas
+    Areas
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Symbol Availability Report
+--------------------------
+
+Position    Shape          Usage           Size    Orient        Length     Count
+--------    -----          -----           ----    ------        ------     -----
+
+Predefined Symbols
+------------------
+
+
+Auto Allocated Symbols
+----------------------
+
+11          CIRCLE         Drawn          0.254                                  
+12          CIRCLE         Drawn         0.2032                                  
+13          CIRCLE         Drawn          0.508                                  
+14          RECTANGLE      Flashed        0.762    90.000        0.1778        56
+15          RECTANGLE      Flashed        0.762   180.000        0.1778        14
+16          RECTANGLE      Flashed         1.20   180.000          0.70         4
+17          RECTANGLE      Flashed         1.52   180.000          0.64         8
+18          RECTANGLE      Flashed         0.45     0.000          0.15         6
+19          RECTANGLE      Flashed         1.10   270.000          0.10         6
+20          RECTANGLE      Flashed       0.4064   270.000        0.3556         5
+21          RECTANGLE      Flashed         1.20     0.000          2.20         8
+22          RECTANGLE      Flashed         1.27     0.000         0.254         2
+23          RECTANGLE      Flashed         1.10     0.000          0.10        12
+24          RECTANGLE      Flashed         0.20     0.000          0.80        24
+25          RECTANGLE      Flashed         0.20    90.000          0.80        24
+26          FINGER         Flashed         0.30   180.000          0.65         8
+27          FINGER         Flashed         0.30    90.000          0.65         8
+28          RECTANGLE      Flashed        0.508    90.000         1.792         5
+29          RECTANGLE      Flashed         2.00    90.000          1.50         4
+30          RECTANGLE      Flashed         1.20     0.000          5.00         1
+31          RECTANGLE      Flashed         0.40   270.000          3.00        48
+32          RECTANGLE      Flashed         1.10    90.000          0.40         4
+33          CIRCLE         Drawn           0.63                                  
+34          CIRCLE         Drawn           0.40                                  
+35          CIRCLE         Drawn          0.381                                  
+
+
+Row 12 completed successfully.
+
+************************************ ROW 13 ************************************
+
+
+ [<None>] :: [Artwork] :: [PASTE X BOTTOM.col] :: [Photo Plotter] :: [RS274-X-A4V.USR] :: [GERBER - MB1075.sel] :: [MB1075-B-P4.gbr] 
+
+~~~~~~~~~~~~~~~~~~~ Warning ~~~~~~~~~~~~~~~~~~~~
+
+The following items are displayed:
+    Component Areas
+    Areas
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Symbol Availability Report
+--------------------------
+
+Position    Shape          Usage           Size    Orient        Length     Count
+--------    -----          -----           ----    ------        ------     -----
+
+Predefined Symbols
+------------------
+
+
+Auto Allocated Symbols
+----------------------
+
+11          CIRCLE         Drawn          0.254                                  
+12          CIRCLE         Drawn         0.2032                                  
+13          CIRCLE         Drawn          0.508                                  
+14          RECTANGLE      Flashed        0.762     0.000        0.1778        70
+15          RECTANGLE      Flashed        0.762   270.000        0.1778        72
+16          RECTANGLE      Flashed         1.10     0.000          0.10        20
+17          RECTANGLE      Flashed         1.27     0.000         0.254         6
+18          RECTANGLE      Flashed         0.30   180.000          0.50         8
+19          RECTANGLE      Flashed         0.30   270.000          0.50         8
+20          RECTANGLE      Flashed         1.50     0.000          0.00         1
+21          RECTANGLE      Flashed         1.27    90.000         0.254         4
+22          RECTANGLE      Flashed      0.40004    90.000       0.94996         5
+23          RECTANGLE      Flashed         2.00     0.000        0.8001         1
+24          RECTANGLE      Flashed         0.55   270.000          0.90         5
+25          CIRCLE         Flashed         0.32                                11
+26          RECTANGLE      Flashed       0.9144     0.000          0.00         2
+27          RECTANGLE      Flashed       0.9144   270.000        0.3556         1
+28          RECTANGLE      Flashed         0.33    90.000          1.67        72
+29          RECTANGLE      Flashed         0.33   180.000          1.67        72
+30          CIRCLE         Flashed        1.524                                 1
+31          RECTANGLE      Flashed        0.889   270.000         0.127         2
+32          RECTANGLE      Flashed         0.60    90.000          1.25        54
+33          CIRCLE         Drawn           0.63                                  
+34          CIRCLE         Drawn          0.381                                  
+35          CIRCLE         Drawn           0.40                                  
+
+
+Row 13 completed successfully.
+
+--------------------------------------------------------------------------------
+                                 End of report
+--------------------------------------------------------------------------------

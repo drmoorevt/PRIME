@@ -33,3 +33,8 @@
 *.map
 *.dep
 *.lst
+*.crf
+*.d
+*.o
+/Firmware/PRIMEa
+/Firmware/PRIMEorg
