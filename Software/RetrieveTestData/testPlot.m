@@ -24,19 +24,19 @@ function testPlot(data, time, labels, testName, xMax)
     set(gAxes(1), 'YTickMode', 'auto');
     set(gAxes(2), 'YTickMode', 'auto');
     
-    %[gAxes, g1, g2] = plotyy(time,data(:,1),time,data(:,2)); %(inCurrent)
-    %hold on;
-    %plot(time,data(:,2), 'red'); %(outCurrent)
-    %plot(time,data(:,4), 'black'); %(state)
-    %xlim(gAxes(1), [0, xMax]);
-    %xlim(gAxes(2), [0, xMax]);
-    %ylim(gAxes(1), [0, 3.6]);
-    %ylim(gAxes(2), [0, 50]);
-    %ylabel(gAxes(1), labels(1));
-    %ylabel(gAxes(2), 'Domain Current (mA)');
-    %xlabel('Time (ms)');
-    %title(testName);
-    hold off;
+%     [gAxes, g1, g2] = plotyy(time,data(:,1),time,data(:,2)); %(inCurrent)
+%     hold on;
+%     plot(time,data(:,2), 'red'); %(outCurrent)
+%     plot(time,data(:,4), 'black'); %(state)
+%     xlim(gAxes(1), [0, xMax]);
+%     xlim(gAxes(2), [0, xMax]);
+%     ylim(gAxes(1), [0, 3.6]);
+%     ylim(gAxes(2), [0, 50]);
+%     ylabel(gAxes(1), labels(1));
+%     ylabel(gAxes(2), 'Domain Current (mA)');
+%     xlabel('Time (ms)');
+%     title(testName);
+%     hold off;
     return;
 end
 

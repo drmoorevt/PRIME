@@ -8,7 +8,7 @@ function [name, chans, data, time] = runTest12(CommPort, baudRate, numSweeps)
         while sweepIter <= numSweeps
             address = uint32((2^21)*rand/4096)*4096;
             writeBuffer(1:128) = uint8(rand(1,128)*128);
-            args = argGenTest12(1000, 28, 0, uint32(profIter - 1), writeBuffer, address, 128);
+            args = argGenTest12(1000, 1, 0, uint32(profIter - 1), writeBuffer, address, 128);
             fprintf('\nExecution %d/%d\n', sweepIter, numSweeps);
             success = false;
             try

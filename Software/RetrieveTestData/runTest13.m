@@ -9,7 +9,7 @@ function [numFailures, chans, data, time] = runTest13(CommPort, baudRate, numSwe
         while sweepIter <= numSweeps
             address = uint32((2^29)*rand/4096)*4096;
             writeBuffer(1:128) = uint8(rand(1,128)*128);
-            args = argGenTest13(4000, 2, 0, uint32(profIter - 1), ... 
+            args = argGenTest13(4000, 1, 0, uint32(profIter - 1), ... 
                                 writeBuffer, address, 128, writeWait);
             fprintf('\nExecution %d/%d\nAddress: %d\n', sweepIter, numSweeps, address);
             fprintf('Data: %s\n', dec2hex(writeBuffer));
@@ -43,7 +43,7 @@ function [numFailures, chans, data, time] = runTest13(CommPort, baudRate, numSwe
         filename = sprintf('./results/Test13-Profile%d-%dSweeps.mat', ...
                            profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time')
-        testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), 20);
+        testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), 225);
         profIter = profIter + 2;
     end
 end
