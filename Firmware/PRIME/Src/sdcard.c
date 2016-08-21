@@ -777,7 +777,7 @@ static SDCommandResult SDCard_sendDataBlock(uint8 token)
 * PARAMETERS  block - The block number to write
 * RETURNS     SDCARD_RESPONSE_OK if the write succeeds, various SDCommandResults otherwise
 \**************************************************************************************************/
-static SDCommandResult SDCard_writeBlock(uint32 block, uint16 writeDelay)
+static SDCommandResult SDCard_writeBlock(uint32 block, uint32 writeDelay)
 {
   SDCommandResponseR1 cardStatusRespR1, writeBlockRespR1;
   SDCommandResponseR2 cardStatusRespR2;
@@ -796,10 +796,10 @@ static SDCommandResult SDCard_writeBlock(uint32 block, uint16 writeDelay)
   {
     SDCard_setState(SDCARD_STATE_WAITING); // Set the state and voltage
     SDCard_setup(FALSE); // Turn on the SPI and control pins
-    Time_delay(writeDelay * 1000); // us --> ms
+    Time_delay(writeDelay); // Wait for the SDCard to complete the write
     SDCard_setup(TRUE); // Turn on the SPI and control pins
     SDCard_setState(SDCARD_STATE_WRITING); // Set the state and voltage
-    Time_delay(1000); // us --> ms
+    //Time_delay(1000); // is this necessary?
     SELECT_CHIP_SD();
   }
   
@@ -825,7 +825,7 @@ static SDCommandResult SDCard_writeBlock(uint32 block, uint16 writeDelay)
 *             length - number of bytes to write
 * RETURNS     TRUE if the write succeeds, FALSE otherwise
 \**************************************************************************************************/
-SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length, uint16 writeDelay)
+SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length, uint32 opDelay)
 {
   uint8 verify;
   uint32 block, offset;
@@ -849,7 +849,7 @@ SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length, uint16 writ
 
   // Write the new contents of the block to the SDCard
   SDCard_setState(SDCARD_STATE_WRITING); // Set the state and voltage
-  writeResult = SDCard_writeBlock(block, writeDelay);
+  writeResult = SDCard_writeBlock(block, opDelay);
 
   // Verify that the source data now resides in the block
   SDCard_setState(SDCARD_STATE_VERIFYING); // Set the state and voltage

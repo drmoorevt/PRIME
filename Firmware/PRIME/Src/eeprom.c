@@ -25,6 +25,8 @@
 #define EE_HIGH_SPEED_VMIN (4.5)
 #define EE_MID_SPEED_VMIN  (2.5)
 #define EE_LOW_SPEED_VMIN  (1.8)
+                               
+#define DEFAULT_PAGE_WRITE_DELAY (5000)  // in microseconds
 
 #define MCP25AA512_MFG_ID (0x29)
                                
@@ -226,7 +228,7 @@ void EEPROM_read(const uint8 *pSrc, uint8 *pDest, uint16 length)
 *             length - number of bytes to write
 * RETURNS     true if the write succeeds
 \**************************************************************************************************/
-EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
+EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint32_t length, uint32_t opDelay)
 {
   uint8 retries;
   uint16 numBytes;
@@ -262,7 +264,7 @@ EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 
       EEPROM_setup(FALSE);  // Disable the EEPROM control and SPI pins while waiting
       EEPROM_setState(EEPROM_STATE_WAITING); // For monitoring and voltage control purposes
-      Time_delay(5000); // EE_PAGE_WRITE_TIME
+      Time_delay(opDelay); // EE_PAGE_WRITE_TIME
 
       EEPROM_read(pDest, readBuf, numBytes); // Verify the write, re-enables then disables EEPROM
       writeOk = (Util_compareMemory(pSrc, readBuf, (uint8)numBytes) == 0);
@@ -294,7 +296,7 @@ boolean EEPROM_fill(uint8 *pDest, uint16 length, uint8 fillVal)
   while (length)
   {
     writeLength = (length > sizeof(fillBuf)) ? sizeof(fillBuf) : length; // One page at a time
-    if (EEPROM_write((uint8*)fillBuf, pDest, writeLength) == FALSE)
+    if (EEPROM_write((uint8*)fillBuf, pDest, writeLength, DEFAULT_PAGE_WRITE_DELAY) == FALSE)
       return FALSE;  // Break early if any write fails
     else
     {

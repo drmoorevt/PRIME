@@ -71,55 +71,15 @@ typedef struct
 
 typedef struct
 {
-  uint32 preTestDelayUs;
-  uint32 sampleRate;
-  uint32 postTestDelayUs;
-} CommonArgs;
-
-typedef struct
-{
-  CommonArgs commonArgs      __attribute__((packed));
-  EEPROMPowerProfile profile __attribute__((packed));
-  uint8 writeBuffer[128];
-  uint8 *pDest               __attribute__((packed));
-  uint16 writeLength         __attribute__((packed));
-} Test11Args;
-
-typedef struct
-{
-  CommonArgs commonArgs      __attribute__((packed));
-  M25PXPowerProfile profile  __attribute__((packed));
-  uint8 writeBuffer[128];
-  uint8 *pDest               __attribute__((packed));
-  uint16 writeLength         __attribute__((packed));
-} Test12Args;
-
-typedef struct
-{
-  CommonArgs commonArgs      __attribute__((packed));
-  SDCardPowerProfile profile __attribute__((packed));
-  uint8 writeBuffer[128];
-  uint8 *pDest               __attribute__((packed));
-  uint16 writeLength         __attribute__((packed));
-  uint16 writeWait           __attribute__((packed));
-} Test13Args;
-
-typedef struct
-{
-  CommonArgs commonArgs;
-  HIHPowerProfile profile;
-  boolean measure;
-  boolean read;
-  boolean convert;
-} Test14Args;
-
-typedef union
-{
-  Test11Args test11Args;
-  Test12Args test12Args;
-  Test13Args test13Args;
-  Test14Args test14Args;
-  uint8 asBytes[256];
+  uint32_t  sampRate;
+  uint32_t  testLen;
+  uint32_t  opDelay[4];
+  uint32_t  profile;
+  uint32_t  preTestDelay;
+  uint32_t  postTestDelay;
+  uint8_t  *pDst;
+  uint32_t  len;
+  uint8_t   buf[1024];
 } TestArgs;
 
 typedef struct
@@ -134,10 +94,8 @@ static struct
   TestHeader testHeader;
   ChanHeader chanHeader[4];
   uint8  testToRun;
-  uint8  argCount;
   TestArgs testArgs;
   TestState state;
-  uint32  powerProfile;
   uint32_t numSamps;
   uint32 (*getPeriphState)(void);
   volatile Samples adc1;
@@ -152,36 +110,36 @@ static struct
     boolean receiving;
     boolean rxTimeout;
     boolean transmitting;
-    __attribute__((aligned)) uint8 rxBuffer[256];
-    __attribute__((aligned)) uint8 txBuffer[256];
+    __attribute__((aligned)) uint8 rxBuffer[512];
+    __attribute__((aligned)) uint8 txBuffer[512];
   } comms;
 } sTests;
 
-uint16 Tests_test00(void *pArgs);
-uint16 Tests_test01(void *pArgs);
-uint16 Tests_test02(void *pArgs);
-uint16 Tests_test03(void *pArgs);
-uint16 Tests_test04(void *pArgs);
-uint16 Tests_test05(void *pArgs);
-uint16 Tests_test06(void *pArgs);
-uint16 Tests_test07(void *pArgs);
-uint16 Tests_test08(void *pArgs);
-uint16 Tests_test09(void *pArgs);
-uint16 Tests_test10(void *pArgs);
-uint16 Tests_test11(void *pArgs);
-uint16 Tests_test12(void *pArgs);
-uint16 Tests_test13(void *pArgs);
-uint16 Tests_test14(void *pArgs);
-uint16 Tests_test15(void *pArgs);
-uint16 Tests_test16(void *pArgs);
-uint16 Tests_test17(void *pArgs);
+uint16 Tests_test00(TestArgs *pArgs);
+uint16 Tests_test01(TestArgs *pArgs);
+uint16 Tests_test02(TestArgs *pArgs);
+uint16 Tests_test03(TestArgs *pArgs);
+uint16 Tests_test04(TestArgs *pArgs);
+uint16 Tests_test05(TestArgs *pArgs);
+uint16 Tests_test06(TestArgs *pArgs);
+uint16 Tests_test07(TestArgs *pArgs);
+uint16 Tests_test08(TestArgs *pArgs);
+uint16 Tests_test09(TestArgs *pArgs);
+uint16 Tests_test10(TestArgs *pArgs);
+uint16 Tests_test11(TestArgs *pArgs);
+uint16 Tests_test12(TestArgs *pArgs);
+uint16 Tests_test13(TestArgs *pArgs);
+uint16 Tests_test14(TestArgs *pArgs);
+uint16 Tests_test15(TestArgs *pArgs);
+uint16 Tests_test16(TestArgs *pArgs);
+uint16 Tests_test17(TestArgs *pArgs);
 
 void Tests_sendData(uint16 numBytes);
 bool Tests_sendBinaryResults(Samples *adcBuffer);
 bool Tests_sendHeaderInfo(void);
 
 // A test function returns the number of data bytes and takes argc/argv parameters
-typedef uint16 (*TestFunction)(void *pArgs);
+typedef uint16 (*TestFunction)(TestArgs *pArgs);
 
 TestFunction testFunctions[] = { &Tests_test00,
                                  &Tests_test01,
@@ -281,8 +239,7 @@ uint8 Tests_getTestToRun(void)
 {
   const uint32 MIN_PACKET_SIZE = 8;
   boolean hasValidPacket = FALSE;
-  uint8 testToRun = 0, argCount = 0;
-  uint32 size;
+  uint32 size, testToRun = 0, argLen = 0;
   
   do
   {
@@ -296,14 +253,13 @@ uint8 Tests_getTestToRun(void)
         (sTests.comms.bytesReceived < MIN_PACKET_SIZE))
       continue;
     testToRun = sTests.comms.rxBuffer[4];
-    argCount  = sTests.comms.rxBuffer[5];
-    size = MIN_PACKET_SIZE + argCount;
+    argLen    = sTests.comms.rxBuffer[5];
+    size      = MIN_PACKET_SIZE + argLen;
     hasValidPacket = (0x0000 == CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, 
                       (uint8 *)&sTests.comms.rxBuffer, size));
   } while (!hasValidPacket);
 
-  Util_copyMemory((uint8 *)&sTests.comms.rxBuffer[6], sTests.testArgs.asBytes, argCount);
-  sTests.argCount = argCount;
+  memcpy(&sTests.testArgs, (uint8_t *)&sTests.comms.rxBuffer[6], argLen);
   return testToRun;
 }
 
@@ -372,13 +328,11 @@ void Tests_runTest14(void)
 {
   uint16 testBuffer[20];
   double temperature, humidity;
-  sTests.testArgs.test14Args.commonArgs.preTestDelayUs  = 100;
-  sTests.testArgs.test14Args.commonArgs.sampleRate      = 1;
-  sTests.testArgs.test14Args.commonArgs.postTestDelayUs = 100;
-  sTests.testArgs.test14Args.profile = HIH_PROFILE_STANDARD;
-  sTests.testArgs.test14Args.convert = TRUE;
-  sTests.testArgs.test14Args.measure = TRUE;
-  sTests.testArgs.test14Args.read = TRUE;
+  sTests.testArgs.preTestDelay  = 100;
+  sTests.testArgs.sampRate      = 1;
+  sTests.testArgs.postTestDelay = 100;
+  sTests.testArgs.profile = HIH_PROFILE_STANDARD;
+  sTests.testArgs.pDst = 0;  // Override pDest to measure/read/convert
   Tests_test14(&sTests.testArgs);
   temperature = HIH613X_getTemperature();
   humidity = HIH613X_getHumidity();
@@ -563,8 +517,10 @@ bool Tests_sendBinaryResults(Samples *adcBuffer)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-static void Tests_setupSPITests(Device device, uint32_t sampRate, uint32_t numSamps, double initVolts)
+static void Tests_setupSPITests(Device device, TestArgs *pArgs)
 {
+  uint32_t numSamps = pArgs->testLen / pArgs->sampRate;
+  
   // Match the continuously variable domain (CVD) to the MCU domain voltage:
   //PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, Analog_getADCVoltage(ADC_DOM0_VOLTAGE));
   PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 3.3);
@@ -575,10 +531,10 @@ static void Tests_setupSPITests(Device device, uint32_t sampRate, uint32_t numSa
     PowerCon_setDeviceDomain((Device)i, VOLTAGE_DOMAIN_0);
   PowerCon_setDeviceDomain(device, VOLTAGE_DOMAIN_2);
   
-  Time_delay(50000); // Let the domain settle for 50ms (allow device power on reset to finish)
+  Time_delay(50000);  // wait 50ms for the domains to settle
   
   // Prepare data structures for retrieval
-  sTests.testHeader.timeScale    = sampRate; // in microseconds
+  sTests.testHeader.timeScale    = pArgs->sampRate; // in microseconds
   sTests.testHeader.numChannels  = 4;
   sTests.testHeader.bytesPerChan = numSamps * sizeof(uint16_t);
   sTests.chanHeader[0].chanNum   = 0;
@@ -622,7 +578,10 @@ static void Tests_setupSPITests(Device device, uint32_t sampRate, uint32_t numSa
   sTests.adc1.isSampling = TRUE;
   sTests.adc2.isSampling = TRUE;
   sTests.adc3.isSampling = TRUE;
-  Analog_startSampleTimer(sampRate);
+  
+  Analog_startSampleTimer(pArgs->sampRate);
+  
+  Time_delay(pArgs->preTestDelay);  // This helps to identify state transitions
 }
 
 /**************************************************************************************************\
@@ -632,16 +591,22 @@ static void Tests_setupSPITests(Device device, uint32_t sampRate, uint32_t numSa
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-static void Tests_teardownSPITests(boolean testPassed)
+static void Tests_teardownSPITests(TestArgs *pArgs, boolean testPassed)
 {
-//  Analog_setDomain(SPI_DOMAIN, FALSE, 3.3);  // Immediately Disable the SPI domain
-
-  // Then wait for any ongoing tests to complete
+  Time_delay(pArgs->postTestDelay);  // This helps to identify state transitions
+  
+  // Wait for any ongoing tests to complete
   while(sTests.adc1.isSampling || 
         sTests.adc2.isSampling || 
         sTests.adc3.isSampling || 
         sTests.periphState.isSampling);
   Analog_stopSampleTimer();
+  
+  // Place every device back into the MCU domain:
+  uint32_t i;
+  for (i = 0; i < DEVICE_MAX; i++)
+    PowerCon_setDeviceDomain((Device)i, VOLTAGE_DOMAIN_0);
+  
   // Enable all previous interrupts
   ENABLE_SYSTICK_INTERRUPT();
 
@@ -653,7 +618,7 @@ static void Tests_teardownSPITests(boolean testPassed)
   {
     case 11:
       sprintf(sTests.chanHeader[3].title, "EEPROM State");
-      switch (sTests.powerProfile)
+      switch (pArgs->profile)
       {
         case 0:
           if (testPassed)
@@ -684,7 +649,7 @@ static void Tests_teardownSPITests(boolean testPassed)
       break;
     case 12:
       sprintf(sTests.chanHeader[3].title, "SerialFlash State");
-      switch (sTests.powerProfile)
+      switch (pArgs->profile)
       {
         case 0:
           if (testPassed)
@@ -721,7 +686,7 @@ static void Tests_teardownSPITests(boolean testPassed)
       break;
     case 13:
       sprintf(sTests.chanHeader[3].title, "SDCard State");
-      switch (sTests.powerProfile)
+      switch (pArgs->profile)
       {
         case 0:
           if (testPassed)
@@ -758,7 +723,7 @@ static void Tests_teardownSPITests(boolean testPassed)
       break;
     case 14:
       sprintf(sTests.chanHeader[3].title, "HIH6130 State");
-      switch (sTests.powerProfile)
+      switch (pArgs->profile)
       {
         case 0:
           if (testPassed)
@@ -798,7 +763,7 @@ static void Tests_teardownSPITests(boolean testPassed)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-uint16 Tests_test00(void *pArgs)
+uint16 Tests_test00(TestArgs *pArgs)
 {
   return SUCCESS;
 }
@@ -810,7 +775,7 @@ uint16 Tests_test00(void *pArgs)
 * RETURNS     Nothing
 * NOTES       Basic sampling test based on pushbutton switches
 \**************************************************************************************************/
-uint16 Tests_test01(void *pArgs)
+uint16 Tests_test01(TestArgs *pArgs)
 {/*
   Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
   Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
@@ -841,7 +806,7 @@ uint16 Tests_test01(void *pArgs)
 * RETURNS     Nothing
 * NOTES       Testing DAC output on port 2
 \**************************************************************************************************/
-uint16 Tests_test02(void *pArgs)
+uint16 Tests_test02(TestArgs *pArgs)
 {/*
   float outVolts;
   while(1)
@@ -859,7 +824,7 @@ uint16 Tests_test02(void *pArgs)
 * RETURNS     Number of bytes generated by the test
 * NOTES       This test attempts to
 \**************************************************************************************************/
-uint16 Tests_test03(void *pArgs)
+uint16 Tests_test03(TestArgs *pArgs)
 {/*
   uint32 i;
   // All pins connected to this domain set to inputs to prevent leakage
@@ -896,7 +861,7 @@ uint16 Tests_test03(void *pArgs)
 * RETURNS     Nothing
 * NOTES       Tests writing to EEPROM
 \**************************************************************************************************/
-uint16 Tests_test04(void *pArgs)
+uint16 Tests_test04(TestArgs *pArgs)
 {/*
   uint8 txBuffer[128];
   uint8 rxBuffer[128];
@@ -927,7 +892,7 @@ uint16 Tests_test04(void *pArgs)
 * RETURNS     Nothing
 * NOTES       Tests writing to Serial Flash
 \**************************************************************************************************/
-uint16 Tests_test05(void *pArgs)
+uint16 Tests_test05(TestArgs *pArgs)
 {/*
   uint8 txBuffer[128];
   uint8 rxBuffer[128];
@@ -958,7 +923,7 @@ uint16 Tests_test05(void *pArgs)
 * RETURNS     Nothing
 * NOTES       Tests writing to the SDCard
 \**************************************************************************************************/
-uint16 Tests_test06(void *pArgs)
+uint16 Tests_test06(TestArgs *pArgs)
 {/*
   uint8 txBuffer[128];
   uint8 rxBuffer[128];
@@ -991,7 +956,7 @@ uint16 Tests_test06(void *pArgs)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-uint16 Tests_test07(void *pArgs)
+uint16 Tests_test07(TestArgs *pArgs)
 { 
   return SUCCESS;
 }
@@ -1003,7 +968,7 @@ uint16 Tests_test07(void *pArgs)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-uint16 Tests_test08(void *pArgs)
+uint16 Tests_test08(TestArgs *pArgs)
 {
   return SUCCESS;
 }
@@ -1015,59 +980,8 @@ uint16 Tests_test08(void *pArgs)
 * RETURNS     Nothing
 * NOTES       None
 \**************************************************************************************************/
-uint16 Tests_test09(void *pArgs)
-{/*
-  AppADCConfig adc1Config = {0};
-  AppADCConfig adc2Config = {0};
-  AppADCConfig adc3Config = {0};
-
-  // ADC1 sampling intVref
-  adc1Config.adcConfig.scan               = FALSE;
-  adc1Config.adcConfig.continuous         = FALSE;
-  adc1Config.adcConfig.numChannels        = 1;
-  adc1Config.adcConfig.chan[0].chanNum    = ADC_Channel_Vrefint;
-  adc1Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_144Cycles;
-  adc1Config.appSampleBuffer              = &sTests.adc1.adcBuffer[0];
-  adc1Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
-
-  // ADC2 sampling extVref
-  adc2Config.adcConfig.scan               = FALSE;
-  adc2Config.adcConfig.continuous         = FALSE;
-  adc2Config.adcConfig.numChannels        = 1;
-  adc2Config.adcConfig.chan[0].chanNum    = ADC_Channel_6;
-  adc2Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_144Cycles;
-  adc2Config.appSampleBuffer              = &sTests.adc2.adcBuffer[0];
-  adc2Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
-
-  // ADC3 sampling domain voltage
-  adc3Config.adcConfig.scan               = FALSE;
-  adc3Config.adcConfig.continuous         = FALSE;
-  adc3Config.adcConfig.numChannels        = 1;
-  adc3Config.adcConfig.chan[0].chanNum    = ADC_Channel_1;
-  adc3Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_144Cycles;
-  adc3Config.appSampleBuffer              = &sTests.adc3.adcBuffer[0];
-  adc3Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
-
-  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,  FALSE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Set domain voltage to nominal (3.25V)
-  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-
-  ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
-  ADC_openPort(ADC_PORT2, adc2Config);
-  ADC_openPort(ADC_PORT3, adc3Config);
-  ADC_getSamples(ADC_PORT1, TESTS_MAX_SAMPLES); // Notify App when sample buffer is full
-  ADC_getSamples(ADC_PORT2, TESTS_MAX_SAMPLES);
-  ADC_getSamples(ADC_PORT3, TESTS_MAX_SAMPLES);
-  ADC_startSampleTimer(TIME_HARD_TIMER_TIMER3, 6000);     // Start timer3 triggered ADCs at 100us sample rate
-
-  // Complete the samples
-  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-*/
+uint16 Tests_test09(TestArgs *pArgs)
+{
   return SUCCESS;
 }
 
@@ -1078,103 +992,8 @@ uint16 Tests_test09(void *pArgs)
 * RETURNS     Number of bytes generated by the test
 * NOTES       None
 \**************************************************************************************************/
-uint16 Tests_test10(void *pArgs)
-{/*
-  AppADCConfig adc1Config = {0};
-  AppADCConfig adc2Config = {0};
-  AppADCConfig adc3Config = {0};
-
-  // ADC1 sampling domain voltage
-  adc1Config.adcConfig.scan               = FALSE;
-  adc1Config.adcConfig.continuous         = FALSE;
-  adc1Config.adcConfig.numChannels        = 1;
-  adc1Config.adcConfig.chan[0].chanNum    = ADC_Channel_1;
-  adc1Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_144Cycles;
-  adc1Config.appSampleBuffer              = &sTests.adc1.adcBuffer[0];
-  adc1Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
-
-  // ADC2 sampling domain input current
-  adc2Config.adcConfig.scan               = FALSE;
-  adc2Config.adcConfig.continuous         = FALSE;
-  adc2Config.adcConfig.numChannels        = 1;
-  adc2Config.adcConfig.chan[0].chanNum    = ADC_Channel_2;
-  adc2Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_144Cycles;
-  adc2Config.appSampleBuffer              = &sTests.adc2.adcBuffer[0];
-  adc2Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
-
-  // ADC3 sampling domain output current
-  adc3Config.adcConfig.scan               = FALSE;
-  adc3Config.adcConfig.continuous         = FALSE;
-  adc3Config.adcConfig.numChannels        = 1;
-  adc3Config.adcConfig.chan[0].chanNum    = ADC_Channel_3;
-  adc3Config.adcConfig.chan[0].sampleTime = ADC_SampleTime_144Cycles;
-  adc3Config.appSampleBuffer              = &sTests.adc3.adcBuffer[0];
-  adc3Config.appNotifyConversionComplete  = &Tests_notifyConversionComplete;
-
-  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,  FALSE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
-  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_delay(100000); // Wait 100ms for domains to settle
-
-  ADC_openPort(ADC_PORT1, adc1Config);        // initializes the ADC, gated by timer3 overflow
-  ADC_openPort(ADC_PORT2, adc2Config);
-  ADC_openPort(ADC_PORT3, adc3Config);
-  ADC_getSamples(ADC_PORT1, TESTS_MAX_SAMPLES); // Notify App when sample buffer is full
-  ADC_getSamples(ADC_PORT2, TESTS_MAX_SAMPLES);
-  ADC_getSamples(ADC_PORT3, TESTS_MAX_SAMPLES);
-  sTests.adc1.isSampling = TRUE;
-  sTests.adc2.isSampling = TRUE;
-  sTests.adc3.isSampling = TRUE;
-  ADC_startSampleTimer(TIME_HARD_TIMER_TIMER3, 300);     // Start timer3 triggered ADCs at 5us sample rate
-
-  Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0xFF);
-  EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)0, 128);
-
-  Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0xAA);
-  EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)128, 128);
-
-  Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x55);
-  EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)256, 128);
-
-  Util_fillMemory(&sTests.comms.rxBuffer[0], 128, 0x00);
-  EEPROM_write(&sTests.comms.rxBuffer[0], (uint8*)384, 128);
-
-  // Complete the samples
-  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-  ADC_stopSampleTimer(TIME_HARD_TIMER_TIMER3);
-
-  // HACK: let EEPROM state be channel 22
-  sTests.periphState.channel = 22;
-
-  // Prepare data structures for retrieval
-  sTests.testHeader.timeScale = 5;
-  sTests.testHeader.numChannels = 4;
-  sTests.testHeader.bytesPerChan = TESTS_MAX_SAMPLES * 2;
-  sTests.chanHeader[0].chanNum  = adc1Config.adcConfig.chan[0].chanNum;
-  sTests.chanHeader[0].bitRes   = (3.3 / 4096.0);
-  sTests.chanHeader[1].chanNum  = adc2Config.adcConfig.chan[0].chanNum;
-  sTests.chanHeader[1].bitRes   = (3.3 / 4096.0);
-  sTests.chanHeader[2].chanNum  = adc3Config.adcConfig.chan[0].chanNum;
-  sTests.chanHeader[2].bitRes   = (3.3 / 4096.0);
-  sTests.chanHeader[3].chanNum  = sTests.periphState.channel;
-  sTests.chanHeader[3].bitRes   = (3.3 / 4096.0);
-
-  // Return domains to initial state
-  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,   TRUE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Set domain voltage to nominal (3.25V)
-  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_delay(10000); // Wait 10ms for domains to settle
-*/
+uint16 Tests_test10(TestArgs *pArgs)
+{
   return SUCCESS;
 }
 
@@ -1185,19 +1004,13 @@ uint16 Tests_test10(void *pArgs)
 * RETURNS     Number of bytes generated by the test
 * NOTES       None
 \**************************************************************************************************/
-uint16 Tests_test11(void *pArgs)
+uint16 Tests_test11(TestArgs *pArgs)
 {
-  EEPROMResult result;
-  Test11Args *pTestArgs = pArgs;
+  EEPROM_setPowerProfile((EEPROMPowerProfile)pArgs->profile);
 
-  sTests.powerProfile = pTestArgs->profile;
-  EEPROM_setPowerProfile(pTestArgs->profile);
-
-  Tests_setupSPITests(DEVICE_EEPROM, pTestArgs->commonArgs.sampleRate, 10000, EEPROM_getStateVoltage());
-  Time_delay(pTestArgs->commonArgs.preTestDelayUs);
-  result = EEPROM_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
-  Time_delay(pTestArgs->commonArgs.postTestDelayUs);
-  Tests_teardownSPITests((EEPROM_RESULT_OK == result));
+  Tests_setupSPITests(DEVICE_EEPROM, pArgs);
+  EEPROMResult result = EEPROM_write(pArgs->buf, pArgs->pDst, pArgs->len, pArgs->opDelay[0]);
+  Tests_teardownSPITests(pArgs, (EEPROM_RESULT_OK == result));
 
   return (EEPROM_RESULT_OK == result);
 }
@@ -1210,19 +1023,13 @@ uint16 Tests_test11(void *pArgs)
 * NOTES       This test uses the same technique as test11, but performs the test iteratively and
 *             aggregates the results.
 \**************************************************************************************************/
-uint16 Tests_test12(void *pArgs)
+uint16 Tests_test12(TestArgs *pArgs)
 {
-  M25PXResult result;
-  Test12Args *pTestArgs = pArgs;
+  M25PX_setPowerProfile((M25PXPowerProfile)pArgs->profile);
 
-  sTests.powerProfile = pTestArgs->profile;
-  M25PX_setPowerProfile(pTestArgs->profile);
-
-  Tests_setupSPITests(DEVICE_NORFLASH, pTestArgs->commonArgs.sampleRate, 275000, M25PX_getStateVoltage());
-  Time_delay(pTestArgs->commonArgs.preTestDelayUs);
-  result = M25PX_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength);
-  Time_delay(pTestArgs->commonArgs.postTestDelayUs);
-  Tests_teardownSPITests((M25PX_RESULT_OK == result));
+  Tests_setupSPITests(DEVICE_NORFLASH, pArgs);
+  M25PXResult result = M25PX_write(pArgs->buf, pArgs->pDst, pArgs->len, pArgs->opDelay[0], pArgs->opDelay[1]);
+  Tests_teardownSPITests(pArgs, (M25PX_RESULT_OK == result));
 
   return (M25PX_RESULT_OK == result);
 }
@@ -1234,14 +1041,11 @@ uint16 Tests_test12(void *pArgs)
 * RETURNS     Number of bytes generated by the test
 * NOTES       This test uses the same technique as test12, but uses the XtremeLowPower function
 \**************************************************************************************************/
-uint16 Tests_test13(void *pArgs)
+uint16 Tests_test13(TestArgs *pArgs)
 {
+  SDCard_setPowerProfile((SDCardPowerProfile)pArgs->profile);
+  
   uint8 i;
-  SDWriteResult writeResult;
-  Test13Args *pTestArgs = pArgs;
-
-  sTests.powerProfile = pTestArgs->profile;
-  SDCard_setPowerProfile(pTestArgs->profile);
   for (i = 0; i < 5; i++)
   {
     Time_delay(300000);
@@ -1249,11 +1053,9 @@ uint16 Tests_test13(void *pArgs)
       break;
   }
   
-  Tests_setupSPITests(DEVICE_SDCARD, pTestArgs->commonArgs.sampleRate, 225000, SDCard_getStateVoltage());
-  Time_delay(pTestArgs->commonArgs.preTestDelayUs);
-  writeResult = SDCard_write(pTestArgs->writeBuffer, pTestArgs->pDest, pTestArgs->writeLength, pTestArgs->writeWait);
-  Time_delay(pTestArgs->commonArgs.postTestDelayUs);
-  Tests_teardownSPITests(SD_WRITE_RESULT_OK == writeResult);
+  Tests_setupSPITests(DEVICE_SDCARD, pArgs);
+  SDWriteResult writeResult = SDCard_write(pArgs->buf, pArgs->pDst, pArgs->len, pArgs->opDelay[0]);
+  Tests_teardownSPITests(pArgs, (SD_WRITE_RESULT_OK == writeResult));
 
   return (SD_WRITE_RESULT_OK == writeResult);
 }
@@ -1265,19 +1067,16 @@ uint16 Tests_test13(void *pArgs)
 * RETURNS     Number of bytes generated by the test
 * NOTES       This test attempts basic operation of the SerialFlash
 \**************************************************************************************************/
-uint16 Tests_test14(void *pArgs)
+uint16 Tests_test14(TestArgs *pArgs)
 {
-  HIHStatus hihResult;
-  Test14Args *pTestArgs = pArgs;
+  bool measure = pArgs->buf[0];
+  bool readVal = pArgs->buf[1];
+  bool convert = pArgs->buf[2];
+  HIH613X_setPowerProfile((HIHPowerProfile)pArgs->profile);
 
-  sTests.powerProfile = pTestArgs->profile;
-  HIH613X_setPowerProfile(pTestArgs->profile);
-
-  Tests_setupSPITests(DEVICE_TEMPSENSE, pTestArgs->commonArgs.sampleRate, 50000, HIH613X_getStateVoltage());
-  Time_delay(pTestArgs->commonArgs.preTestDelayUs);
-  hihResult = HIH613X_readTempHumidI2C(pTestArgs->measure, pTestArgs->read, pTestArgs->convert);
-  Time_delay(pTestArgs->commonArgs.postTestDelayUs);
-  Tests_teardownSPITests(HIH_STATUS_NORMAL == hihResult);
+  Tests_setupSPITests(DEVICE_TEMPSENSE, pArgs);
+  HIHStatus hihResult = HIH613X_readTempHumidI2C(measure, readVal, convert, pArgs->opDelay[0]);
+  Tests_teardownSPITests(pArgs, (HIH_STATUS_NORMAL == hihResult));
 
   return SUCCESS;
 }
@@ -1289,7 +1088,7 @@ uint16 Tests_test14(void *pArgs)
 * RETURNS     Number of bytes generated by the test
 * NOTES       This test attempts power profile operation of the HIH Temp/Humid module
 \**************************************************************************************************/
-uint16 Tests_test15(void *pArgs)
+uint16 Tests_test15(TestArgs *pArgs)
 {
   return SUCCESS;
 }
@@ -1301,7 +1100,7 @@ uint16 Tests_test15(void *pArgs)
 * RETURNS     Number of bytes generated by the test
 * NOTES       This test attempts power profile operation of the SDCard
 \**************************************************************************************************/
-uint16 Tests_test16(void *pArgs)
+uint16 Tests_test16(TestArgs *pArgs)
 {
   return SUCCESS;
 }
@@ -1313,7 +1112,7 @@ uint16 Tests_test16(void *pArgs)
 * RETURNS     Number of bytes generated by the test
 * NOTES       This test attempts basic operation of the HIH_6130_021
 \**************************************************************************************************/
-uint16 Tests_test17(void *pArgs)
+uint16 Tests_test17(TestArgs *pArgs)
 {/*
   uint8  i;
   HIHStatus sensorStatus;

@@ -1,10 +1,9 @@
 function [name, chans, data, time] = TestConsole(CommPort)
     close all
     
-    interval = 1;
-    delete(instrfindall);
-    s = openFixtureComms(CommPort, 115200);
-    
+%    interval = 1;
+%    delete(instrfindall);
+%    s = openFixtureComms(CommPort, 115200);   
 %     while (1)
 %         pause(interval);
 %         KBps = s.BytesAvailable / (1024 * interval);
@@ -12,23 +11,23 @@ function [name, chans, data, time] = TestConsole(CommPort)
 %         fprintf('\nKBps: %10.4f, Kbps: %10.4f', KBps, KBps * 8);
 %     end
     
-    numSweeps = 100;
+    numSweeps = 5;
     eeFails = 0;
     sfFails = 0;
     sdFails = 0;
     htFails = 0;
     
-   %[eeFails, chans, data, time] = runTest11(CommPort, 921600, numSweeps);
-   %[sfFails, chans, data, time] = runTest12(CommPort, 921600, numSweeps);
-   %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 150); % Lexar
-   %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 150); % SanDisk
-   %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 65);  % SwissBit
-   %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 2);   % Kingston
-   [htFails, chans, data, time] = runTest14(CommPort, 921600, numSweeps);
+   %[eeFails, chans, data, time] = runTest11(CommPort, 921600, numSweeps, 10000,  [5000, 0, 0, 0]);    % EEPROM
+   %[sfFails, chans, data, time] = runTest12(CommPort, 921600, numSweeps, 275000, [150000, 5000, 0, 0]);   % NOR
+   [sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 225000, [150000, 0, 0, 0]);  % Lexar
+   %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 225000, [150000, 0, 0, 0]);  % SanDisk
+   %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 100000, [65000, 0, 0, 0]);   % SwissBit
+   %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 15000,  [2000, 0, 0, 0]);    % Kingston
+   %[htFails, chans, data, time] = runTest14(CommPort, 921600, numSweeps,  50000,  [45000, 0, 0, 0]);   % HIH
     
    %fprintf('Dev\tFails\nEE:\t%d\nSF:\t%d\nSD:\t%d\nHT:\t%d\n', eeFails, sfFails, sdFails, htFails);
-    
-    return;
+   [inEnergy, outEnergy, inEnergyDelta, outEnergyDelta] = analyzeTest(data, time)
+   return;
     % End selection bypass
     
     while(1)

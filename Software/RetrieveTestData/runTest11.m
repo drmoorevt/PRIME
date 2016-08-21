@@ -1,4 +1,4 @@
-function [name, chans, data, time] = runTest11(CommPort, baudRate, numSweeps)
+function [name, chans, data, time] = runTest11(CommPort, baudRate, numSweeps, testLen, opDelay)
     delete(instrfindall);
     s = openFixtureComms(CommPort, baudRate);
     
@@ -8,7 +8,15 @@ function [name, chans, data, time] = runTest11(CommPort, baudRate, numSweeps)
         while sweepIter <= numSweeps
             address = uint32((2^16)*rand/128)*128;
             writeBuffer(1:128) = uint8(rand(1,128)*128);
-            args = argGenTest11(1000, 1, 0, uint32(profIter - 1), writeBuffer, address, 128);
+            args = argGen(1,                    ... // sampRate
+                          testLen,              ... // testLen
+                          opDelay,              ... // opDelay
+                          uint32(profIter - 1), ... // profile
+                          1000,                 ... // preTestDelay
+                          1000,                 ... // postTestDelay
+                          address,              ... // Destination address
+                          writeBuffer           ... // Destination data
+                          );
             fprintf('\nExecution %d/%d\n', sweepIter, numSweeps);
             success = false;
             try
@@ -24,7 +32,7 @@ function [name, chans, data, time] = runTest11(CommPort, baudRate, numSweeps)
         filename = sprintf('./results/Test11-Profile%d-%dSweeps.mat', ...
                            profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time')
-        testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), 10);
+        testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testLen/1000);
         profIter = profIter + 2;
     end
 end

@@ -95,9 +95,6 @@ static struct
   boolean             isInitialized;
 } sM25PX;
 
-static boolean M25PX_erase(uint8 *pDest, M25PXSize blockSize);
-static FlashStatusRegister M25PX_readStatusRegister(void);
-
 /**************************************************************************************************\
 * FUNCTION    M25PX_init
 * DESCRIPTION Initializes the M25PX module
@@ -352,9 +349,10 @@ M25PXResult M25PX_read(uint8 *pSrc, uint8 *pDest, uint16 length)
 *             length - number of bytes to read
 * RETURNS     nothing
 \**************************************************************************************************/
-static boolean M25PX_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
+static boolean M25PX_directWrite(uint8 *pSrc, uint8 *pDest, uint32 length, uint32 writeDelay)
 {
   uint32 bytesToWrite, writeCommand;
+  bool success;
 
   while (length > 0)
   {
@@ -372,76 +370,15 @@ static boolean M25PX_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
     DESELECT_CHIP_OF();
     M25PX_setup(FALSE);
 
-    M25PX_waitForWriteComplete(FALSE, PAGE_WRITE_TIME);
-
+    // Has the page write time been overriden?
+    success  = (writeDelay > 0) ? M25PX_waitForWriteComplete(FALSE, writeDelay) 
+                                : M25PX_waitForWriteComplete(FALSE, PAGE_WRITE_TIME);
     length -= bytesToWrite;
     pDest  += bytesToWrite;
     pSrc   += bytesToWrite;
   }
 
-  return TRUE;
-}
-
-/*****************************************************************************\
-* FUNCTION    M25PX_write
-* DESCRIPTION Writes a buffer to Serial Flash
-* PARAMETERS  pSrc - pointer to source RAM buffer
-*             pDest - pointer to destination in M25PX
-*             length - number of bytes to write
-* RETURNS     TRUE if the write succeeds
-\*****************************************************************************/
-M25PXResult M25PX_write(uint8 *pSrc, uint8 *pDest, uint16 length)
-{
-  M25PXResult result = M25PX_RESULT_OK;
-  uint8  *pCache   = (uint8 *)&sM25PX.subSector.byte[0];
-  uint8  *pTestSub = (uint8 *)&sM25PX.testSubSector.byte[0];
-  uint8  *pSubSector, *pCacheDest;
-  uint8   retries;
-  uint16  numToWrite;
-  
-  // Ensure that the chip has enough voltage and time to power up
-  M25PX_setState(M25PX_STATE_IDLE);
-  
-  while ((result != M25PX_RESULT_ERROR) && (length > 0))
-  {
-    // Write must not go past a page boundary, but must erase a whole sub sector at a time
-    numToWrite = M25PX_SIZE_PAGE - ((uint32)pDest & (M25PX_SIZE_PAGE - 1));
-    if (length < numToWrite)
-      numToWrite = length;
-
-    // Determine the which subsector we'll be manipulating and the data destination in local cache
-    pSubSector = (uint8 *)(((uint32)pDest  >> 0) & 0x001FF000);
-    pCacheDest = (uint8 *)((((uint32)pDest >> 0) & 0x00000FFF) + pCache);
-
-    for (retries = 3; retries > 0; retries--)
-    {
-      // Read the sub sector to be written into local cache
-      M25PX_read(pSubSector, pCache, M25PX_SIZE_SUBSECTOR);
-      
-      // Erase sub sector, it is now in local cache
-      M25PX_erase(pSubSector, M25PX_SIZE_SUBSECTOR);
-
-      // Overwrite local cache with the source data at the specified destination
-      Util_copyMemory(pSrc, pCacheDest, numToWrite);
-      
-      // Write the whole sub-sector back to flash
-      M25PX_directWrite(pCache, pSubSector, M25PX_SIZE_SUBSECTOR);
-
-      // Compare memory to determine if the write was successful
-      M25PX_read(pSubSector, pTestSub, M25PX_SIZE_SUBSECTOR);
-      
-      if (0 == Util_compareMemory(pCache, pTestSub, M25PX_SIZE_SUBSECTOR))
-        break;
-      else
-        result = M25PX_RESULT_NEEDED_RETRY;
-    }
-    result  = (retries == 0) ? M25PX_RESULT_ERROR : result;
-    pSrc   += numToWrite; // update source pointer
-    pDest  += numToWrite; // update destination pointer
-    length -= numToWrite;
-  }
-  M25PX_setState(M25PX_STATE_IDLE);
-  return result;
+  return success;
 }
 
 /**************************************************************************************************\
@@ -451,11 +388,11 @@ M25PXResult M25PX_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 *             length - number of bytes to erase
 * RETURNS     status byte for serial flash
 \**************************************************************************************************/
-static boolean M25PX_erase(uint8 *pDest, M25PXSize size)
+static boolean M25PX_erase(uint8 *pDest, M25PXSize size, uint32_t eraseDelay)
 {
   uint32 eraseCmd = ((uint32)pDest & 0x00FFFFFF);
-  boolean success;
   uint32 timeout;
+  bool success;
 
   // Put the erase command into the transmit buffer and set timeouts, both according to size
   switch (size)
@@ -480,9 +417,73 @@ static boolean M25PX_erase(uint8 *pDest, M25PXSize size)
   M25PX_setState(M25PX_STATE_ERASING);
   M25PX_sendWriteEnable();
   M25PX_transceive((uint8 *)&eraseCmd, sizeof(eraseCmd), NULL, 0);
-  success = M25PX_waitForWriteComplete(FALSE, timeout);
 
+  // Has the erase time been overriden?
+  success  = (eraseDelay > 0) ? M25PX_waitForWriteComplete(FALSE, eraseDelay) 
+                              : M25PX_waitForWriteComplete(FALSE, timeout);
   return success;
+}
+
+/*****************************************************************************\
+* FUNCTION    M25PX_write
+* DESCRIPTION Writes a buffer to Serial Flash
+* PARAMETERS  pSrc - pointer to source RAM buffer
+*             pDest - pointer to destination in M25PX
+*             length - number of bytes to write
+* RETURNS     TRUE if the write succeeds
+\*****************************************************************************/
+M25PXResult M25PX_write(uint8 *pSrc, uint8 *pDst, uint32 len, uint32 eraseDelay, uint32 writeDelay)
+{
+  M25PXResult result = M25PX_RESULT_OK;
+  uint8  *pCache   = (uint8 *)&sM25PX.subSector.byte[0];
+  uint8  *pTestSub = (uint8 *)&sM25PX.testSubSector.byte[0];
+  uint8  *pSubSector, *pCacheDest;
+  uint8   retries;
+  uint16  numToWrite;
+  
+  // Ensure that the chip has enough voltage and time to power up
+  M25PX_setState(M25PX_STATE_IDLE);
+  
+  while ((result != M25PX_RESULT_ERROR) && (len > 0))
+  {
+    // Write must not go past a page boundary, but must erase a whole sub sector at a time
+    numToWrite = M25PX_SIZE_PAGE - ((uint32)pDst & (M25PX_SIZE_PAGE - 1));
+    if (len < numToWrite)
+      numToWrite = len;
+
+    // Determine the which subsector we'll be manipulating and the data destination in local cache
+    pSubSector = (uint8 *)(((uint32)pDst  >> 0) & 0x001FF000);
+    pCacheDest = (uint8 *)((((uint32)pDst >> 0) & 0x00000FFF) + pCache);
+
+    for (retries = 3; retries > 0; retries--)
+    {
+      // Read the sub sector to be written into local cache
+      M25PX_read(pSubSector, pCache, M25PX_SIZE_SUBSECTOR);
+      
+      // Erase sub sector, it is now in local cache
+      M25PX_erase(pSubSector, M25PX_SIZE_SUBSECTOR, eraseDelay);
+
+      // Overwrite local cache with the source data at the specified destination
+      Util_copyMemory(pSrc, pCacheDest, numToWrite);
+      
+      // Write the whole sub-sector back to flash
+      M25PX_directWrite(pCache, pSubSector, M25PX_SIZE_SUBSECTOR, writeDelay);
+
+      // Compare memory to determine if the write was successful
+      M25PX_read(pSubSector, pTestSub, M25PX_SIZE_SUBSECTOR);
+      
+      if (0 == Util_compareMemory(pCache, pTestSub, M25PX_SIZE_SUBSECTOR))
+        break;
+      else
+        result = M25PX_RESULT_NEEDED_RETRY;
+    }
+    result = (retries == 0) ? M25PX_RESULT_ERROR : result;
+    pSrc  += numToWrite; // update source pointer
+    pDst  += numToWrite; // update destination pointer
+    len   -= numToWrite;
+  }
+  M25PX_setState(M25PX_STATE_IDLE);
+  return result;
 }
 
 /*****************************************************************************\

@@ -43,7 +43,7 @@ double EEPROM_getStateVoltage(void);
 boolean EEPROM_setPowerProfile(EEPROMPowerProfile profile);
 boolean EEPROM_setPowerState(EEPROMState state, double vDomain);
 void EEPROM_read(const uint8 *pSrc, uint8 *pDest, uint16 length);
-EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint16 length);
+EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint32_t length, uint32_t opDelay);
 boolean EEPROM_fill(uint8 *pDest, uint16 length, uint8 fillVal);
 bool EEPROM_test(void);
 
