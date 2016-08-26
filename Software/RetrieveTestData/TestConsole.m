@@ -10,25 +10,57 @@ function [name, chans, data, time] = TestConsole(CommPort)
 %         flushinput(s);
 %         fprintf('\nKBps: %10.4f, Kbps: %10.4f', KBps, KBps * 8);
 %     end
-    
-    numSweeps = 5;
+    function [newUpper, newLower] = binSearch(fail, upperLim, lowerLim)
+        halfDistance = (upperLim - lowerLim) / 2;
+        if fail > 0  % test failed, increase lower limit, leave upper
+            newLower = round(lowerLim + halfDistance);
+            newUpper = round(upperLim);
+        else  % test passed, decrease lower limit, save new upper limit
+            newLower = round(lowerLim - halfDistance);
+            newUpper = round(lowerLim);
+        end
+    end
+
+    numSweeps = 20;
     eeFails = 0;
     sfFails = 0;
     sdFails = 0;
     htFails = 0;
+   
+    runTest1(CommPort, 921600, numSweeps, 7000,  [5000, 0, 0, 0]);
+    return
     
-   %[eeFails, chans, data, time] = runTest11(CommPort, 921600, numSweeps, 10000,  [5000, 0, 0, 0]);    % EEPROM
+   %[eeFails, chans, data, time] = runTest11(CommPort, 921600, numSweeps, 7000,  [5000, 0, 0, 0]);    % EEPROM
    %[sfFails, chans, data, time] = runTest12(CommPort, 921600, numSweeps, 275000, [150000, 5000, 0, 0]);   % NOR
-   [sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 225000, [150000, 0, 0, 0]);  % Lexar
+   %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 225000, [150000, 0, 0, 0]);  % Lexar
    %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 225000, [150000, 0, 0, 0]);  % SanDisk
    %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 100000, [65000, 0, 0, 0]);   % SwissBit
    %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 15000,  [2000, 0, 0, 0]);    % Kingston
    %[htFails, chans, data, time] = runTest14(CommPort, 921600, numSweeps,  50000,  [45000, 0, 0, 0]);   % HIH
-    
+
    %fprintf('Dev\tFails\nEE:\t%d\nSF:\t%d\nSD:\t%d\nHT:\t%d\n', eeFails, sfFails, sdFails, htFails);
-   [inEnergy, outEnergy, inEnergyDelta, outEnergyDelta] = analyzeTest(data, time)
+   %[inEnergy, outEnergy, inEnergyDelta, outEnergyDelta] = analyzeTest(data, time)
+   %return
+   
+   i = 1;
+   lowerLim = 50000;
+   upperLim = lowerLim * 2;
+   while (lowerLim ~= upperLim)
+       fprintf('\n\nTesting opDelay: %d\n\n', lowerLim);
+       [fail, chans, data, time] = runTest14(CommPort, 921600, numSweeps,  50000,  [lowerLim, 0, 0, 0]);
+       [upperLim, lowerLim] = binSearch(fail, upperLim, lowerLim);
+       %set(gcf,'units','normalized','outerposition',[0 0 1 1])
+       F(i) = getframe(gcf);
+       i = i + 1;
+       close all
+   end
+   fprintf('\n\nOptimal Delay: %d\n\n', lowerLim);
+   close all
+   figure
+   movie(gcf,F,1000000,3)
    return;
-    % End selection bypass
+   
+   % End selection bypass
     
     while(1)
         fprintf('PEGMA Test Console\n');

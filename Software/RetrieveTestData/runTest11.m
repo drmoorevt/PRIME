@@ -2,6 +2,10 @@ function [name, chans, data, time] = runTest11(CommPort, baudRate, numSweeps, te
     delete(instrfindall);
     s = openFixtureComms(CommPort, baudRate);
     
+    preTestDelay = 1000;
+    postTestDelay = 1000;
+    testTime = (preTestDelay + testLen + postTestDelay) / 1000;
+    
     profIter = 1;
     while (profIter < 5) % 4 profiles: (profIter = 1,2,3,4) = 0,1,2,3
         sweepIter = 1;
@@ -12,8 +16,8 @@ function [name, chans, data, time] = runTest11(CommPort, baudRate, numSweeps, te
                           testLen,              ... // testLen
                           opDelay,              ... // opDelay
                           uint32(profIter - 1), ... // profile
-                          1000,                 ... // preTestDelay
-                          1000,                 ... // postTestDelay
+                          preTestDelay,         ... // preTestDelay
+                          postTestDelay,        ... // postTestDelay
                           address,              ... // Destination address
                           writeBuffer           ... // Destination data
                           );
@@ -32,7 +36,7 @@ function [name, chans, data, time] = runTest11(CommPort, baudRate, numSweeps, te
         filename = sprintf('./results/Test11-Profile%d-%dSweeps.mat', ...
                            profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time')
-        testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testLen/1000);
+        testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testTime);
         profIter = profIter + 2;
     end
 end

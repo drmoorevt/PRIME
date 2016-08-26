@@ -13,7 +13,7 @@ function [results, bytesReceived] = rtd(s, bitRes, numChannels, bytesToGet)
         calcCRC = dataCRC;
         success = (calcCRC == dataCRC);
         if (success)
-            fprintf('CRC %d MATCHED %d\n',calcCRC,dataCRC);
+            %fprintf('CRC %d MATCHED %d\n',calcCRC,dataCRC);
             fwrite(s, uint8(hex2dec('42')));  % Tell DUT to proceed
             inRead = double(typecast(uint8(inRead), 'uint16'));
             inRead = inRead * bitRes(i);

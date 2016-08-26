@@ -1,4 +1,5 @@
-function [name, chans, data, time] = runTest14(CommPort, baudRate, numSweeps, testLen, opDelay)
+function [numFailures, chans, data, time] = runTest14(CommPort, baudRate, numSweeps, testLen, opDelay)
+    numFailures = 0;
     delete(instrfindall);
     s = openFixtureComms(CommPort, baudRate);
     
@@ -21,6 +22,13 @@ function [name, chans, data, time] = runTest14(CommPort, baudRate, numSweeps, te
             try
                 [name(:,profIter), chans, data(:,:,sweepIter,profIter), time, success] ...
                     = execTest(s, 14, args);
+                testPassed = strfind(name(profIter),'Passed');
+                if (cellfun('isempty', testPassed))
+                    numFailures = numFailures + 1;
+                    fprintf('\n******TEST ERROR DETECTED*****\n');
+                    %err = MException('Test:Failure', 'The operation did not complete as expected');
+                    %throw(err);
+                end
                 avgData = mean(data, 3);
                 sweepIter = sweepIter + 1;
             catch
@@ -32,6 +40,7 @@ function [name, chans, data, time] = runTest14(CommPort, baudRate, numSweeps, te
                            profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time')
         testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testLen/1000);
-        profIter = profIter + 2;
+        %profIter = profIter + 2;
+        profIter = profIter + 5;  % skipping the low power test now
     end
 end
