@@ -8,6 +8,7 @@
 #include "powercon.h"
 #include "sdcard.h"
 #include "m25px.h"
+#include "plr5010d.h"
 #include "spi.h"
 #include "time.h"
 #include "util.h"
@@ -175,8 +176,6 @@ void Tests_init(void)
   sTests.adc2.pSampleBuffer        = &GPSDRAM->samples[1][0];
   sTests.adc3.pSampleBuffer        = &GPSDRAM->samples[2][0];
   sTests.periphState.pSampleBuffer = &GPSDRAM->samples[3][0];
-  //memset(&GPSDRAM->samples, 0x00, sizeof(GPSDRAM->samples));
-  ExtUSB_flushRxBuffer();
 }
 
 /**************************************************************************************************\
@@ -240,6 +239,7 @@ uint8 Tests_getTestToRun(void)
   const uint32 MIN_PACKET_SIZE = 8;
   boolean hasValidPacket = FALSE;
   uint32 size, testToRun = 0, argLen = 0;
+  ExtUSB_flushRxBuffer();
   
   do
   {
@@ -519,19 +519,16 @@ bool Tests_sendBinaryResults(Samples *adcBuffer)
 \**************************************************************************************************/
 static void Tests_setupSPITests(Device device, TestArgs *pArgs)
 {
-  uint32_t numSamps = pArgs->testLen / pArgs->sampRate;
+  uint32_t numSamps = (pArgs->preTestDelay + pArgs->testLen + pArgs->postTestDelay)/pArgs->sampRate;
   
   // Match the continuously variable domain (CVD) to the MCU domain voltage:
-  //PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, Analog_getADCVoltage(ADC_DOM0_VOLTAGE));
-  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 3.3);
-  
+  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 10));
   // Place every device other than the DUT into the MCU domain. Place the DUT in the CVD:
   uint32_t i;
   for (i = 0; i < DEVICE_MAX; i++)
     PowerCon_setDeviceDomain((Device)i, VOLTAGE_DOMAIN_0);
   PowerCon_setDeviceDomain(device, VOLTAGE_DOMAIN_2);
-  
-  Time_delay(50000);  // wait 50ms for the domains to settle
+//  Time_delay(50000);  // wait 50ms for the domains to settle
   
   // Prepare data structures for retrieval
   sTests.testHeader.timeScale    = pArgs->sampRate; // in microseconds
@@ -758,7 +755,7 @@ static void Tests_teardownSPITests(TestArgs *pArgs, boolean testPassed)
 
 /**************************************************************************************************\
 * FUNCTION    Tests_test0
-* DESCRIPTION Tests the enabling and disabling of the ENERGY_DOMAIN
+* DESCRIPTION 
 * PARAMETERS  None
 * RETURNS     Nothing
 * NOTES       None
@@ -770,33 +767,42 @@ uint16 Tests_test00(TestArgs *pArgs)
 
 /**************************************************************************************************\
 * FUNCTION    Tests_test1
-* DESCRIPTION
+* DESCRIPTION Takes as an input the current and voltage of DOM2, provides the input/output current
 * PARAMETERS  None
 * RETURNS     Nothing
 * NOTES       Basic sampling test based on pushbutton switches
 \**************************************************************************************************/
 uint16 Tests_test01(TestArgs *pArgs)
-{/*
-  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,  FALSE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,    FALSE, 3.3);  // Set domain voltage to nominal (3.25V)
-  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-
-  while(1)
+{
+  double testOutVoltage = *(double *)&pArgs->buf[0];       // The output voltage
+  double testOutCurrent = (*(double *)&pArgs->buf[8]) / 2; // The output current (per channel)
+  uint32_t numAvgs      = *(uint32_t *)&pArgs->buf[16];    // Number of DUT measurement averages
+  bool result = true;
+  
+  // Assume all devices are on the MCU domain and set the output voltage
+  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, testOutVoltage);
+  result = PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM2_OUTCURRENT, testOutCurrent);
+  double domVolts = 0.0;
+  double inCurrent = 0.0;
+  double outCurrent = 0.0;
+  uint32_t i;
+  for (i = 0; i < numAvgs; i++)
   {
-    Time_delay(1000000);
-    Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);
-    Time_delay(1000000);
-    Analog_setDomain(ENERGY_DOMAIN, TRUE, 3.3);
-    Util_spinWait(2000000);
-    while ((GPIOC->IDR & 0x00008000) && (GPIOC->IDR & 0x00004000) && (GPIOC->IDR & 0x00002000));
-    Analog_testAnalog();
-  }*/
-  return SUCCESS;
+    domVolts   += Analog_getADCVoltage(ADC_DOM2_VOLTAGE, 10);
+    inCurrent  += Analog_getADCCurrent(ADC_DOM2_INCURRENT, 10);
+    outCurrent += Analog_getADCCurrent(ADC_DOM2_OUTCURRENT, 10);
+  }
+  // Turn off the sink so we don't accidentally leave a huge draw on the system...
+  result = PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM2_OUTCURRENT, 0.0);
+  domVolts   /= numAvgs;
+  inCurrent  /= numAvgs;
+  outCurrent /= numAvgs;
+  
+  ExtUSB_tx((uint8_t *)&domVolts, sizeof(domVolts));
+  ExtUSB_tx((uint8_t *)&inCurrent, sizeof(inCurrent));
+  ExtUSB_tx((uint8_t *)&outCurrent, sizeof(outCurrent));
+  
+  return (result == true) ? SUCCESS : ERROR;
 }
 
 /**************************************************************************************************\
@@ -807,13 +813,7 @@ uint16 Tests_test01(TestArgs *pArgs)
 * NOTES       Testing DAC output on port 2
 \**************************************************************************************************/
 uint16 Tests_test02(TestArgs *pArgs)
-{/*
-  float outVolts;
-  while(1)
-  {
-    for (outVolts=0.0; outVolts < 3.3; outVolts+=.001)
-      DAC_setVoltage(DAC_PORT2, outVolts);
-  }*/
+{
   return SUCCESS;
 }
 
@@ -825,32 +825,7 @@ uint16 Tests_test02(TestArgs *pArgs)
 * NOTES       This test attempts to
 \**************************************************************************************************/
 uint16 Tests_test03(TestArgs *pArgs)
-{/*
-  uint32 i;
-  // All pins connected to this domain set to inputs to prevent leakage
-  HIH613X_setup(FALSE);
-  EEPROM_setup(FALSE);
-  SerialFlash_setup(FALSE);
-
-  Tests_setupSPITests(EE_CHANNEL_OVERLOAD, 6000, 3.3); // 100us sample rate
-
-  Util_spinWait(1000000);  // Adjusting the graph so as to have a distinct beginning of the test
-  for (i = 3300; i > 0; i--)
-  {
-    Analog_setDomain(SPI_DOMAIN, TRUE, (double)i / 1000.0);
-    Util_spinWait(1000);
-  }
-  for (i = 0; i < 3300; i++)
-  {
-    Analog_setDomain(SPI_DOMAIN, TRUE, (double)i / 1000.0);
-    Util_spinWait(1000);
-  }
-
-  // Complete the samples
-  while(sTests.adc1.isSampling || sTests.adc2.isSampling || sTests.adc3.isSampling);
-
-  Tests_teardownSPITests(TRUE);
-*/
+{
   return SUCCESS;
 }
 
@@ -862,26 +837,7 @@ uint16 Tests_test03(TestArgs *pArgs)
 * NOTES       Tests writing to EEPROM
 \**************************************************************************************************/
 uint16 Tests_test04(TestArgs *pArgs)
-{/*
-  uint8 txBuffer[128];
-  uint8 rxBuffer[128];
-
-  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,   TRUE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
-  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_delay(1000000); // Wait 1000ms for domains to settle
-
-  Util_fillMemory(txBuffer, sizeof(txBuffer), 0x5A);
-  EEPROM_write(txBuffer, 0, sizeof(txBuffer));
-
-  Util_fillMemory(rxBuffer, sizeof(rxBuffer), 0x00);
-  EEPROM_read(0, rxBuffer, sizeof(rxBuffer));
-*/
+{
   return SUCCESS;
 }
 
@@ -893,26 +849,7 @@ uint16 Tests_test04(TestArgs *pArgs)
 * NOTES       Tests writing to Serial Flash
 \**************************************************************************************************/
 uint16 Tests_test05(TestArgs *pArgs)
-{/*
-  uint8 txBuffer[128];
-  uint8 rxBuffer[128];
-
-  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,   TRUE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
-  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_delay(1000000); // Wait 1000ms for domains to settle
-
-  Util_fillMemory(txBuffer, sizeof(txBuffer), 0x5A);
-  SerialFlash_write(txBuffer, 0, sizeof(txBuffer));
-
-  Util_fillMemory(rxBuffer, sizeof(rxBuffer), 0x00);
-  SerialFlash_read(0, rxBuffer, sizeof(rxBuffer));
-*/
+{
   return SUCCESS;
 }
 
@@ -924,28 +861,7 @@ uint16 Tests_test05(TestArgs *pArgs)
 * NOTES       Tests writing to the SDCard
 \**************************************************************************************************/
 uint16 Tests_test06(TestArgs *pArgs)
-{/*
-  uint8 txBuffer[128];
-  uint8 rxBuffer[128];
-
-  Analog_setDomain(MCU_DOMAIN,    FALSE, 3.3);  // Does nothing
-  Analog_setDomain(ANALOG_DOMAIN,  TRUE, 3.3);  // Enable analog domain
-  Analog_setDomain(IO_DOMAIN,      TRUE, 3.3);  // Enable I/O domain
-  Analog_setDomain(COMMS_DOMAIN,   TRUE, 3.3);  // Disable comms domain
-  Analog_setDomain(SRAM_DOMAIN,   FALSE, 3.3);  // Disable sram domain
-  Analog_setDomain(SPI_DOMAIN,     TRUE, 3.3);  // Set domain voltage to nominal (3.25V)
-  Analog_setDomain(ENERGY_DOMAIN, FALSE, 3.3);  // Disable energy domain
-  Analog_setDomain(BUCK_DOMAIN7,  FALSE, 3.3);  // Disable relay domain
-  Time_delay(1000000); // Wait 1000ms for domains to settle
-
-  SDCard_initDisk();
-
-  Util_fillMemory(txBuffer, sizeof(txBuffer), 0x5A);
-  SDCard_write(txBuffer, 0, sizeof(txBuffer));
-
-  Util_fillMemory(rxBuffer, sizeof(rxBuffer), 0x00);
-  SDCard_read(0, rxBuffer, sizeof(rxBuffer));
-*/
+{
   return SUCCESS;
 }
 
@@ -1028,7 +944,9 @@ uint16 Tests_test12(TestArgs *pArgs)
   M25PX_setPowerProfile((M25PXPowerProfile)pArgs->profile);
 
   Tests_setupSPITests(DEVICE_NORFLASH, pArgs);
-  M25PXResult result = M25PX_write(pArgs->buf, pArgs->pDst, pArgs->len, pArgs->opDelay[0], pArgs->opDelay[1]);
+  M25PXResult result = M25PX_write(pArgs->buf, pArgs->pDst, pArgs->len, 
+                                                            pArgs->opDelay[0],  // erase delay
+                                                            pArgs->opDelay[1]); // page write delay
   Tests_teardownSPITests(pArgs, (M25PX_RESULT_OK == result));
 
   return (M25PX_RESULT_OK == result);
@@ -1048,9 +966,9 @@ uint16 Tests_test13(TestArgs *pArgs)
   uint8 i;
   for (i = 0; i < 5; i++)
   {
-    Time_delay(300000);
     if (SDCard_initDisk())  // disk must be initialized before we can test writes to it
       break;
+    Time_delay(300000);
   }
   
   Tests_setupSPITests(DEVICE_SDCARD, pArgs);

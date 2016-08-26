@@ -309,7 +309,7 @@ uint16_t Analog_getADCVal(ADCSelect adc)
   ADC_ChannelConfTypeDef sConfig;
   sConfig.Rank = 1;
   sConfig.Channel = Analog_getChannelNumber(adc);
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;
   HAL_ADC_ConfigChannel(hadc, &sConfig);
   
   HAL_ADC_Start(hadc);
@@ -323,14 +323,18 @@ uint16_t Analog_getADCVal(ADCSelect adc)
 * PARAMETERS  
 * RETURNS     
 \**************************************************************************************************/
-double Analog_getADCVoltage(ADCSelect adc)
+double Analog_getADCVoltage(ADCSelect adc, uint32_t numSamps)
 {
   const double refVoltage = 1.21;
-  uint16_t refCode = Analog_getADCVal(ADC_VREF_INTERNAL);
-  uint16_t domCode = Analog_getADCVal(adc);
+  uint32_t i = 0, refCode = 0, domCode = 0;
+  for (i = 0; i < numSamps; i++)
+  {
+    refCode += Analog_getADCVal(ADC_VREF_INTERNAL);
+    domCode += Analog_getADCVal(adc);
+  }
   if ((ADC_DOM0_VOLTAGE == adc) || (ADC_DOM1_VOLTAGE == adc) || (ADC_DOM2_VOLTAGE == adc))
     domCode <<= 1;  // Domain voltages are divided by two before the ADC. Compensate here.
-  return (refVoltage / (double)refCode) * (double)domCode;
+  return (refVoltage * ((double)domCode / (double)refCode));
 }
 
 /**************************************************************************************************\
@@ -339,11 +343,9 @@ double Analog_getADCVoltage(ADCSelect adc)
 * PARAMETERS  
 * RETURNS     The value of the current channel in mA
 \**************************************************************************************************/
-double Analog_getADCCurrent(ADCSelect adc)
+double Analog_getADCCurrent(ADCSelect adc, const uint32_t numSamps)
 {
-  double volts = Analog_getADCVoltage(adc); // I = (V/R) / Gain
-  double current = ((volts / 0.1) / 100) * 1000;
-  return current;
+  return ((Analog_getADCVoltage(adc, numSamps) / 0.1) / 100) * 1000;  // I = (V/R) / Gain
 }
 
 /**************************************************************************************************\

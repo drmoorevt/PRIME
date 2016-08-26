@@ -156,6 +156,8 @@ void Main_printResult(uint32_t yPos, bool result)
 
 int main(void)
 {
+  bool runPOST = false;
+  
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
@@ -205,100 +207,107 @@ int main(void)
   //ESP12_init(&huart1);
   HIH613X_init();
   M25PX_init();
+  PLR5010D_init();
   //SBT263_init(&huart5);
   //SST26_init();
   SDCard_init();
   //SI114X_init();
 
-  /*
-  BSP_LED_On(LED3);
-  BSP_LED_On(LED4);
-
-  BSP_LCD_LayerDefaultInit(0, LCD_FRAME_BUFFER);  // Initialize the LCD Layers
-  Display_DemoDescription();                      // Display test information
-  
-  BSP_LCD_DisplayStringAt(0, 60,  sdramTest, LEFT_MODE);
-  sMain.ramTest       = ExtMem_testSDRAM();
-  Main_printResult(60, sMain.ramTest);
-  
-  BSP_LCD_DisplayStringAt(0, 75,  vdom0Test, LEFT_MODE);
-  sMain.vDomain0Test  = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_0);
-  Main_printResult(75, sMain.vDomain0Test);
-  
-  BSP_LCD_DisplayStringAt(0, 90,  vdom1Test, LEFT_MODE);
-  sMain.vDomain1Test  = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_1);
-  Main_printResult(90, sMain.vDomain1Test);
-  
-  BSP_LCD_DisplayStringAt(0, 105,  vdom2Test, LEFT_MODE);
-  sMain.vDomain2Test  = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_2);
-  Main_printResult(105, sMain.vDomain2Test);
-  
-  BSP_LCD_DisplayStringAt(0, 120,  eeTest, LEFT_MODE);
-  sMain.eepromTest    = EEPROM_test();
-  Main_printResult(120, sMain.eepromTest);
-  
-  BSP_LCD_DisplayStringAt(0, 135,  norTest, LEFT_MODE);
-  sMain.norFlashTest  = M25PX_test();
-  Main_printResult(135, sMain.norFlashTest);
-  
-  BSP_LCD_DisplayStringAt(0, 150,  nandTest, LEFT_MODE);
-  sMain.nandFlashTest = SST26_test();
-  Main_printResult(150, sMain.nandFlashTest);
-  
-  BSP_LCD_DisplayStringAt(0, 165,  sdTest, LEFT_MODE);
-  sMain.sdCardTest = SDCard_test();
-  Main_printResult(165, sMain.sdCardTest);
-  
-  BSP_LCD_DisplayStringAt(0, 180,  siTest, LEFT_MODE);
-  sMain.si114xTest = SI114X_test();
-  Main_printResult(180, sMain.si114xTest);
-  
-  BSP_LCD_DisplayStringAt(0, 195,  hihTest, LEFT_MODE);
-  sMain.hih6130Test = HIH613X_test();
-  Main_printResult(195, sMain.hih6130Test);
-  
-  BSP_LCD_DisplayStringAt(0, 210,  usbTest, LEFT_MODE);
-  sMain.usbTest       = ExtUSB_testUSB();
-  Main_printResult(210, sMain.usbTest);
-  
-  BSP_LCD_DisplayStringAt(0, 225,  btTest, LEFT_MODE);
-  sMain.bluetoothTest = SBT263_test();
-  Main_printResult(225, sMain.bluetoothTest);
-  
-  BSP_LCD_DisplayStringAt(0, 240,  wifiTest, LEFT_MODE);
-  sMain.wifiTest = ESP12_test();
-  Main_printResult(240, sMain.wifiTest);
-    
-  BSP_LCD_DisplayStringAt(0, 255,  plr0Test, LEFT_MODE);
-  sMain.plr5010d0Test = PLR5010D_test(PLR5010D_DOMAIN0);
-  Main_printResult(255, sMain.plr5010d0Test);
-  
-  BSP_LCD_DisplayStringAt(0, 270,  plr1Test, LEFT_MODE);
-  sMain.plr5010d1Test = PLR5010D_test(PLR5010D_DOMAIN1);
-  Main_printResult(270, sMain.plr5010d1Test);
-  
-  BSP_LCD_DisplayStringAt(0, 285,  plr2Test, LEFT_MODE);
-  sMain.plr5010d2Test = PLR5010D_test(PLR5010D_DOMAIN2);
-  Main_printResult(285, sMain.plr5010d2Test);
-  
-  if (sMain.bluetoothTest && sMain.eepromTest    && sMain.hih6130Test   &&sMain.nandFlashTest  &&
-      sMain.norFlashTest  && sMain.plr5010d0Test && sMain.plr5010d1Test && sMain.plr5010d2Test &&
-      sMain.ramTest       && sMain.sdCardTest    && sMain.sdCardTest    && sMain.si114xTest    && 
-      sMain.usbTest       && sMain.vDomain0Test  && sMain.vDomain1Test  && sMain.vDomain2Test  &&
-      sMain.wifiTest)
+  if (runPOST)
   {
-    BSP_LCD_DisplayStringAt(0, 300,  "all systems go...", CENTER_MODE);
+    BSP_LED_On(LED3);
+    BSP_LED_On(LED4);
+  
+    BSP_LCD_LayerDefaultInit(0, LCD_FRAME_BUFFER);  // Initialize the LCD Layers
+    Display_DemoDescription();                      // Display test information
+    
+    BSP_LCD_DisplayStringAt(0, 60,  sdramTest, LEFT_MODE);
+    sMain.ramTest       = ExtMem_testSDRAM();
+    Main_printResult(60, sMain.ramTest);
+    
+    BSP_LCD_DisplayStringAt(0, 75,  vdom0Test, LEFT_MODE);
+    sMain.vDomain0Test  = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_0);
+    Main_printResult(75, sMain.vDomain0Test);
+    
+    BSP_LCD_DisplayStringAt(0, 90,  vdom1Test, LEFT_MODE);
+    sMain.vDomain1Test  = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_1);
+    Main_printResult(90, sMain.vDomain1Test);
+    
+    BSP_LCD_DisplayStringAt(0, 105,  vdom2Test, LEFT_MODE);
+    sMain.vDomain2Test  = PowerCon_powerSupplyPOST(VOLTAGE_DOMAIN_2);
+    Main_printResult(105, sMain.vDomain2Test);
+    
+    BSP_LCD_DisplayStringAt(0, 120,  eeTest, LEFT_MODE);
+    sMain.eepromTest    = EEPROM_test();
+    Main_printResult(120, sMain.eepromTest);
+    
+    BSP_LCD_DisplayStringAt(0, 135,  norTest, LEFT_MODE);
+    sMain.norFlashTest  = M25PX_test();
+    Main_printResult(135, sMain.norFlashTest);
+    
+    BSP_LCD_DisplayStringAt(0, 150,  nandTest, LEFT_MODE);
+    sMain.nandFlashTest = SST26_test();
+    Main_printResult(150, sMain.nandFlashTest);
+    
+    BSP_LCD_DisplayStringAt(0, 165,  sdTest, LEFT_MODE);
+    sMain.sdCardTest = SDCard_test();
+    Main_printResult(165, sMain.sdCardTest);
+    
+    BSP_LCD_DisplayStringAt(0, 180,  siTest, LEFT_MODE);
+    sMain.si114xTest = SI114X_test();
+    Main_printResult(180, sMain.si114xTest);
+    
+    BSP_LCD_DisplayStringAt(0, 195,  hihTest, LEFT_MODE);
+    sMain.hih6130Test = HIH613X_test();
+    Main_printResult(195, sMain.hih6130Test);
+    
+    BSP_LCD_DisplayStringAt(0, 210,  usbTest, LEFT_MODE);
+    sMain.usbTest       = ExtUSB_testUSB();
+    Main_printResult(210, sMain.usbTest);
+    
+    BSP_LCD_DisplayStringAt(0, 225,  btTest, LEFT_MODE);
+    sMain.bluetoothTest = SBT263_test();
+    Main_printResult(225, sMain.bluetoothTest);
+    
+    BSP_LCD_DisplayStringAt(0, 240,  wifiTest, LEFT_MODE);
+    sMain.wifiTest = ESP12_test();
+    Main_printResult(240, sMain.wifiTest);
+      
+    BSP_LCD_DisplayStringAt(0, 255,  plr0Test, LEFT_MODE);
+    sMain.plr5010d0Test = PLR5010D_test(PLR5010D_DOMAIN0);
+    Main_printResult(255, sMain.plr5010d0Test);
+    
+    BSP_LCD_DisplayStringAt(0, 270,  plr1Test, LEFT_MODE);
+    sMain.plr5010d1Test = PLR5010D_test(PLR5010D_DOMAIN1);
+    Main_printResult(270, sMain.plr5010d1Test);
+    
+    BSP_LCD_DisplayStringAt(0, 285,  plr2Test, LEFT_MODE);
+    sMain.plr5010d2Test = PLR5010D_test(PLR5010D_DOMAIN2);
+    Main_printResult(285, sMain.plr5010d2Test);
+    
+    if (sMain.bluetoothTest && sMain.eepromTest    && sMain.hih6130Test   &&sMain.nandFlashTest  &&
+        sMain.norFlashTest  && sMain.plr5010d0Test && sMain.plr5010d1Test && sMain.plr5010d2Test &&
+        sMain.ramTest       && sMain.sdCardTest    && sMain.sdCardTest    && sMain.si114xTest    && 
+        sMain.usbTest       && sMain.vDomain0Test  && sMain.vDomain1Test  && sMain.vDomain2Test  &&
+        sMain.wifiTest)
+    {
+      BSP_LCD_DisplayStringAt(0, 300,  "all systems go...", CENTER_MODE);
+    }
+    else
+      BSP_LCD_DisplayStringAt(0, 300,  "an error was reported...", CENTER_MODE);
   }
-  else
-    BSP_LCD_DisplayStringAt(0, 300,  "an error was reported...", CENTER_MODE);
-*/
-  // Disable all interrupts (except for the adc trigger which will be enabled last)
-//  uint32_t i;
-//  DISABLE_SYSTICK_INTERRUPT();
-//  for (i = 0; i <= DMA2D_IRQn; i++)
-//    NVIC_DisableIRQ((IRQn_Type)i);
-//  Analog_startSampleTimer(1);
-//  while(1);
+
+  while (1)
+  {
+  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 1.8);
+  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
+  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 2.3);
+  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
+  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 2.8);
+  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
+  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 3.3);
+  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
+  }
   
   while(1)
   {

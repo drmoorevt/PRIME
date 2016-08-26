@@ -166,7 +166,7 @@ bool PowerCon_powerSupplyPOST(VoltageDomain domain)
   {
     PowerCon_setDomainVoltage(domain, pTestArray[i]);
     HAL_Delay(100);
-    domVolts = Analog_getADCVoltage(chanNum) * DOMAIN_VOLTAGE_DIVIDER;
+    domVolts = Analog_getADCVoltage(chanNum, 10) * DOMAIN_VOLTAGE_DIVIDER;
     loVolts = (0.90)*(pTestArray[i]);
     hiVolts = (1.10)*(pTestArray[i]);
     if ((domVolts > hiVolts) || (domVolts < loVolts))

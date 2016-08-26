@@ -21,8 +21,8 @@ typedef enum
 
 bool Analog_init(void);
 uint16_t Analog_getADCVal(ADCSelect adc);
-double Analog_getADCVoltage(ADCSelect adc);
-double Analog_getADCCurrent(ADCSelect adc);
+double Analog_getADCVoltage(ADCSelect adc, uint32_t numSamps);
+double Analog_getADCCurrent(ADCSelect adc, const uint32_t numSamps);
 
 typedef enum
 {

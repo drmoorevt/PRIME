@@ -28,6 +28,7 @@ typedef enum
   POWER_CONTROL_DACX           = 0x4,
   POWER_ON_RESET               = 0x5,
   LDAC_CONTROL                 = 0x6,
+  REFERENCE_CONTROL            = 0x7,
 } DAC856XCmd;
 
 typedef enum
@@ -56,17 +57,6 @@ static struct
     uint8_t txBuf[3];
   };
 } sPLR5010D;
-
-/**************************************************************************************************\
-* FUNCTION    PLR5010D_init
-* DESCRIPTION 
-* PARAMETERS  None
-* RETURNS     Nothing
-\**************************************************************************************************/
-bool PLR5010D_init(void)
-{ 
-  return TRUE;
-}
 
 /**************************************************************************************************\
 * FUNCTION    PLR5010D_clearAllDevices
@@ -117,60 +107,120 @@ void PLR5010D_spiSend(PLR5010DSelect device, uint8_t *pBytes, uint32_t len)
 }
 
 /**************************************************************************************************\
+* FUNCTION    PLR5010D_setConfig
+* DESCRIPTION 
+* PARAMETERS  None
+* RETURNS     Nothing
+\**************************************************************************************************/
+bool PLR5010D_setConfig(PLR5010DSelect device)
+{
+  sPLR5010D.cmd.command = REFERENCE_CONTROL;  // Make sure the external reference is used
+  sPLR5010D.cmd.address = 0;
+  sPLR5010D.cmd.data = 0;
+  PLR5010D_spiSend(device, sPLR5010D.txBuf, 3);
+  
+  sPLR5010D.cmd.command = WRITE_DACX_INREG;  // Make sure the gain is 1
+  sPLR5010D.cmd.address = 2;
+  sPLR5010D.cmd.data = (3 << 8);
+  PLR5010D_spiSend(device, sPLR5010D.txBuf, 3);
+  return true;
+}
+
+/**************************************************************************************************\
+* FUNCTION    PLR5010D_init
+* DESCRIPTION 
+* PARAMETERS  None
+* RETURNS     Nothing
+\**************************************************************************************************/
+bool PLR5010D_init(void)
+{
+  PLR5010D_clearAllDevices();
+  PLR5010D_setConfig(PLR5010D_DOMAIN0);
+  PLR5010D_setConfig(PLR5010D_DOMAIN1);
+  PLR5010D_setConfig(PLR5010D_DOMAIN2);
+  return TRUE;
+}
+
+/**************************************************************************************************\
 * FUNCTION    PLR5010D_setVoltage
 * DESCRIPTION 
 * PARAMETERS  None
 * RETURNS     Nothing
 \**************************************************************************************************/
-bool PLR5010D_setVoltage(PLR5010DSelect device, PLR5010DChannel chan, double volts)
+bool PLR5010D_setVoltage(PLR5010DSelect device, PLR5010DChannel chan, uint16_t voltCode)
 {
   switch (chan)
   {
-    case PLR5010D_CHANA: sPLR5010D.cmd.address = DAC_A; break;
-    case PLR5010D_CHANB: sPLR5010D.cmd.address = DAC_B; break;
+    case PLR5010D_CHANA:     sPLR5010D.cmd.address = DAC_A;   break;
+    case PLR5010D_CHANB:     sPLR5010D.cmd.address = DAC_B;   break;
+    case PLR5010D_CHAN_BOTH: sPLR5010D.cmd.address = DAC_ALL; break;
     default: return false;
   }
   sPLR5010D.cmd.command = WRITE_DACX_INREG_UPDATE_DACX;
-  sPLR5010D.cmd.data = (volts/3.3)*65535;
-  sPLR5010D.cmd.data = (sPLR5010D.cmd.data >> 8) + (sPLR5010D.cmd.data << 8);
+  sPLR5010D.cmd.data = (voltCode >> 8) + (voltCode << 8);
   PLR5010D_spiSend(device, sPLR5010D.txBuf, 3);
   return TRUE;
 }
 
 /**************************************************************************************************\
 * FUNCTION    PLR5010D_setCurrent
-* DESCRIPTION 
+* DESCRIPTION Sets the current sink of the PLR5010D in mA
 * PARAMETERS  None
 * RETURNS     Nothing
+* NOTES       Linearization: I = [.001733*(Vcc - 1.8)*Vbjt + .0449] - [.0151 - (Vcc - 1.8)*.004867]
+*             Therefore   Vbjt = [[.0151 - (Vcc - 1.8)*.004867] - .0449] / [.001733*(Vcc - 1.8)]
+*                              = (current + .0151 - .004867*(Vcc - 1.8)) / (.001733*(Vcc - 1.8) + .0449)
 \**************************************************************************************************/
 bool PLR5010D_setCurrent(PLR5010DSelect device, PLR5010DChannel chan, ADCSelect adc, double current)
-{
-  double loCurrent  = current * .95;
-  double hiCurrent  = current * 1.05;
-  double maxCurrent = current * 1.25;
-  double i, initCurrent, actCurrent;
-  
-  PLR5010D_setVoltage(device, chan, 0.0);
-  HAL_Delay(1);
-  initCurrent = Analog_getADCCurrent(adc);
-  loCurrent  += initCurrent;
-  hiCurrent  += initCurrent;
-  maxCurrent += initCurrent;
-  
-  for (i = 0; i < 3.3; i += .010)
+{ 
+  #define MAX_CURRENT  (275.0)
+  #define EXPECTED_ERROR (0.050)  // Allow 50uA from ideal current
+  double domVoltage, refVoltage, bjtVoltage, initCurrent, actCurrent;
+  PLR5010D_setVoltage(device, chan, 0);  // Turn off this channel to capture initialCurrent
+  initCurrent = Analog_getADCCurrent(adc, 10);
+  if (current < EXPECTED_ERROR)
+    return true;
+  double loCurrent = MAX(current - EXPECTED_ERROR,           0) + initCurrent;
+  double hiCurrent = MIN(current + EXPECTED_ERROR, MAX_CURRENT) + initCurrent;
+  if (PLR5010D_CHAN_BOTH == chan)  // If we're setting both channels, double the expected current
   {
-    actCurrent = Analog_getADCCurrent(adc);
-    PLR5010D_setVoltage(device, chan, i);
-    if ((actCurrent > loCurrent) && (actCurrent < hiCurrent))
-      return true;
-    if (actCurrent > maxCurrent)
-      return false;
+    loCurrent *= 2;
+    hiCurrent *= 2;
   }
-  return false;
+  
+  // Start with the best guess based on linearization
+  switch (device)
+  {
+    case PLR5010D_DOMAIN0: domVoltage = Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 10); break;
+    case PLR5010D_DOMAIN1: domVoltage = Analog_getADCVoltage(ADC_DOM1_VOLTAGE, 10); break;
+    case PLR5010D_DOMAIN2: domVoltage = Analog_getADCVoltage(ADC_DOM2_VOLTAGE, 10); break;
+    default: return false;
+  }
+  refVoltage = Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 10);
+  bjtVoltage = (current/1000 + .0151 - .004867*(domVoltage - 1.8)) / 
+                      (.001733*(domVoltage - 1.8) + .0449);
+  
+  do
+  {
+    PLR5010D_setVoltage(device, chan, MIN((uint16_t)(65535.0 * bjtVoltage / refVoltage), 65535));
+    actCurrent = Analog_getADCCurrent(adc, 10);
+    if (actCurrent > hiCurrent)
+    {  // Actual current is more than requested current, lower bjtVoltage by the % difference
+      bjtVoltage = bjtVoltage * (loCurrent / actCurrent);
+      //bjtVoltage = bjtVoltage - 10/65535.0;
+    }
+    else if (actCurrent < loCurrent)
+    {  // Actual current is less than requested current, raise bjtVoltage by the % difference
+      bjtVoltage = bjtVoltage * (hiCurrent / actCurrent);
+      //bjtVoltage = bjtVoltage + 10/65535.0;
+    }
+  } while ((actCurrent > hiCurrent) || (actCurrent < loCurrent));
+  
+  return true;
 }
 
 /**************************************************************************************************\
-* FUNCTION    PLR5010D_setVoltage
+* FUNCTION    PLR5010D_test
 * DESCRIPTION 
 * PARAMETERS  None
 * RETURNS     Nothing
@@ -201,11 +251,11 @@ bool PLR5010D_test(PLR5010DSelect device)
       default: return false;
     }
     
-    initialOutCurrent = Analog_getADCCurrent(outCurrentADC);
+    initialOutCurrent = Analog_getADCCurrent(outCurrentADC, 10);
     PLR5010D_setCurrent(device, PLR5010D_CHANA, outCurrentADC, 50);
     PLR5010D_setCurrent(device, PLR5010D_CHANB, outCurrentADC, 50);
     HAL_Delay(1);
-    testOutCurrent = Analog_getADCCurrent(outCurrentADC);
+    testOutCurrent = Analog_getADCCurrent(outCurrentADC, 10);
     
     PLR5010D_clearAllDevices();
     
