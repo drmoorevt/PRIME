@@ -21,7 +21,7 @@ function [name, chans, data, time] = TestConsole(CommPort)
         end
     end
 
-    numSweeps = 20;
+    numSweeps = 100;
     eeFails = 0;
     sfFails = 0;
     sdFails = 0;
