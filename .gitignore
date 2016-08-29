@@ -40,3 +40,5 @@
 /Firmware/PRIMEorg
 *.project
 *.cproject
+/Software/RetrieveTestData/results/*.mat
+/Software/RetrieveTestData/*.fig
