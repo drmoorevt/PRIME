@@ -313,8 +313,10 @@ uint16_t Analog_getADCVal(ADCSelect adc)
   HAL_ADC_ConfigChannel(hadc, &sConfig);
   
   HAL_ADC_Start(hadc);
-  HAL_Delay(1);
-  return HAL_ADC_GetValue(hadc);
+  if (HAL_OK == HAL_ADC_PollForConversion(hadc, 10))
+    return HAL_ADC_GetValue(hadc);
+  else
+    return 0;
 }
 
 /**************************************************************************************************\
