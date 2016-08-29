@@ -188,33 +188,11 @@ void Tests_init(void)
 \**************************************************************************************************/
 void Tests_receiveData(uint32 numBytes, uint32 timeout)
 {
-  /* The following spiVoltage variable and code executed while waiting for bytes allows the user to
-     adjust the SPI voltage up, down and centered about 3.3V by pressing the push-buttons. This is
-     really only applicable after startup and while waiting for tests to begin -- DON'T HOLD BUTTONS
-     DURING TESTS */
-//  static double spiVoltage = 3.22734099999;
-  
   sTests.comms.receiving = TRUE;
   sTests.comms.rxTimeout = FALSE;
   sTests.comms.bytesToReceive = numBytes;
   //ExtUSB_flushRxBuffer();
   sTests.comms.bytesReceived = ExtUSB_rx((uint8_t *)&sTests.comms.rxBuffer, numBytes, timeout);
-//  while(sTests.comms.receiving)
-//  {
-//    if ((GPIOC->IDR & 0x0000E000) != 0x0000E000)
-//    {
-//      Time_delay(100);
-//      if (!(GPIOC->IDR & 0x00008000))
-//        spiVoltage -= 0.000001;
-//      if (!(GPIOC->IDR & 0x00004000))
-//        spiVoltage  = 3.3000000;
-//      if (!(GPIOC->IDR & 0x00002000))
-//        spiVoltage += 0.000001;
-//      //Analog_setDomain(SPI_DOMAIN, TRUE, spiVoltage);
-//      sprintf((char *)&sTests.comms.txBuffer[0], "%f\r\n", spiVoltage);
-//      Tests_sendData(10);
-//    }
-//  }
 }
 
 /**************************************************************************************************\
@@ -355,39 +333,23 @@ void Tests_runTest14(void)
  \*************************************************************************************************/
 void Tests_run(void)
 {
-  //while(1)
-  //{
-  //  sTests.testArgs.test11Args.commonArgs.preTestDelayUs  = 1000;
-  //  sTests.testArgs.test11Args.commonArgs.sampleRate      = 1;
-  //  sTests.testArgs.test11Args.commonArgs.postTestDelayUs = 1000;
-  //  sTests.testArgs.test11Args.profile = EEPROM_PROFILE_STANDARD;
-  //  Util_fillMemory(sTests.testArgs.test11Args.writeBuffer, 64, 0xAA);
-  //  sTests.testArgs.test11Args.pDest = 0;
-  //  sTests.testArgs.test11Args.writeLength = 128;
-  //  memset(sTests.adc1.pSampleBuffer, 0x00, 200000);
-  //  memset(sTests.adc2.pSampleBuffer, 0x00, 200000);
-  //  memset(sTests.adc3.pSampleBuffer, 0x00, 200000);
-  //  Tests_test11(&sTests.testArgs);
-  //  Time_delay(1000*1000*1); // Delay 1 second
-  //}
+  /*
+  double args[3] = {3.3, 100, 1};
+  uint32_t numAvgs = 10;
+  memcpy(&args[2], &numAvgs, sizeof(numAvgs));
+  while (1)
+  {
+    for (args[0] = 1.8; args[0] < 3.31; args[0] = args[0] + .1)
+    {
+      for (args[1] = 0; args[1] < 250; args[1] = args[1] + 10)
+      {
+        memcpy(sTests.testArgs.buf, args, sizeof(args));
+        Tests_test01(&sTests.testArgs);
+      }
+    }
+  }
+  */
   
-  //while(1)
-  //{
-  //  Tests_receiveData(1, 1000);
-  //  if (sTests.comms.bytesReceived > 0)
-  //  {
-  //    sTests.comms.txBuffer[0] = sTests.comms.rxBuffer[0];
-  //    Tests_sendData(1);
-  //  }
-  //}
-  //Util_copyMemory(&runMessage[0], &sTests.comms.txBuffer[0], sizeof(runMessage));
-  //while (1)
-  //{
-  //  Tests_sendData(6);
-  //}
-  
-  // SDCard_test();
-//  Time_delay(1000*1000*5); // Let USB synchronize for 5s
   switch (sTests.state)
   {
     case TEST_IDLE:  // Clear test data and setup listening for commands on the comm port
@@ -782,21 +744,11 @@ uint16 Tests_test01(TestArgs *pArgs)
   // Assume all devices are on the MCU domain and set the output voltage
   PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, testOutVoltage);
   result = PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM2_OUTCURRENT, testOutCurrent);
-  double domVolts = 0.0;
-  double inCurrent = 0.0;
-  double outCurrent = 0.0;
-  uint32_t i;
-  for (i = 0; i < numAvgs; i++)
-  {
-    domVolts   += Analog_getADCVoltage(ADC_DOM2_VOLTAGE, 10);
-    inCurrent  += Analog_getADCCurrent(ADC_DOM2_INCURRENT, 10);
-    outCurrent += Analog_getADCCurrent(ADC_DOM2_OUTCURRENT, 10);
-  }
+  double domVolts = Analog_getADCVoltage(ADC_DOM2_VOLTAGE, numAvgs);
+  double inCurrent = Analog_getADCCurrent(ADC_DOM2_INCURRENT, numAvgs);
+  double outCurrent = Analog_getADCCurrent(ADC_DOM2_OUTCURRENT, numAvgs);
   // Turn off the sink so we don't accidentally leave a huge draw on the system...
   result = PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM2_OUTCURRENT, 0.0);
-  domVolts   /= numAvgs;
-  inCurrent  /= numAvgs;
-  outCurrent /= numAvgs;
   
   ExtUSB_tx((uint8_t *)&domVolts, sizeof(domVolts));
   ExtUSB_tx((uint8_t *)&inCurrent, sizeof(inCurrent));

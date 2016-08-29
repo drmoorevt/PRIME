@@ -173,20 +173,23 @@ bool PLR5010D_setVoltage(PLR5010DSelect device, PLR5010DChannel chan, uint16_t v
 \**************************************************************************************************/
 bool PLR5010D_setCurrent(PLR5010DSelect device, PLR5010DChannel chan, ADCSelect adc, double current)
 { 
+  volatile uint32_t numAttempts = 0;
   #define MAX_CURRENT  (275.0)
-  #define EXPECTED_ERROR (0.050)  // Allow 50uA from ideal current
+  #define EXPECTED_ERROR (0.001)  // Allow 1uA from ideal current
   double domVoltage, refVoltage, bjtVoltage, initCurrent, actCurrent;
   PLR5010D_setVoltage(device, chan, 0);  // Turn off this channel to capture initialCurrent
-  initCurrent = Analog_getADCCurrent(adc, 10);
+  initCurrent = Analog_getADCCurrent(adc, 100);
   if (current < EXPECTED_ERROR)
     return true;
-  double loCurrent = MAX(current - EXPECTED_ERROR,           0) + initCurrent;
-  double hiCurrent = MIN(current + EXPECTED_ERROR, MAX_CURRENT) + initCurrent;
+  double loCurrent = MAX(current - EXPECTED_ERROR,           0);
+  double hiCurrent = MIN(current + EXPECTED_ERROR, MAX_CURRENT);
   if (PLR5010D_CHAN_BOTH == chan)  // If we're setting both channels, double the expected current
   {
     loCurrent *= 2;
     hiCurrent *= 2;
   }
+  loCurrent += initCurrent;
+  hiCurrent += initCurrent;
   
   // Start with the best guess based on linearization
   switch (device)
@@ -196,25 +199,27 @@ bool PLR5010D_setCurrent(PLR5010DSelect device, PLR5010DChannel chan, ADCSelect 
     case PLR5010D_DOMAIN2: domVoltage = Analog_getADCVoltage(ADC_DOM2_VOLTAGE, 10); break;
     default: return false;
   }
-  refVoltage = Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 10);
+  refVoltage = Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 5);
   bjtVoltage = (current/1000 + .0151 - .004867*(domVoltage - 1.8)) / 
                       (.001733*(domVoltage - 1.8) + .0449);
   
   do
   {
+    numAttempts++;
+    bjtVoltage = MIN(bjtVoltage, 3.3);
     PLR5010D_setVoltage(device, chan, MIN((uint16_t)(65535.0 * bjtVoltage / refVoltage), 65535));
-    actCurrent = Analog_getADCCurrent(adc, 10);
+    actCurrent = Analog_getADCCurrent(adc, 100);
     if (actCurrent > hiCurrent)
     {  // Actual current is more than requested current, lower bjtVoltage by the % difference
-      bjtVoltage = bjtVoltage * (loCurrent / actCurrent);
+      bjtVoltage = MAX(bjtVoltage * (loCurrent / actCurrent), bjtVoltage * 0.95);
       //bjtVoltage = bjtVoltage - 10/65535.0;
     }
     else if (actCurrent < loCurrent)
     {  // Actual current is less than requested current, raise bjtVoltage by the % difference
-      bjtVoltage = bjtVoltage * (hiCurrent / actCurrent);
+      bjtVoltage = MIN(bjtVoltage * (hiCurrent / actCurrent), bjtVoltage * 1.05);
       //bjtVoltage = bjtVoltage + 10/65535.0;
     }
-  } while ((actCurrent > hiCurrent) || (actCurrent < loCurrent));
+  } while (((actCurrent > hiCurrent) || (actCurrent < loCurrent)) && (numAttempts < 0x10));
   
   return true;
 }
@@ -254,7 +259,6 @@ bool PLR5010D_test(PLR5010DSelect device)
     initialOutCurrent = Analog_getADCCurrent(outCurrentADC, 10);
     PLR5010D_setCurrent(device, PLR5010D_CHANA, outCurrentADC, 50);
     PLR5010D_setCurrent(device, PLR5010D_CHANB, outCurrentADC, 50);
-    HAL_Delay(1);
     testOutCurrent = Analog_getADCCurrent(outCurrentADC, 10);
     
     PLR5010D_clearAllDevices();

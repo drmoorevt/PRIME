@@ -156,31 +156,11 @@ void Main_printResult(uint32_t yPos, bool result)
 
 int main(void)
 {
-  bool runPOST = false;
+  bool runPOST = true;
   
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
-
-  /* Configure the system clock */
-  SystemClock_Config();
-
-  // Disable all interrupts (except for the adc trigger which will be enabled last)
-  //uint32_t i;
-  //DISABLE_SYSTICK_INTERRUPT();
-  //for (i = 0; i <= DMA2D_IRQn; i++)
-  //  NVIC_DisableIRQ((IRQn_Type)i);
-  //  
-  //MX_GPIO_Init();
-  //BSP_LED_Init(LED3);
-  //BSP_LED_Init(LED4);
-  //while(1)
-  //{
-  //  LED3_GPIO_PORT->ODR ^= LED3_PIN;
-  //  Time_delay(1000);
-  //}
-  
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
+  HAL_Init();  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  SystemClock_Config();  /* Configure the system clock */
+  MX_GPIO_Init(); /* Initialize all configured peripherals */
   MX_CRC_Init();
   MX_DAC_Init();
   MX_DMA2D_Init();
@@ -199,19 +179,18 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
   ExtMem_SDRAM_Initialization_sequence(REFRESH_COUNT, &hsdram1);
-  /* USER CODE END 2 */
     
   Analog_init();
   PowerCon_init(&hdac);
   EEPROM_init();
-  //ESP12_init(&huart1);
+  ESP12_init(&huart1);
   HIH613X_init();
   M25PX_init();
   PLR5010D_init();
-  //SBT263_init(&huart5);
-  //SST26_init();
+  SBT263_init(&huart5);
+  SST26_init();
   SDCard_init();
-  //SI114X_init();
+  SI114X_init();
 
   if (runPOST)
   {
@@ -285,7 +264,7 @@ int main(void)
     sMain.plr5010d2Test = PLR5010D_test(PLR5010D_DOMAIN2);
     Main_printResult(285, sMain.plr5010d2Test);
     
-    if (sMain.bluetoothTest && sMain.eepromTest    && sMain.hih6130Test   &&sMain.nandFlashTest  &&
+    if (sMain.bluetoothTest && sMain.eepromTest    && sMain.hih6130Test   && sMain.nandFlashTest &&
         sMain.norFlashTest  && sMain.plr5010d0Test && sMain.plr5010d1Test && sMain.plr5010d2Test &&
         sMain.ramTest       && sMain.sdCardTest    && sMain.sdCardTest    && sMain.si114xTest    && 
         sMain.usbTest       && sMain.vDomain0Test  && sMain.vDomain1Test  && sMain.vDomain2Test  &&
@@ -294,21 +273,21 @@ int main(void)
       BSP_LCD_DisplayStringAt(0, 300,  "all systems go...", CENTER_MODE);
     }
     else
-      BSP_LCD_DisplayStringAt(0, 300,  "an error was reported...", CENTER_MODE);
+      BSP_LCD_DisplayStringAt(0, 300,  "an error occurred", CENTER_MODE);
   }
-
+/*
   while (1)
   {
-  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 1.8);
-  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
-  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 2.3);
-  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
-  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 2.8);
-  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
-  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 3.3);
-  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
+    PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 1.8);
+    PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
+    PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 2.3);
+    PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
+    PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 2.8);
+    PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
+    PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 3.3);
+    PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
   }
-  
+*/
   while(1)
   {
     Tests_run();
