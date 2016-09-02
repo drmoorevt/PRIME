@@ -156,7 +156,7 @@ void Main_printResult(uint32_t yPos, bool result)
 
 int main(void)
 {
-  bool runPOST = true;
+  bool runPOST = false;
   
   HAL_Init();  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   SystemClock_Config();  /* Configure the system clock */
@@ -180,17 +180,17 @@ int main(void)
   /* USER CODE BEGIN 2 */
   ExtMem_SDRAM_Initialization_sequence(REFRESH_COUNT, &hsdram1);
     
-  Analog_init();
-  PowerCon_init(&hdac);
-  EEPROM_init();
-  ESP12_init(&huart1);
-  HIH613X_init();
-  M25PX_init();
+  Analog_init();             
+  PowerCon_init(&hdac);      
+  //EEPROM_init();             
+  //ESP12_init(&huart1);     
+  //HIH613X_init();            
+  //M25PX_init();
   PLR5010D_init();
-  SBT263_init(&huart5);
-  SST26_init();
-  SDCard_init();
-  SI114X_init();
+  //SBT263_init(&huart5);
+  //SST26_init();
+  //SDCard_init();
+  //SI114X_init();
 
   if (runPOST)
   {
@@ -275,19 +275,40 @@ int main(void)
     else
       BSP_LCD_DisplayStringAt(0, 300,  "an error occurred", CENTER_MODE);
   }
-/*
-  while (1)
-  {
-    PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 1.8);
-    PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
-    PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 2.3);
-    PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
-    PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 2.8);
-    PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
-    PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 3.3);
-    PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM1_OUTCURRENT, 50);
-  }
-*/
+  
+  //__disable_irq();
+  //HAL_SuspendTick();
+  //PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 3.3);
+  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 3.3);
+  //uint16_t voltCode = 0;
+  //while(1)
+  //{
+  //  PLR5010D_setVoltage(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, voltCode++);
+  //}
+  //double current;
+  //while(1)
+  //  for (current = 0; current < 125; current = current + .1)
+  //    PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, current);
+  //while (1)
+  //{
+  //  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, 12.5);
+  //  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, 25.0);
+  //  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, 50.0);
+  //  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, 100.0);
+  //}
+  //
+  //while (1)
+  //{
+  //  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 1.8);
+  //  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, 50);
+  //  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 2.3);
+  //  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, 50);
+  //  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 2.8);
+  //  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, 50);
+  //  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 3.3);
+  //  PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, 50);
+  //}
+
   while(1)
   {
     Tests_run();
