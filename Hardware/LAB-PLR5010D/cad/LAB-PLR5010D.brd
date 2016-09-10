@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="7.3.0">
+<eagle version="6.6.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -1462,9 +1462,6 @@ design rules under a new name.</description>
 <autorouter>
 <pass name="Default">
 <param name="RoutingGrid" value="50mil"/>
-<param name="AutoGrid" value="1"/>
-<param name="Efforts" value="0"/>
-<param name="TopRouterVariant" value="1"/>
 <param name="tpViaShape" value="round"/>
 <param name="PrefDir.1" value="|"/>
 <param name="PrefDir.2" value="0"/>
@@ -1584,11 +1581,11 @@ design rules under a new name.</description>
 <attribute name="NAME" x="23.7617" y="7.9375" size="1.016" layer="25" rot="R90"/>
 <attribute name="VALUE" x="17.78" y="4.3942" size="1.27" layer="27"/>
 </element>
-<element name="R1" library="rcl" package="R0603" value="390R" x="3.81" y="4.683125" smashed="yes" rot="MR0">
+<element name="R1" library="rcl" package="R0603" value="3.9K" x="3.81" y="4.683125" smashed="yes" rot="MR0">
 <attribute name="NAME" x="2.8575" y="3.730625" size="1.016" layer="26" rot="MR180"/>
 <attribute name="VALUE" x="4.445" y="2.778125" size="1.27" layer="28" rot="MR0"/>
 </element>
-<element name="R2" library="rcl" package="R0603" value="390R" x="18.018125" y="2.8575" smashed="yes" rot="MR270">
+<element name="R2" library="rcl" package="R0603" value="3.9K" x="18.018125" y="2.8575" smashed="yes" rot="MR270">
 <attribute name="NAME" x="20.081875" y="3.81" size="1.016" layer="26" rot="MR270"/>
 <attribute name="VALUE" x="19.923125" y="3.4925" size="1.27" layer="28" rot="MR270"/>
 </element>
@@ -1612,6 +1609,8 @@ design rules under a new name.</description>
 <attribute name="NAME" x="8.5725" y="6.95325" size="1.016" layer="25" ratio="10"/>
 <attribute name="VALUE" x="9.525" y="2.0955" size="1.27" layer="27" ratio="10"/>
 </element>
+<element name="R3" library="rcl" package="R0603" value="27K" x="1.27" y="-3.81"/>
+<element name="R4" library="rcl" package="R0603" value="27K" x="1.27" y="-8.5725"/>
 </elements>
 <signals>
 <signal name="MCLK">
@@ -1701,6 +1700,8 @@ design rules under a new name.</description>
 <wire x1="1.508125" y1="2.003425" x2="1.508125" y2="4.683125" width="0.254" layer="1"/>
 <wire x1="1.508125" y1="4.683125" x2="2.96" y2="4.683125" width="0.254" layer="16"/>
 <wire x1="1.4986" y1="1.9939" x2="1.508125" y2="2.003425" width="0.254" layer="1"/>
+<contactref element="R3" pad="1"/>
+<wire x1="1.4986" y1="1.9939" x2="0.42" y2="-3.81" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="N$5">
 <contactref element="R2" pad="2"/>
@@ -1709,6 +1710,8 @@ design rules under a new name.</description>
 <via x="18.018125" y="0.873125" extent="1-16" drill="0.3556"/>
 <wire x1="18.018125" y1="0.873125" x2="18.0086" y2="0.88265" width="0.254" layer="1"/>
 <wire x1="18.0086" y1="0.88265" x2="18.0086" y2="2.6162" width="0.254" layer="1"/>
+<contactref element="R4" pad="1"/>
+<wire x1="0.42" y1="-8.5725" x2="18.018125" y2="0.873125" width="0" layer="19" extent="1-16"/>
 </signal>
 <signal name="CHA">
 <contactref element="Q1" pad="4"/>
@@ -1724,6 +1727,8 @@ design rules under a new name.</description>
 <vertex x="7.14375" y="5.08"/>
 <vertex x="9.525" y="7.46125"/>
 </polygon>
+<contactref element="R3" pad="2"/>
+<wire x1="3.81" y1="2.6162" x2="2.12" y2="-3.81" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="CHB">
 <contactref element="Q2" pad="4"/>
@@ -1739,6 +1744,8 @@ design rules under a new name.</description>
 <vertex x="16.98625" y="5.08"/>
 <vertex x="14.605" y="7.46125"/>
 </polygon>
+<contactref element="R4" pad="2"/>
+<wire x1="20.32" y1="2.6162" x2="2.12" y2="-8.5725" width="0" layer="19" extent="1-1"/>
 </signal>
 <signal name="VDD">
 <contactref element="J2" pad="3"/>

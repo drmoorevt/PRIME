@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="7.3.0">
+<eagle version="6.6.0">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -3978,11 +3978,13 @@ COMPLIANT TO JEDEC STANDARDS MO-187BA</description>
 <part name="Q2" library="LAB304" deviceset="FZT849" device=""/>
 <part name="GND4" library="SparkFun-Aesthetics" deviceset="GND2" device="" value="gnd"/>
 <part name="GND5" library="SparkFun-Aesthetics" deviceset="GND2" device="" value="gnd"/>
-<part name="R1" library="rcl" deviceset="R-US_" device="R0603" value="390R"/>
-<part name="R2" library="rcl" deviceset="R-US_" device="R0603" value="390R"/>
+<part name="R1" library="rcl" deviceset="R-US_" device="R0603" value="3.9K"/>
+<part name="R2" library="rcl" deviceset="R-US_" device="R0603" value="3.9K"/>
 <part name="J1" library="con-lstb" deviceset="MA04-1" device=""/>
 <part name="J2" library="con-lstb" deviceset="MA04-1" device=""/>
 <part name="U1" library="LAB-PLR5010D" deviceset="DAC8562" device=""/>
+<part name="R3" library="rcl" deviceset="R-US_" device="R0603" value="27K"/>
+<part name="R4" library="rcl" deviceset="R-US_" device="R0603" value="27K"/>
 </parts>
 <sheets>
 <sheet>
@@ -4017,9 +4019,17 @@ COMPLIANT TO JEDEC STANDARDS MO-187BA</description>
 <instance part="GND5" gate="G$1" x="223.52" y="91.44" smashed="yes"/>
 <instance part="R1" gate="G$1" x="185.42" y="111.76"/>
 <instance part="R2" gate="G$1" x="185.42" y="99.06"/>
-<instance part="J1" gate="1" x="68.58" y="86.36"/>
-<instance part="J2" gate="1" x="68.58" y="68.58"/>
+<instance part="J1" gate="1" x="60.96" y="114.3"/>
+<instance part="J2" gate="1" x="60.96" y="96.52"/>
 <instance part="U1" gate="G$1" x="139.7" y="106.68"/>
+<instance part="R3" gate="G$1" x="198.12" y="116.84" smashed="yes" rot="MR90">
+<attribute name="NAME" x="196.85" y="115.7986" size="1.778" layer="95" rot="MR0"/>
+<attribute name="VALUE" x="196.85" y="113.538" size="1.778" layer="96" rot="MR0"/>
+</instance>
+<instance part="R4" gate="G$1" x="218.44" y="104.14" smashed="yes" rot="MR90">
+<attribute name="NAME" x="217.17" y="103.0986" size="1.778" layer="95" rot="MR0"/>
+<attribute name="VALUE" x="217.17" y="100.838" size="1.778" layer="96" rot="MR0"/>
+</instance>
 </instances>
 <busses>
 </busses>
@@ -4031,9 +4041,9 @@ COMPLIANT TO JEDEC STANDARDS MO-187BA</description>
 <pinref part="U1" gate="G$1" pin="SCLK"/>
 </segment>
 <segment>
-<wire x1="76.2" y1="88.9" x2="88.9" y2="88.9" width="0.1524" layer="91"/>
+<wire x1="68.58" y1="116.84" x2="81.28" y2="116.84" width="0.1524" layer="91"/>
 <pinref part="J1" gate="1" pin="4"/>
-<label x="88.9" y="88.9" size="1.778" layer="95" rot="MR0"/>
+<label x="81.28" y="116.84" size="1.778" layer="95" rot="MR0"/>
 </segment>
 </net>
 <net name="!CS" class="0">
@@ -4043,9 +4053,9 @@ COMPLIANT TO JEDEC STANDARDS MO-187BA</description>
 <pinref part="U1" gate="G$1" pin="!CS"/>
 </segment>
 <segment>
-<wire x1="76.2" y1="86.36" x2="88.9" y2="86.36" width="0.1524" layer="91"/>
+<wire x1="68.58" y1="114.3" x2="81.28" y2="114.3" width="0.1524" layer="91"/>
 <pinref part="J1" gate="1" pin="3"/>
-<label x="88.9" y="86.36" size="1.778" layer="95" rot="MR0"/>
+<label x="81.28" y="114.3" size="1.778" layer="95" rot="MR0"/>
 </segment>
 </net>
 <net name="MOSI" class="0">
@@ -4055,8 +4065,8 @@ COMPLIANT TO JEDEC STANDARDS MO-187BA</description>
 <pinref part="U1" gate="G$1" pin="DIN"/>
 </segment>
 <segment>
-<wire x1="76.2" y1="66.04" x2="88.9" y2="66.04" width="0.1524" layer="91"/>
-<label x="88.9" y="66.04" size="1.778" layer="95" rot="MR0"/>
+<wire x1="68.58" y1="93.98" x2="81.28" y2="93.98" width="0.1524" layer="91"/>
+<label x="81.28" y="93.98" size="1.778" layer="95" rot="MR0"/>
 <pinref part="J2" gate="1" pin="2"/>
 </segment>
 </net>
@@ -4103,9 +4113,9 @@ COMPLIANT TO JEDEC STANDARDS MO-187BA</description>
 <pinref part="GND5" gate="G$1" pin="3.3V"/>
 </segment>
 <segment>
-<wire x1="76.2" y1="81.28" x2="88.9" y2="81.28" width="0.1524" layer="91"/>
+<wire x1="68.58" y1="109.22" x2="81.28" y2="109.22" width="0.1524" layer="91"/>
 <pinref part="J1" gate="1" pin="1"/>
-<label x="88.9" y="81.28" size="1.778" layer="95" rot="MR0"/>
+<label x="81.28" y="109.22" size="1.778" layer="95" rot="MR0"/>
 </segment>
 </net>
 <net name="!CLR" class="0">
@@ -4115,9 +4125,9 @@ COMPLIANT TO JEDEC STANDARDS MO-187BA</description>
 <pinref part="U1" gate="G$1" pin="!CLR"/>
 </segment>
 <segment>
-<wire x1="88.9" y1="83.82" x2="76.2" y2="83.82" width="0.1524" layer="91"/>
+<wire x1="81.28" y1="111.76" x2="68.58" y2="111.76" width="0.1524" layer="91"/>
 <pinref part="J1" gate="1" pin="2"/>
-<label x="88.9" y="83.82" size="1.778" layer="95" rot="MR0"/>
+<label x="81.28" y="111.76" size="1.778" layer="95" rot="MR0"/>
 </segment>
 </net>
 <net name="N$1" class="0">
@@ -4134,7 +4144,9 @@ COMPLIANT TO JEDEC STANDARDS MO-187BA</description>
 <segment>
 <pinref part="R1" gate="G$1" pin="2"/>
 <pinref part="Q1" gate="G$1" pin="B"/>
-<wire x1="190.5" y1="111.76" x2="198.12" y2="111.76" width="0.1524" layer="91"/>
+<pinref part="R3" gate="G$1" pin="1"/>
+<junction x="198.12" y="111.76"/>
+<wire x1="198.12" y1="111.76" x2="190.5" y2="111.76" width="0.1524" layer="91"/>
 </segment>
 </net>
 <net name="N$5" class="0">
@@ -4142,37 +4154,47 @@ COMPLIANT TO JEDEC STANDARDS MO-187BA</description>
 <pinref part="R2" gate="G$1" pin="2"/>
 <pinref part="Q2" gate="G$1" pin="B"/>
 <wire x1="190.5" y1="99.06" x2="218.44" y2="99.06" width="0.1524" layer="91"/>
+<pinref part="R4" gate="G$1" pin="1"/>
+<junction x="218.44" y="99.06"/>
 </segment>
 </net>
 <net name="CHA" class="0">
 <segment>
 <pinref part="Q1" gate="G$1" pin="C"/>
-<wire x1="203.2" y1="116.84" x2="203.2" y2="124.46" width="0.1524" layer="91"/>
+<wire x1="203.2" y1="116.84" x2="203.2" y2="121.92" width="0.1524" layer="91"/>
 <label x="203.2" y="124.46" size="1.778" layer="95"/>
+<pinref part="R3" gate="G$1" pin="2"/>
+<wire x1="203.2" y1="121.92" x2="203.2" y2="124.46" width="0.1524" layer="91"/>
+<wire x1="198.12" y1="121.92" x2="203.2" y2="121.92" width="0.1524" layer="91"/>
+<junction x="203.2" y="121.92"/>
 </segment>
 <segment>
-<wire x1="88.9" y1="63.5" x2="76.2" y2="63.5" width="0.1524" layer="91"/>
+<wire x1="81.28" y1="91.44" x2="68.58" y2="91.44" width="0.1524" layer="91"/>
 <pinref part="J2" gate="1" pin="1"/>
-<label x="88.9" y="63.5" size="1.778" layer="95" rot="MR0"/>
+<label x="81.28" y="91.44" size="1.778" layer="95" rot="MR0"/>
 </segment>
 </net>
 <net name="CHB" class="0">
 <segment>
 <pinref part="Q2" gate="G$1" pin="C"/>
-<wire x1="223.52" y1="104.14" x2="223.52" y2="124.46" width="0.1524" layer="91"/>
+<wire x1="223.52" y1="104.14" x2="223.52" y2="109.22" width="0.1524" layer="91"/>
 <label x="223.52" y="124.46" size="1.778" layer="95"/>
+<pinref part="R4" gate="G$1" pin="2"/>
+<wire x1="223.52" y1="109.22" x2="223.52" y2="124.46" width="0.1524" layer="91"/>
+<wire x1="218.44" y1="109.22" x2="223.52" y2="109.22" width="0.1524" layer="91"/>
+<junction x="223.52" y="109.22"/>
 </segment>
 <segment>
-<wire x1="76.2" y1="71.12" x2="88.9" y2="71.12" width="0.1524" layer="91"/>
+<wire x1="68.58" y1="99.06" x2="81.28" y2="99.06" width="0.1524" layer="91"/>
 <pinref part="J2" gate="1" pin="4"/>
-<label x="88.9" y="71.12" size="1.778" layer="95" rot="MR0"/>
+<label x="81.28" y="99.06" size="1.778" layer="95" rot="MR0"/>
 </segment>
 </net>
 <net name="VDD" class="0">
 <segment>
-<wire x1="76.2" y1="68.58" x2="88.9" y2="68.58" width="0.1524" layer="91"/>
+<wire x1="68.58" y1="96.52" x2="81.28" y2="96.52" width="0.1524" layer="91"/>
 <pinref part="J2" gate="1" pin="3"/>
-<label x="88.9" y="68.58" size="1.778" layer="95" rot="MR0"/>
+<label x="81.28" y="96.52" size="1.778" layer="95" rot="MR0"/>
 </segment>
 <segment>
 <pinref part="SUPPLY1" gate="G$1" pin="3.3V"/>
