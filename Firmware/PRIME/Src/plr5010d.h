@@ -20,6 +20,6 @@ typedef enum
 bool PLR5010D_init(void);
 bool PLR5010D_test(PLR5010DSelect device);
 bool PLR5010D_setVoltage(PLR5010DSelect device, PLR5010DChannel chan, uint16_t volts);
-bool PLR5010D_setCurrent(PLR5010DSelect device, PLR5010DChannel chan, ADCSelect adc, double current);
+bool PLR5010D_setCurrent(PLR5010DSelect device, PLR5010DChannel chan, double current);
 
 #endif /* PLR5010D_H_ */

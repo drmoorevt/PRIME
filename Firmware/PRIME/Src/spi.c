@@ -64,22 +64,33 @@ void SPI_init(SPI_HandleTypeDef *pSPI)
 \**************************************************************************************************/
 boolean SPI_setup(boolean state, SPIRate rate, uint32_t phase, uint32_t pol, SPITIMode mode)
 {
-  HAL_SPI_DeInit(spSPI);
+  HAL_SPI_DeInit(spSPI);  // dont deinit every time?
   if (state)
   {
     uint32_t prescalar;
     switch (rate)
     {
-      case SPI_CLOCK_RATE_90000000: prescalar = SPI_BAUDRATEPRESCALER_2;   break;
-      case SPI_CLOCK_RATE_45000000: prescalar = SPI_BAUDRATEPRESCALER_4;   break;
-      case SPI_CLOCK_RATE_22500000: prescalar = SPI_BAUDRATEPRESCALER_8;   break;
-      case SPI_CLOCK_RATE_11250000: prescalar = SPI_BAUDRATEPRESCALER_16;  break;
-      case SPI_CLOCK_RATE_05625000: prescalar = SPI_BAUDRATEPRESCALER_32;  break;
-      case SPI_CLOCK_RATE_02812500: prescalar = SPI_BAUDRATEPRESCALER_64;  break;
-      case SPI_CLOCK_RATE_01406250: prescalar = SPI_BAUDRATEPRESCALER_128; break;
-      case SPI_CLOCK_RATE_00703125: prescalar = SPI_BAUDRATEPRESCALER_256; break;
+      case SPI_CLOCK_RATE_45000000: prescalar = SPI_BAUDRATEPRESCALER_2;   break;
+      case SPI_CLOCK_RATE_22500000: prescalar = SPI_BAUDRATEPRESCALER_4;   break;
+      case SPI_CLOCK_RATE_11250000: prescalar = SPI_BAUDRATEPRESCALER_8;   break;
+      case SPI_CLOCK_RATE_05625000: prescalar = SPI_BAUDRATEPRESCALER_16;  break;
+      case SPI_CLOCK_RATE_02812500: prescalar = SPI_BAUDRATEPRESCALER_32;  break;
+      case SPI_CLOCK_RATE_01406250: prescalar = SPI_BAUDRATEPRESCALER_64;  break;
+      case SPI_CLOCK_RATE_00703125: prescalar = SPI_BAUDRATEPRESCALER_128; break;
       default: return FALSE;
     }
+    
+    spSPI->Init.Direction      = SPI_DIRECTION_2LINES;
+    spSPI->Init.CLKPhase       = SPI_PHASE_1EDGE;
+    spSPI->Init.CLKPolarity    = SPI_POLARITY_LOW;
+    spSPI->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLED;
+    spSPI->Init.CRCPolynomial  = 7;
+    spSPI->Init.DataSize       = SPI_DATASIZE_8BIT;
+    spSPI->Init.FirstBit       = SPI_FIRSTBIT_MSB;
+    spSPI->Init.NSS            = SPI_NSS_SOFT;
+    spSPI->Init.TIMode         = SPI_TIMODE_DISABLED;
+    spSPI->Init.Mode           = SPI_MODE_MASTER;
+    
     spSPI->Init.BaudRatePrescaler = prescalar;
     spSPI->Init.CLKPhase = (phase == SPI_PHASE_2EDGE) ? SPI_PHASE_2EDGE : SPI_PHASE_1EDGE;
     spSPI->Init.CLKPolarity = (pol == SPI_POLARITY_HIGH) ? SPI_POLARITY_HIGH : SPI_POLARITY_LOW;

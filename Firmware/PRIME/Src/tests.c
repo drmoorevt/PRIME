@@ -743,12 +743,14 @@ uint16 Tests_test01(TestArgs *pArgs)
   
   // Assume all devices are on the MCU domain and set the output voltage
   PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, testOutVoltage);
-  result = PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM2_OUTCURRENT, testOutCurrent);
+  result = PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, testOutCurrent);
+  Time_delay(1000*100);
   double domVolts = Analog_getADCVoltage(ADC_DOM2_VOLTAGE, numAvgs);
   double inCurrent = Analog_getADCCurrent(ADC_DOM2_INCURRENT, numAvgs);
   double outCurrent = Analog_getADCCurrent(ADC_DOM2_OUTCURRENT, numAvgs);
   // Turn off the sink so we don't accidentally leave a huge draw on the system...
-  result = PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, ADC_DOM2_OUTCURRENT, 0.0);
+  PLR5010D_clearAllDevices();
+  //result = PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, 0.0);
   
   ExtUSB_tx((uint8_t *)&domVolts, sizeof(domVolts));
   ExtUSB_tx((uint8_t *)&inCurrent, sizeof(inCurrent));

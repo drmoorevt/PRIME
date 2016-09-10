@@ -334,6 +334,8 @@ double Analog_getADCVoltage(ADCSelect adc, uint32_t numSamps)
     refCode += Analog_getADCVal(ADC_VREF_INTERNAL);
     domCode += Analog_getADCVal(adc);
   }
+  if ((ADC_DOM0_VOLTAGE == adc) || (ADC_DOM1_VOLTAGE == adc) || (ADC_DOM2_VOLTAGE == adc))
+    domCode <<= 1;  // Domain voltages are divided by two before the ADC. Compensate here.
   return (refVoltage * ((double)domCode / (double)refCode));
 }
 

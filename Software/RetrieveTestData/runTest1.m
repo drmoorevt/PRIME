@@ -4,10 +4,10 @@ function [ output_args ] = runTest1(CommPort, baudRate, numAvgs, testLen, opDela
     
     startVolts   = 1.8;
     endVolts     = 3.3;
-    voltIter     = 1.5;
+    voltIter     = 0.1;
     startCurrent = 0;
     endCurrent   = 250;
-    currIter     = 0.05;
+    currIter     = .1;
     
     filename = sprintf('./results/Test1_%.3fV-%.3fV(%.3fV)_%.3fmA-%.3fmA(%.3fmA).mat', ...
                        startVolts, endVolts, voltIter, startCurrent, endCurrent, currIter);
@@ -62,11 +62,18 @@ function [ output_args ] = runTest1(CommPort, baudRate, numAvgs, testLen, opDela
                 dutOutVolts(voltIdx, currIdx) = fread(s,  1, 'double');
                 dutInCur(voltIdx, currIdx)    = fread(s,  1, 'double');
                 dutOutCur(voltIdx, currIdx)   = fread(s,  1, 'double');
-                fprintf('SUCCESS\n');
+                fprintf('SUCCESS: %.3fVin/%.3fmAin %.3fVout/%.3fmAout = %.3fefficiency\n', ...
+                         dutInVolts(voltIdx, currIdx),   ...
+                         dutInCur(voltIdx, currIdx),     ...
+                         dutOutVolts(voltIdx, currIdx),  ...
+                         dutOutCur(voltIdx, currIdx),    ...
+                         (dutOutVolts(voltIdx, currIdx) * dutOutCur(voltIdx, currIdx)) / ...
+                          (dutInVolts(voltIdx, currIdx) * dutInCur(voltIdx, currIdx)));
             else
                 fprintf('MISSED\n');
             end
             %pause(.05);
+            %s = resetFixtureComms(s, CommPort, baudRate);
             fwrite(s, uint8(hex2dec('54'))); % Attempt DUT reset
             %pause(.05);
         end
@@ -78,11 +85,13 @@ function [ output_args ] = runTest1(CommPort, baudRate, numAvgs, testLen, opDela
     % eff = pOut / pIn = (vOut * iOut) / (vIn * iIn)
     eff = 100 .* ((dutOutVolts .* dutOutCur) ./ (dutInVolts .* dutInCur));
     close all
+    %plot(dutOutCur, eff)
     surf(dutOutCur, dutOutVolts, eff)
     %surf(dutOutCur(:,2:end), dutOutVolts(:,2:end), eff(:,2:end))
     xlabel('Output Current (mA)');
     ylabel('Output Voltage (V)');
     zlabel('SMPS Efficiency');
+    return
     xlim([startCurrent,endCurrent])
     ylim([startVolts,endVolts])
     
