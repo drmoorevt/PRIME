@@ -156,7 +156,7 @@ void Main_printResult(uint32_t yPos, bool result)
 
 int main(void)
 {
-  bool runPOST = false;
+  bool runPOST = true;
   
   HAL_Init();  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   SystemClock_Config();  /* Configure the system clock */
@@ -182,16 +182,20 @@ int main(void)
     
   Analog_init();             
   PowerCon_init(&hdac);      
-  //EEPROM_init();             
-  //ESP12_init(&huart1);     
-  //HIH613X_init();            
-  //M25PX_init();
+  EEPROM_init();             
+  ESP12_init(&huart1);     
+  HIH613X_init();            
+  M25PX_init();
   PLR5010D_init();
-  //SBT263_init(&huart5);
-  //SST26_init();
-  //SDCard_init();
-  //SI114X_init();
-
+  
+  while(1)
+  sMain.eepromTest    = EEPROM_test();
+  
+  SBT263_init(&huart5);
+  SST26_init();
+  SDCard_init();
+  SI114X_init();
+    
   if (runPOST)
   {
     BSP_LED_On(LED3);
@@ -278,7 +282,7 @@ int main(void)
   
   //__disable_irq();
   //HAL_SuspendTick();
-  //PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 3.3);
+  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 3.3);
   PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 3.3);
   //uint16_t voltCode = 0;
   //while(1)

@@ -118,9 +118,9 @@ bool PowerCon_init(DAC_HandleTypeDef *pDAC)
   for (i = DEVICE_EEPROM; i < DEVICE_MAX; i++)
     PowerCon_setDeviceDomain(i, VOLTAGE_DOMAIN_0);
   
-  //Default voltage domains to 3.3, 2.7, 1.8
-  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 2.7);
-  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 1.8);
+  //Default voltage domains to 3.3
+  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_1, 3.3);
+  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, 3.3);
   return true;
 }
 
@@ -135,7 +135,6 @@ bool PowerCon_powerSupplyPOST(VoltageDomain domain)
   const double dom0Voltage[1] = {3.3};
   const double dom1Voltage[4] = {3.3, 2.7, 2.3, 1.8};
   const double dom2Voltage[4] = {3.3, 2.7, 2.3, 1.8};
-  const double DOMAIN_VOLTAGE_DIVIDER = 2;
   const double *pTestArray;
   
   ADCSelect chanNum;
@@ -166,7 +165,7 @@ bool PowerCon_powerSupplyPOST(VoltageDomain domain)
   {
     PowerCon_setDomainVoltage(domain, pTestArray[i]);
     HAL_Delay(100);
-    domVolts = Analog_getADCVoltage(chanNum, 10) * DOMAIN_VOLTAGE_DIVIDER;
+    domVolts = Analog_getADCVoltage(chanNum, 10);
     loVolts = (0.90)*(pTestArray[i]);
     hiVolts = (1.10)*(pTestArray[i]);
     if ((domVolts > hiVolts) || (domVolts < loVolts))
