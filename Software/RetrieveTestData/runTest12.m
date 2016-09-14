@@ -1,4 +1,4 @@
-function [name, chans, data, time] = runTest12(CommPort, baudRate, numSweeps, testLen, opDelay)
+function [numFailures, chans, data, time] = runTest12(CommPort, baudRate, numSweeps, testLen, opDelay)
     delete(instrfindall);
     s = openFixtureComms(CommPort, baudRate);
     

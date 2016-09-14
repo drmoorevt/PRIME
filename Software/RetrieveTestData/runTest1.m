@@ -4,9 +4,9 @@ function [ output_args ] = runTest1(CommPort, baudRate, numAvgs, testLen, opDela
     
     startVolts   = 1.8;
     endVolts     = 3.3;
-    voltIter     = 0.1;
-    startCurrent = 0;
-    endCurrent   = 250;
+    voltIter     = 1.3;
+    startCurrent = .1;
+    endCurrent   = 10;
     currIter     = .1;
     
     filename = sprintf('./results/Test1_%.3fV-%.3fV(%.3fV)_%.3fmA-%.3fmA(%.3fmA).mat', ...

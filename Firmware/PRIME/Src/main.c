@@ -186,11 +186,7 @@ int main(void)
   ESP12_init(&huart1);     
   HIH613X_init();            
   M25PX_init();
-  PLR5010D_init();
-  
-  while(1)
-  sMain.eepromTest    = EEPROM_test();
-  
+  PLR5010D_init();  
   SBT263_init(&huart5);
   SST26_init();
   SDCard_init();

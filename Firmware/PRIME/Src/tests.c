@@ -176,6 +176,11 @@ void Tests_init(void)
   sTests.adc2.pSampleBuffer        = &GPSDRAM->samples[1][0];
   sTests.adc3.pSampleBuffer        = &GPSDRAM->samples[2][0];
   sTests.periphState.pSampleBuffer = &GPSDRAM->samples[3][0];
+    
+  // Reset all devices to default domain
+  Device i;
+  for (i = DEVICE_EEPROM; i < DEVICE_MAX; i++)
+    PowerCon_setDeviceDomain(i, VOLTAGE_DOMAIN_0);
 }
 
 /**************************************************************************************************\
@@ -490,18 +495,18 @@ static void Tests_setupSPITests(Device device, TestArgs *pArgs)
   for (i = 0; i < DEVICE_MAX; i++)
     PowerCon_setDeviceDomain((Device)i, VOLTAGE_DOMAIN_0);
   PowerCon_setDeviceDomain(device, VOLTAGE_DOMAIN_2);
-//  Time_delay(50000);  // wait 50ms for the domains to settle
+  double refVolts = Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 100);
   
   // Prepare data structures for retrieval
   sTests.testHeader.timeScale    = pArgs->sampRate; // in microseconds
   sTests.testHeader.numChannels  = 4;
   sTests.testHeader.bytesPerChan = numSamps * sizeof(uint16_t);
   sTests.chanHeader[0].chanNum   = 0;
-  sTests.chanHeader[0].bitRes    = (3.3 / 4096.0) * 2;  // Voltage measurements are div2
+  sTests.chanHeader[0].bitRes    = (refVolts / 4096.0) * 2;  // Voltage measurements are div2
   sTests.chanHeader[1].chanNum   = 1;
-  sTests.chanHeader[1].bitRes    = (3.3 / 4096.0) * (1000.0 / 1000.0); // (Gain = 100, R=0.1)
+  sTests.chanHeader[1].bitRes    = (((refVolts / 4096.0) / 0.1) / 100) * 1000;  // I = (V/R) / Gain
   sTests.chanHeader[2].chanNum   = 2;
-  sTests.chanHeader[2].bitRes    = (3.3 / 4096.0) * (1000.0 / 1000.0); // (Gain = 100, R=0.1)
+  sTests.chanHeader[2].bitRes    = (((refVolts / 4096.0) / 0.1) / 100) * 1000;  // I = (V/R) / Gain
   sTests.chanHeader[3].chanNum   = sTests.periphState.channel;
   switch (sTests.testToRun)  // Normalize these resolutions based on max number of states
   {
@@ -744,7 +749,7 @@ uint16 Tests_test01(TestArgs *pArgs)
   // Assume all devices are on the MCU domain and set the output voltage
   PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, testOutVoltage);
   result = PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, testOutCurrent);
-  Time_delay(1000*100);
+  //Time_delay(1000*100);
   double domVolts = Analog_getADCVoltage(ADC_DOM2_VOLTAGE, numAvgs);
   double inCurrent = Analog_getADCCurrent(ADC_DOM2_INCURRENT, numAvgs);
   double outCurrent = Analog_getADCCurrent(ADC_DOM2_OUTCURRENT, numAvgs);

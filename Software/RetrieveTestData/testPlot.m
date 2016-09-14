@@ -9,6 +9,9 @@ function testPlot(data, time, labels, testName, xMax)
     newFigure = figure();
     hold on
     [gAxes, g1, g2] = plotyy(time,data(:,1),time,data(:,2)); %(inCurrent)
+    set(g1, {'Color'}, {'b'})
+    set(g2, {'Color'}, {[0 .5 0]}) % set for dark green
+    set(gAxes,{'ycolor'},{'b';[0 .5 0]})
     xlim(gAxes(1), [0, xMax]);
     xlim(gAxes(2), [0, xMax]);
     ylim(gAxes(1), [0, 3.6]);
@@ -31,6 +34,7 @@ function testPlot(data, time, labels, testName, xMax)
     
     [gAxes, g1, g3] = plotyy(time,data(:,1),time,data(:,3)); %(outCurrent)
     set(newFigure,{'Color'},{'w'})
+    set(g1, {'Color'}, {'b'})
     set(g3, {'Color'}, {'r'})
     set(gAxes,{'ycolor'},{'b';'r'})
 %    set(gAxes,'Position',[.13,.8,.775,.21])

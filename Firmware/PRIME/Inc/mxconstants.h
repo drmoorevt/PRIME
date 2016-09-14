@@ -70,6 +70,10 @@
 #define ADC3_PIO0_GPIO_Port GPIOF
 #define SPI5_MCLK_Pin GPIO_PIN_7
 #define SPI5_MCLK_GPIO_Port GPIOF
+#define SPI5_MISO_Pin GPIO_PIN_8
+#define SPI5_MISO_GPIO_Port GPIOF
+#define SPI5_MOSI_Pin GPIO_PIN_9
+#define SPI5_MOSI_GPIO_Port GPIOF
 #define ENABLE_Pin GPIO_PIN_10
 #define ENABLE_GPIO_Port GPIOF
 #define PH0_OSC_IN_Pin GPIO_PIN_0

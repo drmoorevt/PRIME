@@ -4,9 +4,6 @@
 #include "time.h"
 #include "util.h"
 
-#define _PLR_CLR_Pin GPIO_PIN_12
-#define _PLR_CLR_GPIO_Port GPIOB
-
 #define DATA_VREF_DISABLE (0)
 #define DATA_VREF_ENABLE (1)
 
@@ -70,9 +67,7 @@ static struct
 void PLR5010D_clearAllDevices(void)
 {
   SELECT_ALL_PLR5010D_CLR();
-  Time_delay(1000);
   DESELECT_ALL_PLR5010D_CLR();
-  Time_delay(1000);
 }
 
 /**************************************************************************************************\
@@ -103,8 +98,6 @@ void PLR5010D_selectDevice(PLR5010DSelect device, bool select)
 void PLR5010D_spiSend(PLR5010DSelect device, uint8_t *pBytes, uint32_t len)
 {
   SPI_setup(true, SPI_CLOCK_RATE_22500000, SPI_PHASE_1EDGE, SPI_POLARITY_HIGH, SPI_MODE_NORMAL);
-  SPI_write("",1);  // Must not have the clock/data lines accidentally drop AFTER the chip is
-                    // selected. Dsense the line here so we don't inadvertently clock out a byte
 //  SPI_setup(true, SPI_CLOCK_RATE_22500000, SPI_PHASE_2EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
   PLR5010D_selectDevice(device, true);
   SPI_write(pBytes, len);
@@ -196,7 +189,7 @@ bool PLR5010D_setVoltage(PLR5010DSelect device, PLR5010DChannel chan, uint16_t v
 bool PLR5010D_setCurrent(PLR5010DSelect device, PLR5010DChannel chan, double current)
 { 
   #define MAX_CURRENT    (100.0)  // Can only pull 100mA from each BJT @ 2.5V reference
-  #define EXPECTED_ERROR (0.100)  // Allow 50uA from ideal current
+  #define EXPECTED_ERROR (0.050)  // Allow 50uA from ideal current
   
   ADCSelect adc;
   switch (device)  // Find the appropriate output current to measure the effect of this change
@@ -209,8 +202,8 @@ bool PLR5010D_setCurrent(PLR5010DSelect device, PLR5010DChannel chan, double cur
   
   PLR5010D_clearAllDevices();
   //PLR5010D_setVoltage(device, chan, 0);  // Turn off this channel to capture initialCurrent
-  Time_delay(1000);  // Wait a millisecond for the current to stabilize
-  double initCurrent = Analog_getADCCurrent(adc, 1);
+  Time_delay(1000*10);  // Wait 10 milliseconds for the current to stabilize
+  double initCurrent = Analog_getADCCurrent(adc, 100);
   double loCurrent = MAX(current - EXPECTED_ERROR,           0);
   double hiCurrent = MIN(current + EXPECTED_ERROR, MAX_CURRENT);
   if (PLR5010D_CHAN_BOTH == chan)  // If we're setting both channels, double the expected current
@@ -224,9 +217,9 @@ bool PLR5010D_setCurrent(PLR5010DSelect device, PLR5010DChannel chan, double cur
   double domVoltage;
   switch (device)  // Start with the best guess based on linearization
   {
-    case PLR5010D_DOMAIN0: domVoltage = Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 10); break;
-    case PLR5010D_DOMAIN1: domVoltage = Analog_getADCVoltage(ADC_DOM1_VOLTAGE, 10); break;
-    case PLR5010D_DOMAIN2: domVoltage = Analog_getADCVoltage(ADC_DOM2_VOLTAGE, 10); break;
+    case PLR5010D_DOMAIN0: domVoltage = Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 1); break;
+    case PLR5010D_DOMAIN1: domVoltage = Analog_getADCVoltage(ADC_DOM1_VOLTAGE, 1); break;
+    case PLR5010D_DOMAIN2: domVoltage = Analog_getADCVoltage(ADC_DOM2_VOLTAGE, 1); break;
     default: return false;
   }
   //refVoltage = Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 5);
@@ -251,7 +244,7 @@ bool PLR5010D_setCurrent(PLR5010DSelect device, PLR5010DChannel chan, double cur
       bjtVoltage = MIN(bjtVoltage * (hiCurrent / actCurrent), bjtVoltage * 1.10);
       //bjtVoltage = bjtVoltage + 10/65535.0;
     }
-  } while (((actCurrent > hiCurrent) || (actCurrent < loCurrent)) && (numAttempts < 0x10));
+  } while (((actCurrent > hiCurrent) || (actCurrent < loCurrent)) && (numAttempts < 0xFF));
   
   return true;
 }
@@ -264,40 +257,29 @@ bool PLR5010D_setCurrent(PLR5010DSelect device, PLR5010DChannel chan, double cur
 \**************************************************************************************************/
 bool PLR5010D_test(PLR5010DSelect device)
 {
-  double initialOutCurrent, testOutCurrent, iDiff;
-  ADCSelect outCurrentADC;
   uint32_t i;
+  double initialOutCurrent, testOutCurrent, iDiff;
+  
+  ADCSelect outCurrentADC;
+  switch (device)  // Find the appropriate output current to measure the effect of this change
+  {
+    case PLR5010D_DOMAIN0: outCurrentADC = ADC_DOM0_OUTCURRENT; break;
+    case PLR5010D_DOMAIN1: outCurrentADC = ADC_DOM1_OUTCURRENT; break;
+    case PLR5010D_DOMAIN2: outCurrentADC = ADC_DOM2_OUTCURRENT; break;
+    default: return false;
+  }
   
   for (i = 0; i < 10; i++)
   {
-  
     PLR5010D_clearAllDevices();
-    
-    sPLR5010D.cmd.command = LDAC_CONTROL;
-    sPLR5010D.cmd.address = DAC_A;
-    sPLR5010D.cmd.data = 3;
-    sPLR5010D.cmd.data = (sPLR5010D.cmd.data >> 8) + (sPLR5010D.cmd.data << 8);
-    PLR5010D_spiSend(device, sPLR5010D.txBuf, 3);
-    Time_delay(1000);
-    
-    switch (device)
-    {
-      case PLR5010D_DOMAIN0: outCurrentADC = ADC_DOM0_OUTCURRENT; break;
-      case PLR5010D_DOMAIN1: outCurrentADC = ADC_DOM1_OUTCURRENT; break;
-      case PLR5010D_DOMAIN2: outCurrentADC = ADC_DOM2_OUTCURRENT; break;
-      default: return false;
-    }
-    
     initialOutCurrent = Analog_getADCCurrent(outCurrentADC, 10);
-    PLR5010D_setCurrent(device, PLR5010D_CHANA, 50);
-    PLR5010D_setCurrent(device, PLR5010D_CHANB, 50);
+    PLR5010D_setCurrent(device, PLR5010D_CHAN_BOTH, 25);
     testOutCurrent = Analog_getADCCurrent(outCurrentADC, 10);
-    
     PLR5010D_clearAllDevices();
     
     iDiff = (testOutCurrent - initialOutCurrent);
-   if ((iDiff > 80) && (iDiff < 120))
-     return true;
+    if ((iDiff > 40) && (iDiff < 60))
+      return true;
   }
   return false;
 }

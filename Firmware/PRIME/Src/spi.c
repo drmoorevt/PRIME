@@ -109,30 +109,21 @@ boolean SPI_setup(boolean state, SPIRate rate, uint32_t phase, uint32_t pol, SPI
 \**************************************************************************************************/
 void SPI_write(const uint8 *pBytes, uint32 numBytes)
 {
-  if (numBytes == 0)
-    return;
-  
-  HAL_SPI_Transmit(spSPI, (uint8_t *)pBytes, numBytes, 100);
-  while(spSPI->State != HAL_SPI_STATE_READY); // Wait for tx to complete
+  volatile HAL_StatusTypeDef halVal = HAL_SPI_Transmit(spSPI, (uint8_t *)pBytes, numBytes, 100);
 }
 
-/*****************************************************************************\
+/**************************************************************************************************\
 * FUNCTION     SPI_read
 * DESCRIPTION  Reads the specified number of bytes from the SPI and places them
 *              into the buffer pointed to by pBytes.
 * PARAMETERS   pBytes - buffer in which to the bytes read
 *              numBytes - the number of bytes to read
 * RETURNS      nothing
-\*****************************************************************************/
+\**************************************************************************************************/
 void SPI_read(uint8 *pBytes, uint32 numBytes)
 {
-  if (numBytes == 0)
-    return;
-  
-  memset(pBytes, 0xFF, numBytes);
-  
-  HAL_SPI_Receive(spSPI, (uint8_t *)pBytes, numBytes, 100);
-  while(spSPI->State != HAL_SPI_STATE_READY); // Wait for tx to complete
+  memset(pBytes, 0xFF, numBytes);  // HAL will send pBytes as dummy bytes -- make them all 0xFF 
+  volatile HAL_StatusTypeDef halVal = HAL_SPI_Receive(spSPI, (uint8_t *)pBytes, numBytes, 100);
 }
 
 
