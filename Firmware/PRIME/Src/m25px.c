@@ -444,7 +444,7 @@ M25PXResult M25PX_write(uint8 *pSrc, uint8 *pDst, uint32 len, uint32 eraseDelay,
   // Ensure that the chip has enough voltage and time to power up
   M25PX_setState(M25PX_STATE_IDLE);
   
-  while ((result != M25PX_RESULT_ERROR) && (len > 0))
+  while ((result == M25PX_RESULT_OK) && (len > 0))
   {
     // Write must not go past a page boundary, but must erase a whole sub sector at a time
     numToWrite = M25PX_SIZE_PAGE - ((uint32)pDst & (M25PX_SIZE_PAGE - 1));
@@ -455,28 +455,24 @@ M25PXResult M25PX_write(uint8 *pSrc, uint8 *pDst, uint32 len, uint32 eraseDelay,
     pSubSector = (uint8 *)(((uint32)pDst  >> 0) & 0x001FF000);
     pCacheDest = (uint8 *)((((uint32)pDst >> 0) & 0x00000FFF) + pCache);
 
-    for (retries = 3; retries > 0; retries--)
-    {
-      // Read the sub sector to be written into local cache
-      M25PX_read(pSubSector, pCache, M25PX_SIZE_SUBSECTOR);
-      
-      // Erase sub sector, it is now in local cache
-      M25PX_erase(pSubSector, M25PX_SIZE_SUBSECTOR, eraseDelay);
+    // Read the sub sector to be written into local cache
+    M25PX_read(pSubSector, pCache, M25PX_SIZE_SUBSECTOR);
+    
+    // Erase sub sector, it is now in local cache
+    M25PX_erase(pSubSector, M25PX_SIZE_SUBSECTOR, eraseDelay);
 
-      // Overwrite local cache with the source data at the specified destination
-      Util_copyMemory(pSrc, pCacheDest, numToWrite);
-      
-      // Write the whole sub-sector back to flash
-      M25PX_directWrite(pCache, pSubSector, M25PX_SIZE_SUBSECTOR, writeDelay);
+    // Overwrite local cache with the source data at the specified destination
+    Util_copyMemory(pSrc, pCacheDest, numToWrite);
+    
+    // Write the whole sub-sector back to flash
+    M25PX_directWrite(pCache, pSubSector, M25PX_SIZE_SUBSECTOR, writeDelay);
 
-      // Compare memory to determine if the write was successful
-      M25PX_read(pSubSector, pTestSub, M25PX_SIZE_SUBSECTOR);
+    // Compare memory to determine if the write was successful
+    M25PX_read(pSubSector, pTestSub, M25PX_SIZE_SUBSECTOR);
+    
+    if (0 != Util_compareMemory(pCache, pTestSub, M25PX_SIZE_SUBSECTOR))
+      retries = 0;  // Will fail out (with line reset) on next line of code
       
-      if (0 == Util_compareMemory(pCache, pTestSub, M25PX_SIZE_SUBSECTOR))
-        break;
-      else
-        result = M25PX_RESULT_NEEDED_RETRY;
-    }
     result = (retries == 0) ? M25PX_RESULT_ERROR : result;
     pSrc  += numToWrite; // update source pointer
     pDst  += numToWrite; // update destination pointer

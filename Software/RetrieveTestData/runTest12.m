@@ -1,4 +1,5 @@
 function [numFailures, chans, data, time] = runTest12(CommPort, baudRate, numSweeps, testLen, opDelay)
+    numFailures = 0;
     delete(instrfindall);
     s = openFixtureComms(CommPort, baudRate);
     
@@ -26,6 +27,13 @@ function [numFailures, chans, data, time] = runTest12(CommPort, baudRate, numSwe
             try
                 [name(:,profIter), chans, data(:,:,sweepIter,profIter), time, success] ...
                     = execTest(s, 12, args);
+                testPassed = strfind(name(profIter),'Passed');
+                if (cellfun('isempty', testPassed))
+                    numFailures = numFailures + 1;
+                    fprintf('\n******TEST ERROR DETECTED*****\n');
+                    %err = MException('Test:Failure', 'The operation did not complete as expected');
+                    %throw(err);
+                end
                 avgData = mean(data, 3);
                 sweepIter = sweepIter + 1;
             catch
@@ -37,6 +45,7 @@ function [numFailures, chans, data, time] = runTest12(CommPort, baudRate, numSwe
                            profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time')
         testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testTime);
-        profIter = profIter + 3;
+        %profIter = profIter + 3;
+        profIter = profIter + 6;
     end
 end

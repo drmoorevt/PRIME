@@ -230,9 +230,7 @@ void EEPROM_read(const uint8 *pSrc, uint8 *pDest, uint16 length)
 \**************************************************************************************************/
 EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint32_t length, uint32_t opDelay)
 {
-  uint8 retries;
   uint16 numBytes;
-  boolean writeOk = FALSE;
   uint8 writeBuf[ADDRBYTES_EE + 1], readBuf[WRITEPAGESIZE_EE];
 
   while (length > 0)
@@ -240,41 +238,39 @@ EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint32_t length, uint32_t o
     // for EE, write must not go past a page boundary
     numBytes = MIN(length, WRITEPAGESIZE_EE - ((uint32)pDest & (WRITEPAGESIZE_EE-1)));
 
-    for (retries = EE_NUM_RETRIES, writeOk = FALSE; (writeOk == FALSE) && (retries > 0); retries--)
-    {
-      // Must set state (voltage) before setting control pins!
-      EEPROM_setState(EEPROM_STATE_WRITING); // For monitoring and voltage control purposes
-      EEPROM_setup(TRUE); // Enable the EEPROM control and SPI pins for the transaction
+    // Must set state (voltage) before setting control pins!
+    EEPROM_setState(EEPROM_STATE_WRITING); // For monitoring and voltage control purposes
+    EEPROM_setup(TRUE); // Enable the EEPROM control and SPI pins for the transaction
 
-      // enable EEPROM
-      SELECT_CHIP_EE0();
-      writeBuf[0] = OP_WRITE_ENABLE;
-      SPI_write(writeBuf, 1);
-      DESELECT_CHIP_EE0();
+    // enable EEPROM
+    SELECT_CHIP_EE0();
+    writeBuf[0] = OP_WRITE_ENABLE;
+    SPI_write(writeBuf, 1);
+    DESELECT_CHIP_EE0();
 
-      // write to EEPROM
-      writeBuf[0] = OP_WRITE_MEMORY;
-      writeBuf[1] = (uint8)((uint32)pDest >> 8);
-      writeBuf[2] = (uint8)((uint32)pDest >> 0);
+    // write to EEPROM
+    writeBuf[0] = OP_WRITE_MEMORY;
+    writeBuf[1] = (uint8)((uint32)pDest >> 8);
+    writeBuf[2] = (uint8)((uint32)pDest >> 0);
 
-      SELECT_CHIP_EE0();
-      SPI_write(writeBuf, ADDRBYTES_EE + 1);
-      SPI_write(pSrc, numBytes);
-      DESELECT_CHIP_EE0();
+    SELECT_CHIP_EE0();
+    SPI_write(writeBuf, ADDRBYTES_EE + 1);
+    SPI_write(pSrc, numBytes);
+    DESELECT_CHIP_EE0();
 
-      EEPROM_setup(FALSE);  // Disable the EEPROM control and SPI pins while waiting
-      EEPROM_setState(EEPROM_STATE_WAITING); // For monitoring and voltage control purposes
-      Time_delay(opDelay); // EE_PAGE_WRITE_TIME
+    EEPROM_setup(FALSE);  // Disable the EEPROM control and SPI pins while waiting
+    EEPROM_setState(EEPROM_STATE_WAITING); // For monitoring and voltage control purposes
+    Time_delay(opDelay); // EE_PAGE_WRITE_TIME
 
-      EEPROM_read(pDest, readBuf, numBytes); // Verify the write, re-enables then disables EEPROM
-      writeOk = (Util_compareMemory(pSrc, readBuf, (uint8)numBytes) == 0);
-    }
+    EEPROM_read(pDest, readBuf, numBytes); // Verify the write, re-enables then disables EEPROM
+    if (Util_compareMemory(pSrc, readBuf, (uint8)numBytes) != 0)
+      return EEPROM_RESULT_ERROR;
 
     pSrc   += numBytes; // update source pointer
     pDest  += numBytes; // update destination pointer
     length -= numBytes;
   }
-  return (writeOk) ? EEPROM_RESULT_OK : EEPROM_RESULT_ERROR;
+  return EEPROM_RESULT_OK;
 }
 
 /**************************************************************************************************\
