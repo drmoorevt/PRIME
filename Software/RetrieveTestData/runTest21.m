@@ -7,7 +7,7 @@ function [name, chans, data, time] = runTest21(CommPort, baudRate, numSweeps, te
     upperLim = lowerLim * 2;
     while (lowerLim ~= upperLim)
         fprintf('\n\nTesting opDelay: %d\n\n', lowerLim);
-        [fail, chans, data, time] = runTest11(CommPort, 921600, numSweeps,  7000,  [lowerLim, 0, 0, 0]);
+        [fail, chans, data, time] = runTest11(CommPort, 921600, numSweeps,  testLen,  [lowerLim, 0, 0, 0]);
         [upperLim, lowerLim] = binSearch(fail, upperLim, lowerLim);
         %set(gcf,'units','normalized','outerposition',[0 0 1 1])
         F(i) = getframe(gcf);
