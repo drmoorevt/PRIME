@@ -15,11 +15,26 @@
 struct
 {
   SoftTimerConfig softTimers[TIME_SOFT_TIMER_MAX];
-  uint64 systemTime;  // milliseconds since the epoch
+  uint64_t systemTime;  // milliseconds since the epoch
+  uint64_t pendEnergy;
   boolean isSecondBoundary;
 } sTime;
 
 static void Time_decrementSoftTimers(void);
+
+/**************************************************************************************************\
+* FUNCTION      Time_notifyEnergyExpended
+* DESCRIPTION   
+* PARAMETERS    none
+* RETURN        none
+\**************************************************************************************************/
+bool Time_notifyEnergyExpended(uint32_t energyExpendedBitCounts)
+{
+  sTime.pendEnergy = (sTime.pendEnergy > energyExpendedBitCounts) 
+                   ? sTime.pendEnergy - energyExpendedBitCounts
+                   : 0;
+  return sTime.pendEnergy > 0;
+}
 
 /**************************************************************************************************\
 * FUNCTION      Time_init
@@ -169,6 +184,36 @@ void Time_delay(volatile uint32 microSeconds)
                               TIM_CR1_OPM   |  // One pulse mode, disable after count hits zero
                               TIM_CR1_ARPE);   // Buffer the ARPE
   while (!(TIM5->SR & TIM_SR_UIF));            // Wait until timer hits the ARR value
+}
+
+/**************************************************************************************************\
+* FUNCTION      Time_pendEnergyTime
+* DESCRIPTION   Blocking delay
+* PARAMETERS    microSeconds - number of microSeconds to delay
+* RETURN        none
+* NOTES         Timer5 is connected to APB1 which is operating at 60MHz
+\**************************************************************************************************/
+void Time_pendEnergyTime(volatile uint32 microSeconds, volatile uint32_t microJoules)
+{
+  if (0 == microSeconds)
+    return;
+  // if this is called waiting on zero microjoules then assume no actual energy wait
+  sTime.pendEnergy = (microJoules != 0) ? microJoules : 0xFFFFFFFFFFFFFFFF;
+  
+  const uint32_t timFreq = 90000000;
+  RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;          // Turn on Timer5 clocks (90 MHz)
+  TIM5->CR1     = (0x0000);                    // Turn off the counter entirely
+  TIM5->PSC     = (timFreq / (1000 * 1000));   // Set prescalar to count up on microsecond bounds.
+  TIM5->ARR     = (microSeconds);               // Set up the counter to count down
+  TIM5->SR      = (0x0000);                    // Clear all status (and interrupt) bits
+  TIM5->DIER    = (0x0000);                    // Turn off the timer (update) interrupt
+  TIM5->CR2     = (0x0000);                    // Ensure CR2 is at default settings
+  TIM5->CR1     = (0x0000) | (TIM_CR1_CEN   |  // Turn on the timer
+                              TIM_CR1_URS   |  // Only overflow/underflow generates an update IRQ
+                              TIM_CR1_OPM   |  // One pulse mode, disable after count hits zero
+                              TIM_CR1_ARPE);   // Buffer the ARPE
+  // Wait until timer hits the ARR value or the pending energy expenditure value reaches zero
+  while ((!(TIM5->SR & TIM_SR_UIF)) && (sTime.pendEnergy > 0));
 }
 
 /**************************************************************************************************\

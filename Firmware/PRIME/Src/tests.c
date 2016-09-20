@@ -114,6 +114,9 @@ static struct
     __attribute__((aligned)) uint8 rxBuffer[512];
     __attribute__((aligned)) uint8 txBuffer[512];
   } comms;
+  uint32_t targetEnergy;
+  uint32_t totalEnergy;
+  uint32_t sampIdx;
 } sTests;
 
 uint16 Tests_test00(TestArgs *pArgs);
@@ -257,7 +260,11 @@ void Tests_notifySampleTrigger(void)
   if (FALSE == sTests.periphState.isSampling)
     return;
   if (sTests.periphState.numSamples-- > 0) // More than one sample remains
+  {
     *sTests.periphState.pSampleBuffer++ = sTests.getPeriphState();
+    Time_notifyEnergyExpended(*sTests.adc3.pSampleBuffer);
+    sTests.totalEnergy += *sTests.adc3.pSampleBuffer++;
+  }
   else
     sTests.periphState.isSampling = FALSE;
 }
@@ -309,19 +316,21 @@ const uint8 resetMessage[6] = {'R','e','s','e','t','\n'};
 \**************************************************************************************************/
 void Tests_runTest14(void)
 {
-  uint16 testBuffer[20];
-  double temperature, humidity;
-  sTests.testArgs.preTestDelay  = 100;
-  sTests.testArgs.sampRate      = 1;
-  sTests.testArgs.postTestDelay = 100;
+  sTests.testArgs.len = 50000;
+  sTests.testArgs.opDelay[0] = 45000;
   sTests.testArgs.profile = HIH_PROFILE_STANDARD;
-  sTests.testArgs.pDst = 0;  // Override pDest to measure/read/convert
+  sTests.testArgs.preTestDelay  = 1000;
+  sTests.testArgs.sampRate      = 1;
+  sTests.testArgs.postTestDelay = 1000;
+  sTests.testArgs.buf[0] = 1;
+  sTests.testArgs.buf[1] = 1;
+  sTests.testArgs.buf[2] = 1;
   Tests_test14(&sTests.testArgs);
-  temperature = HIH613X_getTemperature();
-  humidity = HIH613X_getHumidity();
-  Util_copyMemory((uint8 *)&GPSDRAM->samples[0][0], (uint8 *)testBuffer, 20);
-  Tests_sendData(sprintf((char *)sTests.comms.txBuffer, "Temperature: %f, Humidity: %f\r\n", 
-                         temperature, humidity));
+  double temperature = HIH613X_getTemperature();
+  double humidity = HIH613X_getHumidity();
+  Tests_sendData(sprintf((char *)sTests.comms.txBuffer, 
+    "Temperature: %f, Humidity: %f, Energy: %f\r\n", 
+                         temperature, humidity, (double)sTests.totalEnergy));
 }
 
 /******************************** Test START,SEND,RESET protocol **********************************\
@@ -354,6 +363,16 @@ void Tests_run(void)
     }
   }
   */
+  while(1)
+  {
+    sTests.adc1.pSampleBuffer        = &GPSDRAM->samples[0][0];  // Reset sample buffers to
+    sTests.adc2.pSampleBuffer        = &GPSDRAM->samples[1][0];  // initial values so we can
+    sTests.adc3.pSampleBuffer        = &GPSDRAM->samples[2][0];  // send out the data
+    sTests.periphState.pSampleBuffer = &GPSDRAM->samples[3][0];  // chronologically
+    sTests.totalEnergy = 0;
+    Tests_runTest14();
+    Time_delay(100000);
+  }
   
   switch (sTests.state)
   {

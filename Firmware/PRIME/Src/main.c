@@ -156,7 +156,7 @@ void Main_printResult(uint32_t yPos, bool result)
 
 int main(void)
 {
-  bool runPOST = true;
+  bool runPOST = false;
   
   HAL_Init();  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   SystemClock_Config();  /* Configure the system clock */

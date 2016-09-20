@@ -70,4 +70,7 @@ uint32 Time_getTimeOfday(void);
 uint64 Time_getSystemTime(void);
 boolean Time_isSecondBoundary(void);
 
+void Time_pendEnergyTime(volatile uint32 microSeconds, volatile uint32_t microJoules);
+bool Time_notifyEnergyExpended(uint32_t energyExpendedBitCounts);
+
 #endif //TIME_H
