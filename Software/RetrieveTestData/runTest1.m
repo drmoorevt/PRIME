@@ -4,10 +4,10 @@ function [ output_args ] = runTest1(CommPort, baudRate, numAvgs, testLen, opDela
     
     startVolts   = 1.8;
     endVolts     = 3.3;
-    voltIter     = 1.3;
+    voltIter     = 0.5;
     startCurrent = .1;
     endCurrent   = 10;
-    currIter     = .1;
+    currIter     = 1;
     
     filename = sprintf('./results/Test1_%.3fV-%.3fV(%.3fV)_%.3fmA-%.3fmA(%.3fmA).mat', ...
                        startVolts, endVolts, voltIter, startCurrent, endCurrent, currIter);
@@ -15,7 +15,7 @@ function [ output_args ] = runTest1(CommPort, baudRate, numAvgs, testLen, opDela
     numVoltMeas = round((endVolts - startVolts) / voltIter) + 1;
     numCurrMeas = round((endCurrent - startCurrent) / currIter) + 1;
     
-    dutInVolts   = ones(numVoltMeas, numCurrMeas) * 4.32;
+    dutInVolts   = ones(numVoltMeas, numCurrMeas) * 4.50;
     dutOutVolts  = zeros(numVoltMeas,numCurrMeas);
     dutInCur     = zeros(numVoltMeas,numCurrMeas);
     dutOutCur    = zeros(numVoltMeas,numCurrMeas);

@@ -51,6 +51,19 @@ typedef struct
   void      (*appNotifyTimerExpired)(SoftTimer timer); // Can be null
 } SoftTimerConfig;
 
+typedef enum
+{
+  DELAY_TYPE_TIME,
+  DELAY_TYPE_ENERGY,
+  DELAY_TYPE_DELTA,
+} DelayType;
+
+typedef struct
+{
+  uint32_t tDelay;
+  uint32_t eDelay;
+} Delay;
+
 #define ENABLE_SYSTICK()  SysTick->CTRL = SysTick->CTRL | (SysTick_CTRL_ENABLE_Msk)
 #define DISABLE_SYSTICK() SysTick->CTRL = SysTick->CTRL & (~SysTick_CTRL_ENABLE_Msk)
 #define ENABLE_SYSTICK_INTERRUPT()  SysTick->CTRL = SysTick->CTRL | (SysTick_CTRL_TICKINT_Msk)
@@ -70,7 +83,7 @@ uint32 Time_getTimeOfday(void);
 uint64 Time_getSystemTime(void);
 boolean Time_isSecondBoundary(void);
 
-void Time_pendEnergyTime(volatile uint32 microSeconds, volatile uint32_t microJoules);
+void Time_pendEnergyTime(Delay *pDelay);
 bool Time_notifyEnergyExpended(uint32_t energyExpendedBitCounts);
 
 #endif //TIME_H

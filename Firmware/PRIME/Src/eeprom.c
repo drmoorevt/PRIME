@@ -338,20 +338,4 @@ static uint8_t EEPROM_readMfgId(void)
 bool EEPROM_test(void)
 {
   return (MCP25AA512_MFG_ID == EEPROM_readMfgId());
-  /*
-  PowerCon_setDeviceDomain(DEVICE_EEPROM, VOLTAGE_DOMAIN_0);
-  uint8 buffer[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-  uint8 test[sizeof(buffer)];
-  
-  // basic read test
-  EEPROM_read((uint8*)0,test,sizeof(test));
-  EEPROM_write(buffer,(uint8*)0,sizeof(buffer));
-  EEPROM_read((uint8*)0,test,sizeof(test));
-
-  // boundary test
-  EEPROM_write(buffer,(uint8*)(8),sizeof(buffer));
-  EEPROM_read((uint8*)(8),test,sizeof(test));
-
-  return (0 == Util_compareMemory(buffer, test, sizeof(buffer)));
-  */
 }

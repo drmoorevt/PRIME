@@ -40,6 +40,13 @@ function [numFailures, chans, data, time] = runTest14(CommPort, baudRate, numSwe
                            profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time')
         testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testLen/1000);
+        
+        movingAverage = avgData;
+        movingAverage(50:end-50,1) = conv(avgData(50:end-50,1), ones(50,1)/50, 'same');
+        movingAverage(50:end-50,2) = conv(avgData(50:end-50,2), ones(50,1)/50, 'same');
+        movingAverage(50:end-50,3) = conv(avgData(50:end-50,3), ones(50,1)/50, 'same');
+        testPlot(movingAverage(:,:,profIter), time, chans, name(:,profIter), testLen/1000);
+        
         %profIter = profIter + 2;
         profIter = profIter + 5;  % skipping the low power test now
     end

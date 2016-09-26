@@ -183,11 +183,11 @@ int main(void)
   Analog_init();             
   PowerCon_init(&hdac);      
   EEPROM_init();             
-  ESP12_init(&huart1);     
+//  ESP12_init(&huart1);     
   HIH613X_init();            
   M25PX_init();
   PLR5010D_init();  
-  SBT263_init(&huart5);
+//  SBT263_init(&huart5);
   SST26_init();
   SDCard_init();
   SI114X_init();

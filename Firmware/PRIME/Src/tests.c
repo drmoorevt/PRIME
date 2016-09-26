@@ -184,6 +184,8 @@ void Tests_init(void)
   Device i;
   for (i = DEVICE_EEPROM; i < DEVICE_MAX; i++)
     PowerCon_setDeviceDomain(i, VOLTAGE_DOMAIN_0);
+  PowerCon_setDeviceDomain(DEVICE_WIFIMOD, VOLTAGE_DOMAIN_NONE);
+  PowerCon_setDeviceDomain(DEVICE_BTMOD, VOLTAGE_DOMAIN_NONE);
 }
 
 /**************************************************************************************************\
@@ -363,6 +365,7 @@ void Tests_run(void)
     }
   }
   */
+  /*
   while(1)
   {
     sTests.adc1.pSampleBuffer        = &GPSDRAM->samples[0][0];  // Reset sample buffers to
@@ -373,7 +376,7 @@ void Tests_run(void)
     Tests_runTest14();
     Time_delay(100000);
   }
-  
+  */
   switch (sTests.state)
   {
     case TEST_IDLE:  // Clear test data and setup listening for commands on the comm port
@@ -511,9 +514,9 @@ static void Tests_setupSPITests(Device device, TestArgs *pArgs)
   PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 10));
   // Place every device other than the DUT into the MCU domain. Place the DUT in the CVD:
   uint32_t i;
-  for (i = 0; i < DEVICE_MAX; i++)
-    PowerCon_setDeviceDomain((Device)i, VOLTAGE_DOMAIN_0);
-  PowerCon_setDeviceDomain(device, VOLTAGE_DOMAIN_2);
+//  for (i = 0; i < DEVICE_MAX; i++)
+//    PowerCon_setDeviceDomain((Device)i, VOLTAGE_DOMAIN_0);
+//  PowerCon_setDeviceDomain(device, VOLTAGE_DOMAIN_2);
   double refVolts = Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 100);
   
   // Prepare data structures for retrieval
@@ -586,9 +589,9 @@ static void Tests_teardownSPITests(TestArgs *pArgs, boolean testPassed)
   Analog_stopSampleTimer();
   
   // Place every device back into the MCU domain:
-  uint32_t i;
-  for (i = 0; i < DEVICE_MAX; i++)
-    PowerCon_setDeviceDomain((Device)i, VOLTAGE_DOMAIN_0);
+//  uint32_t i;
+//  for (i = 0; i < DEVICE_MAX; i++)
+//    PowerCon_setDeviceDomain((Device)i, VOLTAGE_DOMAIN_0);
   
   // Enable all previous interrupts
   ENABLE_SYSTICK_INTERRUPT();
@@ -767,8 +770,9 @@ uint16 Tests_test01(TestArgs *pArgs)
   
   // Assume all devices are on the MCU domain and set the output voltage
   PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, testOutVoltage);
+  Time_delay(1000*100);
   result = PLR5010D_setCurrent(PLR5010D_DOMAIN2, PLR5010D_CHAN_BOTH, testOutCurrent);
-  //Time_delay(1000*100);
+  Time_delay(1000*100);
   double domVolts = Analog_getADCVoltage(ADC_DOM2_VOLTAGE, numAvgs);
   double inCurrent = Analog_getADCCurrent(ADC_DOM2_INCURRENT, numAvgs);
   double outCurrent = Analog_getADCCurrent(ADC_DOM2_OUTCURRENT, numAvgs);
@@ -968,10 +972,15 @@ uint16 Tests_test14(TestArgs *pArgs)
   bool measure = pArgs->buf[0];
   bool readVal = pArgs->buf[1];
   bool convert = pArgs->buf[2];
+  
+  Delay delay;
+  delay.tDelay = pArgs->opDelay[0];
+  delay.eDelay = pArgs->opDelay[3];
+  
   HIH613X_setPowerProfile((HIHPowerProfile)pArgs->profile);
 
   Tests_setupSPITests(DEVICE_TEMPSENSE, pArgs);
-  HIHStatus hihResult = HIH613X_readTempHumidI2C(measure, readVal, convert, pArgs->opDelay[0]);
+  HIHStatus hihResult = HIH613X_readTempHumidI2C(measure, readVal, convert, &delay);
   Tests_teardownSPITests(pArgs, (HIH_STATUS_NORMAL == hihResult));
 
   return SUCCESS;

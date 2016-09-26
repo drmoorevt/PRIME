@@ -25,7 +25,7 @@ typedef struct
 } HIH613XData;
 
 // Power profile voltage definitions, in HIHPowerProfile / HIHState order
-static const double HIH_POWER_PROFILES[HIH_PROFILE_MAX][HIH_STATE_MAX] =
+static double HIH_POWER_PROFILES[HIH_PROFILE_MAX][HIH_STATE_MAX] =
 { // Idle, Data Ready, Transmitting, Waiting, Reading
   {3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile
   {2.9, 2.9, 2.9, 2.9, 3.3},  // 29VIRyTW
@@ -56,6 +56,14 @@ void HIH613X_init(void)
   
   HIH613X_setPowerProfile(HIH_PROFILE_STANDARD);  // Set all states to 3.3v
   HIH613X_setup(FALSE);
+  
+  double vMCU = Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 100);
+  
+  uint32_t i;
+  for (i = 0; i < HIH_STATE_MAX; i++)  // All states = vMCU for standard profile
+    HIH_POWER_PROFILES[HIH_PROFILE_STANDARD][i] = vMCU;
+  for (i = 0; i < HIH_PROFILE_MAX; i++) // Only reading state = vMCU for other profiles
+    HIH_POWER_PROFILES[i][HIH_STATE_READING] = vMCU;
   
   sHIH613X.state = HIH_STATE_IDLE;
   sHIH613X.isInitialized = TRUE;
@@ -136,8 +144,8 @@ static void HIH613X_setState(HIHState state)
   }
   
   sHIH613X.state = state;
-  PowerCon_setDeviceDomain(DEVICE_TEMPSENSE, curDomain);
   PowerCon_setDomainVoltage(curDomain, sHIH613X.vDomain[state]);  // Set the domain voltage
+  PowerCon_setDeviceDomain(DEVICE_TEMPSENSE, curDomain);
 }
 
 /**************************************************************************************************\
@@ -218,7 +226,7 @@ void HIH613X_notifyVoltageChange(double newVoltage)
 *                delay occurring between the measurement and read
 *             2) The results are stored in the HIH613X structure
 \**************************************************************************************************/
-HIHStatus HIH613X_readTempHumidI2C(bool measure, bool read, bool convert, uint32_t opDelay)
+HIHStatus HIH613X_readTempHumidI2C(bool measure, bool read, bool convert, Delay *pDelay)
 {
   uint8_t dummyWrite[1] = {0xFF};
   
@@ -234,7 +242,7 @@ HIHStatus HIH613X_readTempHumidI2C(bool measure, bool read, bool convert, uint32
   if (measure && read)
   {
     // tMeasure ~= 36.65ms, but 45ms for reliability (comes in from fixture)
-    Time_pendEnergyTime(opDelay, 0);
+    Time_pendEnergyTime(pDelay);
     HIH613X_setState(HIH_STATE_DATA_READY);
   }
 
@@ -267,7 +275,8 @@ HIHStatus HIH613X_readTempHumidI2C(bool measure, bool read, bool convert, uint32
 \**************************************************************************************************/
 bool HIH613X_test(void)
 {
-  HIH613X_readTempHumidI2C(true, true, true, 50000);
+  Delay delay = {0, 50000};
+  HIH613X_readTempHumidI2C(true, true, true, &delay);
   return ((sHIH613X.currHum > 0) && (sHIH613X.currHum < 100) &&
           (sHIH613X.currTmp > 0) && (sHIH613X.currTmp < 100));
 }
