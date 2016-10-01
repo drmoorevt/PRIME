@@ -11,7 +11,7 @@ function [name, chans, data, time] = TestConsole(CommPort)
 %         fprintf('\nKBps: %10.4f, Kbps: %10.4f', KBps, KBps * 8);
 %     end
 
-    numSweeps = 1;
+    numSweeps = 10;
     eeFails = 0;
     sfFails = 0;
     sdFails = 0;
@@ -36,7 +36,7 @@ function [name, chans, data, time] = TestConsole(CommPort)
    %[htFails, chans, data, time] = runTest24(CommPort, 921600, numSweeps,  50000,  [45000, 0, 0, 0]);   % HIH
    
    % Optimal Energy Delay Tests
-   [htFails, chans, data, time] = runTest24(CommPort, 921600, numSweeps,  50000,  [0, 0, 0, 630000]);   % HIH
+   [htFails, chans, data, time] = runTest24(CommPort, 921600, numSweeps,  50000,  [0, 0, 0, 700000]);   % HIH
    
    %fprintf('Dev\tFails\nEE:\t%d\nSF:\t%d\nSD:\t%d\nHT:\t%d\n', eeFails, sfFails, sdFails, htFails);
    %[inEnergy, outEnergy, inEnergyDelta, outEnergyDelta] = analyzeTest(data, time)
