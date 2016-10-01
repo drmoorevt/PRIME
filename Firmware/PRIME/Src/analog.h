@@ -17,6 +17,7 @@ typedef enum
   ADC_DOM1_OUTCURRENT = 0x07,
   ADC_DOM2_OUTCURRENT = 0x08,
   ADC_SELECT_MAX      = 0x09,
+  ADC_PERIPH_STATE    = 0x0A
 } ADCSelect;
 
 bool Analog_init(void);
@@ -29,7 +30,8 @@ typedef enum
   ADC_PORT1     = 0,
   ADC_PORT2     = 1,
   ADC_PORT3     = 2,
-  NUM_ADC_PORTS = 3
+  NUM_ADC_PORTS = 3,
+  ADC_PORT_PERIPH_STATE = 4
 } ADCPort;
 
 typedef struct
@@ -51,6 +53,8 @@ typedef struct
   uint16_t *appSampleBuffer;
   void  (*appNotifyConversionComplete)(uint8_t, uint32_t);
 } AppADCConfig;
+
+extern uint16_t gPeriphState;  // Provide peripheral state variable for peripherals to update
 
 void Analog_openPort(ADCSelect adcSelect, AppADCConfig appConfig);
 void Analog_configureADC(ADCSelect adcSel, void *pDst, uint32_t numSamps);

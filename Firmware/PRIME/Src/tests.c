@@ -114,8 +114,6 @@ static struct
     __attribute__((aligned)) uint8 rxBuffer[512];
     __attribute__((aligned)) uint8 txBuffer[512];
   } comms;
-  uint32_t targetEnergy;
-  uint32_t totalEnergy;
   uint32_t sampIdx;
 } sTests;
 
@@ -252,26 +250,6 @@ uint8 Tests_getTestToRun(void)
 }
 
 /**************************************************************************************************\
-* FUNCTION    Tests_notifySampleTrigger
-* DESCRIPTION Function is called upon interrupt indicating that sample trigger (TMR3) has occurred
-* PARAMETERS  None
-* RETURNS     Nothing
-\**************************************************************************************************/
-void Tests_notifySampleTrigger(void)
-{
-  if (FALSE == sTests.periphState.isSampling)
-    return;
-  if (sTests.periphState.numSamples-- > 0) // More than one sample remains
-  {
-    *sTests.periphState.pSampleBuffer++ = sTests.getPeriphState();
-    Time_notifyEnergyExpended(*sTests.adc3.pSampleBuffer);
-    sTests.totalEnergy += *sTests.adc3.pSampleBuffer++;
-  }
-  else
-    sTests.periphState.isSampling = FALSE;
-}
-
-/**************************************************************************************************\
 * FUNCTION    Tests_notifyConversionComplete
 * DESCRIPTION This function is called upon interrupt indicating that numSamples have been taken
 * PARAMETERS  None
@@ -279,34 +257,20 @@ void Tests_notifySampleTrigger(void)
 \**************************************************************************************************/
 void Tests_notifyConversionComplete(ADCPort port, uint32_t chan, uint32 numSamples)
 {
+  uint16_t *pBuffer;
+  volatile Samples *pSampleSet;
   switch (port)
   {
-    case ADC_PORT1:
-      sTests.adc1.channel    = chan;
-      sTests.adc1.isSampling = FALSE;
-      break;
-    case ADC_PORT2:
-      sTests.adc2.channel    = chan;
-      sTests.adc2.isSampling = FALSE;
-      break;
-    case ADC_PORT3:
-      sTests.adc3.channel    = chan;
-      sTests.adc3.isSampling = FALSE;
-      break;
-    default:
-      break;
+    case ADC_PORT1: pSampleSet = &sTests.adc1;        pBuffer = &GPSDRAM->samples[0][0]; break;
+    case ADC_PORT2: pSampleSet = &sTests.adc2;        pBuffer = &GPSDRAM->samples[1][0]; break;
+    case ADC_PORT3: pSampleSet = &sTests.adc3;        pBuffer = &GPSDRAM->samples[2][0]; break;
+    default:        pSampleSet = &sTests.periphState; pBuffer = &GPSDRAM->samples[3][0]; break;
   }
-  // should turn off the ADC timer here
+  pSampleSet->channel    = chan;
+  pSampleSet->isSampling = FALSE;
+  pSampleSet->numSamples = numSamples;
+  pSampleSet->pSampleBuffer = pBuffer;
 }
-
-// User sends a two-byte ASCII test number to run, respond with ACK or NAK
-uint8 runMessage[6]   = {'T','e','s','t','0','\n'};
-// User sends a status request, respond with #bytes available for done or NAK for not done
-const uint8 statMessage[7]  = {'S','t','a','t','u','s','\n'};
-// User requests byte offset (uint16) into test buffer
-const uint8 sendMessage[9]  = {'S','e','n','d','0','0','0','0','\n'};
-// User sends a request to reset tests: flush the test buffer and reset state machine
-const uint8 resetMessage[6] = {'R','e','s','e','t','\n'};
 
 /**************************************************************************************************\
 * FUNCTION    Tests_runTest14
@@ -330,9 +294,13 @@ void Tests_runTest14(void)
   Tests_test14(&sTests.testArgs);
   double temperature = HIH613X_getTemperature();
   double humidity = HIH613X_getHumidity();
+  double totalEnergy = 0;
+  uint32_t i;
+  for (i = 0; i < sTests.periphState.numSamples; i++)
+    totalEnergy += sTests.periphState.pSampleBuffer[i];
+  
   Tests_sendData(sprintf((char *)sTests.comms.txBuffer, 
-    "Temperature: %f, Humidity: %f, Energy: %f\r\n", 
-                         temperature, humidity, (double)sTests.totalEnergy));
+    "Temperature: %f, Humidity: %f, Energy: %f\r\n", temperature, humidity, totalEnergy));
 }
 
 /******************************** Test START,SEND,RESET protocol **********************************\
@@ -365,18 +333,17 @@ void Tests_run(void)
     }
   }
   */
-  /*
+  
   while(1)
   {
     sTests.adc1.pSampleBuffer        = &GPSDRAM->samples[0][0];  // Reset sample buffers to
     sTests.adc2.pSampleBuffer        = &GPSDRAM->samples[1][0];  // initial values so we can
     sTests.adc3.pSampleBuffer        = &GPSDRAM->samples[2][0];  // send out the data
     sTests.periphState.pSampleBuffer = &GPSDRAM->samples[3][0];  // chronologically
-    sTests.totalEnergy = 0;
     Tests_runTest14();
     Time_delay(100000);
   }
-  */
+  
   switch (sTests.state)
   {
     case TEST_IDLE:  // Clear test data and setup listening for commands on the comm port
@@ -544,9 +511,10 @@ static void Tests_setupSPITests(Device device, TestArgs *pArgs)
   for (i = 0; i <= DMA2D_IRQn; i++)
     NVIC_DisableIRQ((IRQn_Type)i);
 
-  Analog_configureADC(ADC_DOM2_VOLTAGE,    sTests.adc1.pSampleBuffer, numSamps);
-  Analog_configureADC(ADC_DOM2_INCURRENT,  sTests.adc2.pSampleBuffer, numSamps);
-  Analog_configureADC(ADC_DOM2_OUTCURRENT, sTests.adc3.pSampleBuffer, numSamps);
+  Analog_configureADC(ADC_DOM2_VOLTAGE,    sTests.adc1.pSampleBuffer,        numSamps);
+  Analog_configureADC(ADC_DOM2_INCURRENT,  sTests.adc2.pSampleBuffer,        numSamps);
+  Analog_configureADC(ADC_DOM2_OUTCURRENT, sTests.adc3.pSampleBuffer,        numSamps);
+  Analog_configureADC(ADC_PERIPH_STATE,    sTests.periphState.pSampleBuffer, numSamps);
   
   switch (device)
   {
@@ -557,13 +525,13 @@ static void Tests_setupSPITests(Device device, TestArgs *pArgs)
     default: break;
   }
   sTests.periphState.channel    = device;   // For sorting out the state of the peripheral
-  sTests.periphState.isSampling = TRUE;     
   sTests.periphState.numSamples = numSamps; // decremented on each sample
   
   // Begin the sampling by turning on the associated sample timer
-  sTests.adc1.isSampling = TRUE;
-  sTests.adc2.isSampling = TRUE;
-  sTests.adc3.isSampling = TRUE;
+  sTests.adc1.isSampling        = TRUE;
+  sTests.adc2.isSampling        = TRUE;
+  sTests.adc3.isSampling        = TRUE;
+  sTests.periphState.isSampling = TRUE;     
   
   Analog_startSampleTimer(pArgs->sampRate);
   

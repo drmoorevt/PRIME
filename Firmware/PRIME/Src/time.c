@@ -97,7 +97,7 @@ void Time_initTimer1(void)
 \**************************************************************************************************/
 void TIM1_UP_TIM10_IRQHandler(void)
 {
-  CLEAR_BIT(TIM2->SR, TIM_SR_UIF); // Clear the update interrupt flag
+  CLEAR_BIT(TIM1->SR, TIM_SR_UIF); // Clear the update interrupt flag
 }
 
 /**************************************************************************************************\

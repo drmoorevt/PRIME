@@ -19,11 +19,20 @@ typedef struct
   AppADCConfig      cfg;
 } ADCPortCfg;
 
+typedef struct
+{
+  TIM_HandleTypeDef htim;
+  DMA_HandleTypeDef hdma[7];
+  AppADCConfig      cfg;
+} TimPortCfg;
+
 static struct
 {
   ADCPortCfg adc[NUM_ADC_PORTS];
-  TIM_HandleTypeDef htim;
+  TimPortCfg tim;
 } sAnalog;
+
+uint16_t gPeriphState;
 
 void Analog_initADC(ADCSelect adcNum);
 ADCPort Analog_getPortNumber(ADCSelect adcSelect);
@@ -82,7 +91,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
   if (numToFetch > 0)
   {
     HAL_ADC_Stop_DMA(hadc);
-    if(HAL_ADC_Start_DMA(hadc, (uint32 *)portCfg->cfg.appSampleBuffer, numToFetch) != HAL_OK)
+    if(HAL_ADC_Start_DMA(hadc, (uint32_t *)portCfg->cfg.appSampleBuffer, numToFetch) != HAL_OK)
       Error_Handler();
   }
   else
@@ -100,6 +109,34 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 }
 
 /**************************************************************************************************\
+* FUNCTION    Analog_PeriphStateXferCpltCallback
+* DESCRIPTION 
+* PARAMETERS  None
+* RETURNS     Nothing
+\**************************************************************************************************/
+void Analog_PeriphStateXferCpltCallback(DMA_HandleTypeDef *hdma)
+{
+  AppADCConfig *appCfg = &sAnalog.tim.cfg;
+  // Subtract off the number we just completed, and calculate the number of remaining samples
+  uint32_t numCompleted = MIN(0xFFFF, appCfg->adcConfig.numSamps);
+  appCfg->adcConfig.numSamps -= numCompleted;
+  uint32_t numToFetch   = MIN(0xFFFF, appCfg->adcConfig.numSamps);
+  // Increment the destination pointer by the number of completed samples
+  appCfg->appSampleBuffer += numCompleted;
+  
+  if (numToFetch > 0)
+  {
+    HAL_DMA_Abort(&sAnalog.tim.hdma[TIM_DMA_ID_UPDATE]);
+    HAL_DMA_Start_IT(&sAnalog.tim.hdma[TIM_DMA_ID_UPDATE], (uint32_t)&gPeriphState, 
+                     (uint32_t)appCfg->appSampleBuffer, numToFetch);
+  }
+  else
+  {
+    Tests_notifyConversionComplete(ADC_PORT_PERIPH_STATE, 4, sAnalog.tim.cfg.adcConfig.numSamps);
+  }
+}
+
+/**************************************************************************************************\
 * FUNCTION    Analog_dmaInit
 * DESCRIPTION Configures the ADCs to use DMA
 * PARAMETERS  None
@@ -108,54 +145,78 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 void Analog_dmaInit(ADCPort adcNum)
 {
   IRQn_Type dmaIRQ;
-  ADCPortCfg *pADC = &sAnalog.adc[adcNum];
+  ADC_HandleTypeDef *phADC;
+  TIM_HandleTypeDef *phTIM;
+  DMA_HandleTypeDef *phDMA;
   
-  __DMA2_CLK_ENABLE();
-  /*##-3- Configure the DMA streams ##########################################*/
-  if (NULL != pADC->hdma.Instance)  // Only preform the DeInit if it was previously init
-    HAL_DMA_DeInit(&pADC->hdma);
+  if (ADC_PORT_PERIPH_STATE == adcNum)
+  {
+    phTIM = &sAnalog.tim.htim;
+    phDMA = &sAnalog.tim.hdma[TIM_DMA_ID_UPDATE];
+    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_UPDATE],      *phDMA);
+    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_CC1],         *phDMA);
+    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_CC2],         *phDMA);
+    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_CC3],         *phDMA);
+    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_CC4],         *phDMA);
+    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_COMMUTATION], *phDMA);
+    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_TRIGGER],     *phDMA);
+    phDMA->XferCpltCallback = Analog_PeriphStateXferCpltCallback;
+  }
+  else
+  {
+    phADC = &sAnalog.adc[adcNum].hadc;
+    phDMA = &sAnalog.adc[adcNum].hdma;
+    __HAL_LINKDMA(phADC, DMA_Handle, *phDMA);
+  }
+  
+  __DMA2_CLK_ENABLE(); // Configure the DMA streams
+  if (NULL != phDMA->Instance)  // Only preform the DeInit if it was previously init
+    HAL_DMA_DeInit(phDMA);
+  
   switch (adcNum)  // Configure the DMA streams 
   {
     case ADC_PORT1:
-      pADC->hdma.Instance     = DMA2_Stream0;
-      pADC->hdma.Init.Channel = DMA_CHANNEL_0;
-      dmaIRQ = DMA2_Stream0_IRQn;
+      phDMA->Instance     = DMA2_Stream4;
+      phDMA->Init.Channel = DMA_CHANNEL_0;
+      dmaIRQ = DMA2_Stream4_IRQn;
       break;
     case ADC_PORT2:
-      pADC->hdma.Instance     = DMA2_Stream2;
-      pADC->hdma.Init.Channel = DMA_CHANNEL_1;
+      phDMA->Instance     = DMA2_Stream2;
+      phDMA->Init.Channel = DMA_CHANNEL_1;
       dmaIRQ = DMA2_Stream2_IRQn;
       break;
     case ADC_PORT3:
-      pADC->hdma.Instance     = DMA2_Stream1;
-      pADC->hdma.Init.Channel = DMA_CHANNEL_2;
+      phDMA->Instance     = DMA2_Stream0;
+      phDMA->Init.Channel = DMA_CHANNEL_2;
+      dmaIRQ = DMA2_Stream0_IRQn;
+      break;
+    case ADC_PORT_PERIPH_STATE:
+      phDMA->Instance     = DMA2_Stream1;
+      phDMA->Init.Channel = DMA_CHANNEL_7;
       dmaIRQ = DMA2_Stream1_IRQn;
       break;
     default: return;
   }
-  pADC->hdma.Init.Direction           = DMA_PERIPH_TO_MEMORY;
-  pADC->hdma.Init.PeriphInc           = DMA_PINC_DISABLE;
-  pADC->hdma.Init.MemInc              = DMA_MINC_ENABLE;
-  pADC->hdma.Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
-  pADC->hdma.Init.MemDataAlignment    = DMA_MDATAALIGN_HALFWORD;
-  pADC->hdma.Init.Mode                = DMA_NORMAL;
-  pADC->hdma.Init.Priority            = DMA_PRIORITY_HIGH;
-  pADC->hdma.Init.FIFOMode            = DMA_FIFOMODE_ENABLE;
-  pADC->hdma.Init.FIFOThreshold       = DMA_FIFO_THRESHOLD_1QUARTERFULL;
-  pADC->hdma.Init.MemBurst            = DMA_MBURST_SINGLE;
-  pADC->hdma.Init.PeriphBurst         = DMA_PBURST_SINGLE;
-  HAL_DMA_Init(&pADC->hdma);
-
-  /* Associate the initialized DMA handle to the the ADC handle */
-  __HAL_LINKDMA(&pADC->hadc, DMA_Handle, pADC->hdma);
-
+  phDMA->Init.Direction           = DMA_PERIPH_TO_MEMORY;
+  phDMA->Init.PeriphInc           = DMA_PINC_DISABLE;
+  phDMA->Init.MemInc              = DMA_MINC_ENABLE;
+  phDMA->Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+  phDMA->Init.MemDataAlignment    = DMA_MDATAALIGN_HALFWORD;
+  phDMA->Init.Mode                = DMA_NORMAL;
+  phDMA->Init.Priority            = DMA_PRIORITY_HIGH;
+  phDMA->Init.FIFOMode            = DMA_FIFOMODE_ENABLE;
+  phDMA->Init.FIFOThreshold       = DMA_FIFO_THRESHOLD_1QUARTERFULL;
+  phDMA->Init.MemBurst            = DMA_MBURST_SINGLE;
+  phDMA->Init.PeriphBurst         = DMA_PBURST_SINGLE;
+  HAL_DMA_Init(phDMA);
+  
   HAL_NVIC_SetPriority(dmaIRQ, 0, 0);  // Configure the NVIC for DMA
   HAL_NVIC_EnableIRQ(dmaIRQ);
 }
 
 /**************************************************************************************************\
 * FUNCTION    Analog_init
-* DESCRIPTION 
+* DESCRIPTION Configures the ADC peripheral, calls the DMA configuration
 * PARAMETERS  
 * RETURNS     
 \**************************************************************************************************/
@@ -170,14 +231,14 @@ void Analog_initADC(ADCSelect adcSel)
   if (HAL_DMA_STATE_RESET != pADC->hdma.State)
     HAL_DMA_DeInit(&pADC->hdma);
   
-  /*##-1- Configure the ADC peripheral #######################################*/
   switch (adcNum)
   {
     case ADC_PORT1: pADC->hadc.Instance = ADC1; break;
     case ADC_PORT2: pADC->hadc.Instance = ADC2; break;
     case ADC_PORT3: pADC->hadc.Instance = ADC3; break;
     default: return;
-  } // 180MHz div6 = 30Mhz clock
+  }
+  // 180MHz div6 = 30Mhz clock
   pADC->hadc.Init.ClockPrescaler        = ADC_CLOCKPRESCALER_PCLK_DIV6;
   pADC->hadc.Init.Resolution            = ADC_RESOLUTION_12B;
   pADC->hadc.Init.ScanConvMode          = DISABLE;
@@ -185,14 +246,13 @@ void Analog_initADC(ADCSelect adcSel)
   pADC->hadc.Init.DiscontinuousConvMode = DISABLE;
   pADC->hadc.Init.NbrOfDiscConversion   = 0;
   pADC->hadc.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_RISING;
-  pADC->hadc.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T2_TRGO;
+  pADC->hadc.Init.ExternalTrigConv      = ADC_EXTERNALTRIGCONV_T8_TRGO;
   pADC->hadc.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
   pADC->hadc.Init.NbrOfConversion       = 1;
   pADC->hadc.Init.DMAContinuousRequests = DISABLE;
   pADC->hadc.Init.EOCSelection          = ADC_EOC_SINGLE_CONV;
   HAL_ADC_Init(&pADC->hadc);
   
-  /*##-2- Configure ADC regular channel ######################################*/
   ADC_ChannelConfTypeDef chanConfig;
   chanConfig.Channel = Analog_getChannelNumber(adcSel);
   chanConfig.Rank = 1;
@@ -284,7 +344,6 @@ uint16_t Analog_getADCVal(ADCSelect adc)
   
   ADC_HandleTypeDef *hadc = Analog_getADCHandle(adc);
   
-  /*##-1- Configure the ADC peripheral #######################################*/
   switch (adcNum)
   {
     case ADC_PORT1: hadc->Instance = ADC1; break;
@@ -384,31 +443,28 @@ void Analog_openPort(ADCSelect adcSelect, AppADCConfig appConfig)
 boolean Analog_setupTimer(uint32_t irqPeriod)
 {
   //uint32_t timFreq = HAL_RCC_GetPCLK1Freq() * 2;
-  
   const uint32_t timFreq = 90000000;
-  sAnalog.htim.Instance = TIM2;
-  sAnalog.htim.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
-  sAnalog.htim.Init.CounterMode       = TIM_COUNTERMODE_UP;
-  //sAnalog.htim.Init.Period            = irqPeriod;
-  //sAnalog.htim.Init.Prescaler         = (timFreq / (1000 * 1000)); // yields 1us per tick
-  sAnalog.htim.Init.Period            = irqPeriod * (timFreq / (1000 * 1000));
-  sAnalog.htim.Init.Prescaler         = 0;
-  sAnalog.htim.Init.RepetitionCounter = 0;
-  sAnalog.htim.Channel                = HAL_TIM_ACTIVE_CHANNEL_1;
-  HAL_TIM_Base_Init(&sAnalog.htim);
+  sAnalog.tim.htim.Instance = TIM8;
+  sAnalog.tim.htim.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+  sAnalog.tim.htim.Init.CounterMode       = TIM_COUNTERMODE_UP;
+  sAnalog.tim.htim.Init.Period            = irqPeriod * (timFreq / (1000 * 1000));
+  sAnalog.tim.htim.Init.Prescaler         = 0;
+  sAnalog.tim.htim.Init.RepetitionCounter = 0;
+  sAnalog.tim.htim.Channel                = HAL_TIM_ACTIVE_CHANNEL_1;
+  HAL_TIM_Base_Init(&sAnalog.tim.htim);
   
-  //TIM_ClockConfigTypeDef clockDef;
-  //clockDef.ClockSource    = TIM_CLOCKSOURCE_INTERNAL;
-  //clockDef.ClockPolarity  = TIM_CLOCKPOLARITY_BOTHEDGE;
-  //clockDef.ClockPrescaler = TIM_CLOCKPRESCALER_DIV1;
-  //clockDef.ClockFilter    = 0;
-  //HAL_TIM_ConfigClockSource(&sAnalog.htim, &clockDef);
+  TIM_ClockConfigTypeDef clockDef;
+  clockDef.ClockSource    = TIM_CLOCKSOURCE_INTERNAL;
+  clockDef.ClockPolarity  = TIM_CLOCKPOLARITY_BOTHEDGE;
+  clockDef.ClockPrescaler = TIM_CLOCKPRESCALER_DIV1;
+  clockDef.ClockFilter    = 0;
+  HAL_TIM_ConfigClockSource(&sAnalog.tim.htim, &clockDef);
   
   TIM_MasterConfigTypeDef sMasterConfig;
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
-  //sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  HAL_TIMEx_MasterConfigSynchronization(&sAnalog.htim, &sMasterConfig);
+  HAL_TIMEx_MasterConfigSynchronization(&sAnalog.tim.htim, &sMasterConfig);
+  __HAL_TIM_ENABLE_DMA(&sAnalog.tim.htim, TIM_DMA_UPDATE);
   
   return TRUE;
 }
@@ -423,15 +479,28 @@ boolean Analog_setupTimer(uint32_t irqPeriod)
 \**************************************************************************************************/
 void Analog_configureADC(ADCSelect adcSel, void *pDst, uint32_t numSamps)
 {
-  Analog_initADC(adcSel);
-  ADCPortCfg *pCfg = Analog_getADCPortConfig(adcSel);
-  pCfg->cfg.adcConfig.numSamps = numSamps;
-  pCfg->cfg.appSampleBuffer = pDst;
-  pCfg->cfg.adcConfig.chan[0].chanNum = Analog_getChannelNumber(adcSel);
-  numSamps = MIN(0xFFFF, numSamps);
-  if(HAL_ADC_Start_DMA(&pCfg->hadc, (uint32 *)pDst, numSamps) != HAL_OK)
-    Error_Handler();
+  if (ADC_PERIPH_STATE == adcSel)
+  {
+    sAnalog.tim.cfg.adcConfig.numSamps = numSamps;
+    sAnalog.tim.cfg.appSampleBuffer = pDst;
+    Analog_dmaInit(ADC_PORT_PERIPH_STATE);
+    numSamps = MIN(0xFFFF, numSamps);
+    HAL_DMA_Start_IT(&sAnalog.tim.hdma[TIM_DMA_ID_UPDATE], (uint32_t)&gPeriphState, (uint32_t)pDst, numSamps);
+  }
+  else
+  {
+    Analog_initADC(adcSel);
+    ADCPortCfg *pCfg = Analog_getADCPortConfig(adcSel);
+    pCfg->cfg.adcConfig.numSamps = numSamps;
+    pCfg->cfg.appSampleBuffer = pDst;
+    pCfg->cfg.adcConfig.chan[0].chanNum = Analog_getChannelNumber(adcSel);
+    numSamps = MIN(0xFFFF, numSamps);
+    if(HAL_ADC_Start_DMA(&pCfg->hadc, (uint32 *)pDst, numSamps) != HAL_OK)
+      Error_Handler();
+  }
 }
+
+#include "stm32f429i_discovery.h"
 
 /**************************************************************************************************\
 * FUNCTION    Analog_startSampleTimer
@@ -443,10 +512,8 @@ void Analog_configureADC(ADCSelect adcSel, void *pDst, uint32_t numSamps)
 boolean Analog_startSampleTimer(uint32_t sampRate)
 {
   Analog_setupTimer(sampRate);
-  HAL_TIM_Base_Start_IT(&sAnalog.htim);
-  
-  NVIC_EnableIRQ(TIM2_IRQn);
-  NVIC_ClearPendingIRQ(ADC_IRQn);
+  BSP_LED_On(LED3);
+  HAL_TIM_Base_Start(&sAnalog.tim.htim);
   return SUCCESS;
 }
 
@@ -460,33 +527,13 @@ boolean Analog_startSampleTimer(uint32_t sampRate)
 \**************************************************************************************************/
 boolean Analog_stopSampleTimer(void)
 {
-  HAL_TIM_Base_Stop_IT(&sAnalog.htim);
+  HAL_TIM_Base_Stop_IT(&sAnalog.tim.htim);
+  BSP_LED_Off(LED3);
   HAL_ADC_Stop_DMA(&sAnalog.adc[ADC_PORT1].hadc);
   HAL_ADC_Stop_DMA(&sAnalog.adc[ADC_PORT2].hadc);
   HAL_ADC_Stop_DMA(&sAnalog.adc[ADC_PORT3].hadc);
-  NVIC_DisableIRQ(TIM2_IRQn);
+  NVIC_DisableIRQ(TIM8_UP_TIM13_IRQn);
   return SUCCESS;
-}
-
-#include "stm32f429i_discovery.h"
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  
-}
-
-/**************************************************************************************************\
-* FUNCTION      TIM2_IRQHandler
-* DESCRIPTION   Handles interrupts originating from Timer2
-* PARAMETERS    none
-* RETURN        none
-\**************************************************************************************************/
-void TIM2_IRQHandler(void)
-{
-//  HAL_TIM_IRQHandler(&sAnalog.htim);
-  LED3_GPIO_PORT->ODR ^= LED3_PIN;
-  //TIM2->EGR = TIM_EGR_UG;
-  TIM2->SR = ~(TIM_IT_UPDATE);
-  Tests_notifySampleTrigger();
 }
 
 /**************************************************************************************************\
@@ -496,7 +543,7 @@ void TIM2_IRQHandler(void)
 * RETURNS     Nothing
 * NOTES       DMA2, Stream0 is configured for DMA via ADC_1 (DMA Channel 0, ADC Channel 14, pin C4)
 \**************************************************************************************************/
-void DMA2_Stream0_IRQHandler(void)
+void DMA2_Stream4_IRQHandler(void)
 {
   HAL_DMA_IRQHandler(sAnalog.adc[ADC_PORT1].hadc.DMA_Handle);
 }
@@ -508,9 +555,9 @@ void DMA2_Stream0_IRQHandler(void)
 * RETURNS     Nothing
 * NOTES       DMA2, Stream1 is configured for DMA via ADC_3 (DMA Channel 2, ADC Channel 11, pin C1)
 \**************************************************************************************************/
-void DMA2_Stream1_IRQHandler(void)
+void DMA2_Stream2_IRQHandler(void)
 {
-  HAL_DMA_IRQHandler(sAnalog.adc[ADC_PORT3].hadc.DMA_Handle);
+  HAL_DMA_IRQHandler(sAnalog.adc[ADC_PORT2].hadc.DMA_Handle);
 }
 
 /**************************************************************************************************\
@@ -520,7 +567,19 @@ void DMA2_Stream1_IRQHandler(void)
 * RETURNS     Nothing
 * NOTES       DMA2, Stream2 is configured for DMA via ADC_2 (DMA Channel 1, ADC Channel 15, pin C5)
 \**************************************************************************************************/
-void DMA2_Stream2_IRQHandler(void)
+void DMA2_Stream0_IRQHandler(void)
 {
-  HAL_DMA_IRQHandler(sAnalog.adc[ADC_PORT2].hadc.DMA_Handle);
+  HAL_DMA_IRQHandler(sAnalog.adc[ADC_PORT3].hadc.DMA_Handle);
+}
+
+/**************************************************************************************************\
+* FUNCTION    DMA2_Stream3_IRQHandler
+* DESCRIPTION Catches interrupts from the DMA stream and dispatches them to their handler
+* PARAMETERS  None
+* RETURNS     Nothing
+* NOTES       DMA2, Stream2 is configured for DMA via ADC_2 (DMA Channel 1, ADC Channel 15, pin C5)
+\**************************************************************************************************/
+void DMA2_Stream1_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(sAnalog.tim.htim.hdma[TIM_DMA_ID_UPDATE]);
 }
