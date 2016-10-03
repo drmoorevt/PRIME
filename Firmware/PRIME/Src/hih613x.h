@@ -34,9 +34,9 @@ void HIH613X_init(void);
 bool HIH613X_test(void);
 boolean HIH613X_setup(boolean state);
 
-HIHState HIH613X_getState(void);
-uint32 HIH613X_getStateAsWord(void);
-double HIH613X_getStateVoltage(void);
+HIHState  HIH613X_getState(void);
+uint32_t *HIH613X_getStatePointer(void);
+double    HIH613X_getStateVoltage(void);
 
 void HIH613X_notifyVoltageChange(double newVoltage);
 boolean HIH613X_setPowerProfile(HIHPowerProfile profile);

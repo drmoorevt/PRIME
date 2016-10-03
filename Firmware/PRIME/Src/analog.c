@@ -4,50 +4,28 @@
 #include <string.h>
 
 #define FILE_ID ANALOG_C
-
-typedef enum
-{
-  ANALOG_HANDLE_DAC_1   = 0,
-  ANALOG_HANDLE_DAC_2   = 1,
-  ANALOG_HANDLE_DAC_MAX = 2,
-} AnalogDacHandle;
+#pragma anon_unions
 
 typedef struct
 {
-  ADC_HandleTypeDef hadc;
+  union
+  {
+    ADC_HandleTypeDef hadc;  // For the analog to digital converters
+    TIM_HandleTypeDef htim;  // For the monitoring of memory locations (gPeriphState)
+  };
   DMA_HandleTypeDef hdma;
   AppADCConfig      cfg;
 } ADCPortCfg;
 
-typedef struct
-{
-  TIM_HandleTypeDef htim;
-  DMA_HandleTypeDef hdma[7];
-  AppADCConfig      cfg;
-} TimPortCfg;
-
 static struct
 {
   ADCPortCfg adc[NUM_ADC_PORTS];
-  TimPortCfg tim;
+  uint32_t *pPeriphState;
 } sAnalog;
-
-uint16_t gPeriphState;
 
 void Analog_initADC(ADCSelect adcNum);
 ADCPort Analog_getPortNumber(ADCSelect adcSelect);
 uint32_t Analog_getChannelNumber(ADCSelect adcSelect);
-
-/**************************************************************************************************\
-* FUNCTION    Error_Handler
-* DESCRIPTION Generic error handler for use when intended callbacks dont exist
-* PARAMETERS  None
-* RETURNS     Nothing
-\**************************************************************************************************/
-static void Error_Handler(void)
-{
-  while(1) { }
-}
 
 /**************************************************************************************************\
 * FUNCTION    Analog_init
@@ -61,6 +39,23 @@ bool Analog_init(void)
   return true;
 }
 
+/**************************************************************************************************\
+* FUNCTION    Analog_setPeriphStatePointer
+* DESCRIPTION 
+* PARAMETERS  
+* RETURNS     
+\**************************************************************************************************/
+void Analog_setPeriphStatePointer(uint32_t *pPeriphState)
+{
+  sAnalog.pPeriphState = pPeriphState;
+}
+
+/**************************************************************************************************\
+* FUNCTION    Analog_getPortCfg
+* DESCRIPTION Returns the base structure containing ADC (or memory sampling) information
+* PARAMETERS  
+* RETURNS     
+\**************************************************************************************************/
 ADCPortCfg *Analog_getPortCfg(ADC_HandleTypeDef *hadc)
 { 
   uint32_t i;
@@ -69,7 +64,7 @@ ADCPortCfg *Analog_getPortCfg(ADC_HandleTypeDef *hadc)
     if (hadc == &sAnalog.adc[i].hadc)
       return &sAnalog.adc[i];
   }
-  return NULL;
+  return &sAnalog.adc[ADC_PORT_PERIPH_STATE];
 }
 
 /**************************************************************************************************\
@@ -78,62 +73,67 @@ ADCPortCfg *Analog_getPortCfg(ADC_HandleTypeDef *hadc)
 * PARAMETERS  None
 * RETURNS     Nothing
 \**************************************************************************************************/
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
+void Analog_xferComplete(ADCPort port)
 {
-  ADCPortCfg *portCfg = Analog_getPortCfg(hadc);
-  // Subtract off the number we just completed, and calculate the number of remaining samples
-  uint32_t numCompleted = MIN(0xFFFF, portCfg->cfg.adcConfig.numSamps);
-  portCfg->cfg.adcConfig.numSamps -= numCompleted;
-  uint32_t numToFetch   = MIN(0xFFFF, portCfg->cfg.adcConfig.numSamps);
+  ADCPortCfg *pPortCfg = &sAnalog.adc[port];
+  //if (pPortCfg->hdma.
   // Increment the destination pointer by the number of completed samples
-  portCfg->cfg.appSampleBuffer += numCompleted;
+  // Subtract off the number we just completed, and calculate the number of remaining samples
+  pPortCfg->cfg.appSampleBuffer          += MIN(0xFFFF, pPortCfg->cfg.adcConfig.sampsInProgress);
+  pPortCfg->cfg.adcConfig.sampsRemaining -= MIN(0xFFFF, pPortCfg->cfg.adcConfig.sampsInProgress);
+  pPortCfg->cfg.adcConfig.sampsCompleted += MIN(0xFFFF, pPortCfg->cfg.adcConfig.sampsInProgress);
+  pPortCfg->cfg.adcConfig.sampsInProgress = MIN(0xFFFF, pPortCfg->cfg.adcConfig.sampsRemaining);
   
-  if (numToFetch > 0)
+  // Stop the DMA transfer in any case we are complete (different for mem2mem vs ADC)
+  if (port == ADC_PORT_PERIPH_STATE)
+    HAL_DMA_Abort(&sAnalog.adc[port].hdma);
+  else
+    HAL_ADC_Stop_DMA(&sAnalog.adc[port].hadc);
+  
+  // Notify the caller that we are totally complete if we have no more samples to transfer
+  if (pPortCfg->cfg.adcConfig.sampsRemaining == 0)
   {
-    HAL_ADC_Stop_DMA(hadc);
-    if(HAL_ADC_Start_DMA(hadc, (uint32_t *)portCfg->cfg.appSampleBuffer, numToFetch) != HAL_OK)
-      Error_Handler();
+    Tests_notifyConversionComplete(port, pPortCfg->cfg.adcConfig.chan[0].chanNum,
+                                         pPortCfg->cfg.adcConfig.sampsCompleted);
   }
   else
-  {
-    ADCPort port = ADC_PORT1;
-    if (ADC1 == hadc->Instance)
-      port = ADC_PORT1;
-    else if (ADC2 == hadc->Instance)
-      port = ADC_PORT2;
-    else if (ADC3 == hadc->Instance)
-      port = ADC_PORT3;
-    Tests_notifyConversionComplete(port, sAnalog.adc[port].cfg.adcConfig.chan[0].chanNum,
-                                         sAnalog.adc[port].cfg.adcConfig.numSamps);
+  { // We still have more samples to take -- restart the DMA transfer
+    if (pPortCfg == &sAnalog.adc[ADC_PORT_PERIPH_STATE])
+    { // Restart the mem2mem DMA if we have more samples to take
+      HAL_DMA_Start_IT(&pPortCfg->hdma, (uint32_t)sAnalog.pPeriphState, 
+                                        (uint32_t)pPortCfg->cfg.appSampleBuffer, 
+                                        (uint32_t)pPortCfg->cfg.adcConfig.sampsInProgress);
+    }
+    else
+    { // Restart the ADC (+DMA) if we have more samples to take
+      HAL_ADC_Start_DMA(&pPortCfg->hadc, (uint32_t *)pPortCfg->cfg.appSampleBuffer, 
+                                         (uint32_t  )pPortCfg->cfg.adcConfig.sampsInProgress);
+    }
   }
 }
 
-/**************************************************************************************************\
-* FUNCTION    Analog_PeriphStateXferCpltCallback
-* DESCRIPTION 
-* PARAMETERS  None
-* RETURNS     Nothing
-\**************************************************************************************************/
-void Analog_PeriphStateXferCpltCallback(DMA_HandleTypeDef *hdma)
+ADCPort Analog_getPortFromHandle(ADC_HandleTypeDef *hadc)
 {
-  AppADCConfig *appCfg = &sAnalog.tim.cfg;
-  // Subtract off the number we just completed, and calculate the number of remaining samples
-  uint32_t numCompleted = MIN(0xFFFF, appCfg->adcConfig.numSamps);
-  appCfg->adcConfig.numSamps -= numCompleted;
-  uint32_t numToFetch   = MIN(0xFFFF, appCfg->adcConfig.numSamps);
-  // Increment the destination pointer by the number of completed samples
-  appCfg->appSampleBuffer += numCompleted;
-  
-  if (numToFetch > 0)
-  {
-    HAL_DMA_Abort(&sAnalog.tim.hdma[TIM_DMA_ID_UPDATE]);
-    HAL_DMA_Start_IT(&sAnalog.tim.hdma[TIM_DMA_ID_UPDATE], (uint32_t)&gPeriphState, 
-                     (uint32_t)appCfg->appSampleBuffer, numToFetch);
-  }
+  ADCPort port;
+  if (&sAnalog.adc[ADC_PORT1].hadc == hadc)
+    port = ADC_PORT1;
+  else if (&sAnalog.adc[ADC_PORT2].hadc == hadc)
+    port = ADC_PORT2; 
+  else if (&sAnalog.adc[ADC_PORT3].hadc == hadc)
+    port = ADC_PORT3;
   else
-  {
-    Tests_notifyConversionComplete(ADC_PORT_PERIPH_STATE, 4, sAnalog.tim.cfg.adcConfig.numSamps);
-  }
+    port = ADC_PORT_PERIPH_STATE;
+  return port;
+}
+
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+{
+  Analog_xferComplete(Analog_getPortFromHandle(hadc));
+}
+
+void HAL_DMA_ConvCpltCallback(DMA_HandleTypeDef* hdma)
+{
+  Analog_xferComplete(Analog_getPortFromHandle((ADC_HandleTypeDef *)hdma)); // intentionally wrong
 }
 
 /**************************************************************************************************\
@@ -151,16 +151,9 @@ void Analog_dmaInit(ADCPort adcNum)
   
   if (ADC_PORT_PERIPH_STATE == adcNum)
   {
-    phTIM = &sAnalog.tim.htim;
-    phDMA = &sAnalog.tim.hdma[TIM_DMA_ID_UPDATE];
-    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_UPDATE],      *phDMA);
-    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_CC1],         *phDMA);
-    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_CC2],         *phDMA);
-    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_CC3],         *phDMA);
-    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_CC4],         *phDMA);
-    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_COMMUTATION], *phDMA);
-    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_TRIGGER],     *phDMA);
-    phDMA->XferCpltCallback = Analog_PeriphStateXferCpltCallback;
+    phTIM = &sAnalog.adc[ADC_PORT_PERIPH_STATE].htim;
+    phDMA = &sAnalog.adc[ADC_PORT_PERIPH_STATE].hdma;
+    __HAL_LINKDMA(phTIM, hdma[TIM_DMA_ID_UPDATE], *phDMA);
   }
   else
   {
@@ -225,12 +218,6 @@ void Analog_initADC(ADCSelect adcSel)
   ADCPort adcNum   = Analog_getPortNumber(adcSel);
   ADCPortCfg *pADC = &sAnalog.adc[adcNum];
   
-  if (HAL_ADC_STATE_RESET != pADC->hadc.State)
-    HAL_ADC_DeInit(&pADC->hadc);
-  
-  if (HAL_DMA_STATE_RESET != pADC->hdma.State)
-    HAL_DMA_DeInit(&pADC->hdma);
-  
   switch (adcNum)
   {
     case ADC_PORT1: pADC->hadc.Instance = ADC1; break;
@@ -238,6 +225,13 @@ void Analog_initADC(ADCSelect adcSel)
     case ADC_PORT3: pADC->hadc.Instance = ADC3; break;
     default: return;
   }
+  
+  if (HAL_ADC_STATE_RESET != pADC->hadc.State)
+    HAL_ADC_DeInit(&pADC->hadc);
+  
+  if (HAL_DMA_STATE_RESET != pADC->hdma.State)
+    HAL_DMA_DeInit(&pADC->hdma);
+  
   // 180MHz div6 = 30Mhz clock
   pADC->hadc.Init.ClockPrescaler        = ADC_CLOCKPRESCALER_PCLK_DIV6;
   pADC->hadc.Init.Resolution            = ADC_RESOLUTION_12B;
@@ -282,7 +276,7 @@ uint32_t Analog_getChannelNumber(ADCSelect adcSelect)
     case ADC_DOM0_OUTCURRENT: return  ADC_CHANNEL_4;
     case ADC_DOM1_OUTCURRENT: return  ADC_CHANNEL_11;
     case ADC_DOM2_OUTCURRENT: return  ADC_CHANNEL_13;
-    default: return 0;
+    default: return ADC_PERIPH_STATE;
   }
 }
 
@@ -305,7 +299,7 @@ ADCPort Analog_getPortNumber(ADCSelect adcSelect)
     case ADC_DOM0_OUTCURRENT: return ADC_PORT3;
     case ADC_DOM1_OUTCURRENT: return ADC_PORT3;
     case ADC_DOM2_OUTCURRENT: return ADC_PORT3;
-    default: return ADC_PORT1;
+    default: return ADC_PORT_PERIPH_STATE;
   }
 }
 
@@ -442,29 +436,29 @@ void Analog_openPort(ADCSelect adcSelect, AppADCConfig appConfig)
 \**************************************************************************************************/
 boolean Analog_setupTimer(uint32_t irqPeriod)
 {
-  //uint32_t timFreq = HAL_RCC_GetPCLK1Freq() * 2;
-  const uint32_t timFreq = 90000000;
-  sAnalog.tim.htim.Instance = TIM8;
-  sAnalog.tim.htim.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
-  sAnalog.tim.htim.Init.CounterMode       = TIM_COUNTERMODE_UP;
-  sAnalog.tim.htim.Init.Period            = irqPeriod * (timFreq / (1000 * 1000));
-  sAnalog.tim.htim.Init.Prescaler         = 0;
-  sAnalog.tim.htim.Init.RepetitionCounter = 0;
-  sAnalog.tim.htim.Channel                = HAL_TIM_ACTIVE_CHANNEL_1;
-  HAL_TIM_Base_Init(&sAnalog.tim.htim);
+  uint32_t timFreq = HAL_RCC_GetPCLK2Freq();  // TIM8 is connected to APB2
+  sAnalog.adc[ADC_PORT_PERIPH_STATE].htim.Instance = TIM8;
+  sAnalog.adc[ADC_PORT_PERIPH_STATE].htim.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+  sAnalog.adc[ADC_PORT_PERIPH_STATE].htim.Init.CounterMode       = TIM_COUNTERMODE_UP;
+  sAnalog.adc[ADC_PORT_PERIPH_STATE].htim.Init.Period            = irqPeriod * (timFreq / (1000 * 1000));
+  sAnalog.adc[ADC_PORT_PERIPH_STATE].htim.Init.Prescaler         = 0;
+  sAnalog.adc[ADC_PORT_PERIPH_STATE].htim.Init.RepetitionCounter = 0;
+  sAnalog.adc[ADC_PORT_PERIPH_STATE].htim.Channel                = HAL_TIM_ACTIVE_CHANNEL_1;
+  __TIM8_CLK_ENABLE();
+  __HAL_TIM_ENABLE_DMA(&sAnalog.adc[ADC_PORT_PERIPH_STATE].htim, TIM_DMA_UPDATE);
+  HAL_TIM_Base_Init(&sAnalog.adc[ADC_PORT_PERIPH_STATE].htim);
   
   TIM_ClockConfigTypeDef clockDef;
   clockDef.ClockSource    = TIM_CLOCKSOURCE_INTERNAL;
   clockDef.ClockPolarity  = TIM_CLOCKPOLARITY_BOTHEDGE;
   clockDef.ClockPrescaler = TIM_CLOCKPRESCALER_DIV1;
   clockDef.ClockFilter    = 0;
-  HAL_TIM_ConfigClockSource(&sAnalog.tim.htim, &clockDef);
+  HAL_TIM_ConfigClockSource(&sAnalog.adc[ADC_PORT_PERIPH_STATE].htim, &clockDef);
   
   TIM_MasterConfigTypeDef sMasterConfig;
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_UPDATE;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  HAL_TIMEx_MasterConfigSynchronization(&sAnalog.tim.htim, &sMasterConfig);
-  __HAL_TIM_ENABLE_DMA(&sAnalog.tim.htim, TIM_DMA_UPDATE);
+  HAL_TIMEx_MasterConfigSynchronization(&sAnalog.adc[ADC_PORT_PERIPH_STATE].htim, &sMasterConfig);
   
   return TRUE;
 }
@@ -479,29 +473,28 @@ boolean Analog_setupTimer(uint32_t irqPeriod)
 \**************************************************************************************************/
 void Analog_configureADC(ADCSelect adcSel, void *pDst, uint32_t numSamps)
 {
+  ADCPortCfg *pCfg = Analog_getADCPortConfig(adcSel);
+  pCfg->cfg.adcConfig.sampsRemaining  = numSamps;
+  pCfg->cfg.adcConfig.sampsCompleted  = 0;
+  pCfg->cfg.adcConfig.sampsInProgress = MIN(0xFFFF, numSamps);
+  pCfg->cfg.appSampleBuffer = pDst;
+  pCfg->cfg.adcConfig.chan[0].chanNum = Analog_getChannelNumber(adcSel);
   if (ADC_PERIPH_STATE == adcSel)
   {
-    sAnalog.tim.cfg.adcConfig.numSamps = numSamps;
-    sAnalog.tim.cfg.appSampleBuffer = pDst;
     Analog_dmaInit(ADC_PORT_PERIPH_STATE);
-    numSamps = MIN(0xFFFF, numSamps);
-    HAL_DMA_Start_IT(&sAnalog.tim.hdma[TIM_DMA_ID_UPDATE], (uint32_t)&gPeriphState, (uint32_t)pDst, numSamps);
+    pCfg->hdma.XferCpltCallback = HAL_DMA_ConvCpltCallback;
+    HAL_DMA_Start_IT(&pCfg->hdma, (uint32_t)sAnalog.pPeriphState, 
+                                  (uint32_t)pCfg->cfg.appSampleBuffer, 
+                                  (uint32_t)pCfg->cfg.adcConfig.sampsInProgress);
   }
   else
   {
     Analog_initADC(adcSel);
-    ADCPortCfg *pCfg = Analog_getADCPortConfig(adcSel);
-    pCfg->cfg.adcConfig.numSamps = numSamps;
-    pCfg->cfg.appSampleBuffer = pDst;
-    pCfg->cfg.adcConfig.chan[0].chanNum = Analog_getChannelNumber(adcSel);
-    numSamps = MIN(0xFFFF, numSamps);
-    if(HAL_ADC_Start_DMA(&pCfg->hadc, (uint32 *)pDst, numSamps) != HAL_OK)
-      Error_Handler();
+    HAL_ADC_Start_DMA(&pCfg->hadc, (uint32 *)pDst, pCfg->cfg.adcConfig.sampsInProgress);
   }
 }
 
-#include "stm32f429i_discovery.h"
-
+#include "stm32f429i_discovery.h"  // For the BSP_LED toggling
 /**************************************************************************************************\
 * FUNCTION    Analog_startSampleTimer
 * DESCRIPTION Starts one of the sample timers that can (if configured) trigger and ADC conversion
@@ -513,7 +506,7 @@ boolean Analog_startSampleTimer(uint32_t sampRate)
 {
   Analog_setupTimer(sampRate);
   BSP_LED_On(LED3);
-  HAL_TIM_Base_Start(&sAnalog.tim.htim);
+  HAL_TIM_Base_Start(&sAnalog.adc[ADC_PORT_PERIPH_STATE].htim);
   return SUCCESS;
 }
 
@@ -527,12 +520,8 @@ boolean Analog_startSampleTimer(uint32_t sampRate)
 \**************************************************************************************************/
 boolean Analog_stopSampleTimer(void)
 {
-  HAL_TIM_Base_Stop_IT(&sAnalog.tim.htim);
+  HAL_TIM_Base_Stop(&sAnalog.adc[ADC_PORT_PERIPH_STATE].htim);
   BSP_LED_Off(LED3);
-  HAL_ADC_Stop_DMA(&sAnalog.adc[ADC_PORT1].hadc);
-  HAL_ADC_Stop_DMA(&sAnalog.adc[ADC_PORT2].hadc);
-  HAL_ADC_Stop_DMA(&sAnalog.adc[ADC_PORT3].hadc);
-  NVIC_DisableIRQ(TIM8_UP_TIM13_IRQn);
   return SUCCESS;
 }
 
@@ -581,5 +570,5 @@ void DMA2_Stream0_IRQHandler(void)
 \**************************************************************************************************/
 void DMA2_Stream1_IRQHandler(void)
 {
-  HAL_DMA_IRQHandler(sAnalog.tim.htim.hdma[TIM_DMA_ID_UPDATE]);
+  HAL_DMA_IRQHandler(sAnalog.adc[ADC_PORT_PERIPH_STATE].htim.hdma[TIM_DMA_ID_UPDATE]);
 }

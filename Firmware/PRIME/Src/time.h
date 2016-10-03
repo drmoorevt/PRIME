@@ -72,14 +72,9 @@ typedef struct
 void Time_init(void);
 void Time_delay(uint32 microSeconds);
 
-void Time_stopTimer(HardTimer timer);
-void Time_initTimer2(uint16 reloadValue);
-void Time_initTimer3(uint16 reloadValue);
-
 void Time_startTimer(SoftTimerConfig timerConfig);
 uint32 Time_getTimerValue(SoftTimer timer);
 
-uint32 Time_getTimeOfday(void);
 uint64 Time_getSystemTime(void);
 boolean Time_isSecondBoundary(void);
 

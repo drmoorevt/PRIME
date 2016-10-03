@@ -27,11 +27,11 @@ double Analog_getADCCurrent(ADCSelect adc, const uint32_t numSamps);
 
 typedef enum
 {
-  ADC_PORT1     = 0,
-  ADC_PORT2     = 1,
-  ADC_PORT3     = 2,
-  NUM_ADC_PORTS = 3,
-  ADC_PORT_PERIPH_STATE = 4
+  ADC_PORT1             = 0,
+  ADC_PORT2             = 1,
+  ADC_PORT3             = 2,
+  ADC_PORT_PERIPH_STATE = 3,
+  NUM_ADC_PORTS         = 4
 } ADCPort;
 
 typedef struct
@@ -44,7 +44,9 @@ typedef struct
     uint8_t sampleTime;
     uint8_t chanNum;
   } chan[16];
-  uint32_t numSamps;
+  uint32_t sampsInProgress;
+  uint32_t sampsRemaining;
+  uint32_t sampsCompleted;
 } ADCConfig;
 
 typedef struct
@@ -54,8 +56,7 @@ typedef struct
   void  (*appNotifyConversionComplete)(uint8_t, uint32_t);
 } AppADCConfig;
 
-extern uint16_t gPeriphState;  // Provide peripheral state variable for peripherals to update
-
+void Analog_setPeriphStatePointer(uint32_t *pPeriphState);
 void Analog_openPort(ADCSelect adcSelect, AppADCConfig appConfig);
 void Analog_configureADC(ADCSelect adcSel, void *pDst, uint32_t numSamps);
 boolean Analog_startSampleTimer(uint32_t sampRate);

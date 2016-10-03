@@ -48,105 +48,6 @@ void Time_init(void)
 }
 
 /**************************************************************************************************\
-* FUNCTION      Time_stopTimer
-* DESCRIPTION
-* PARAMETERS    none
-* RETURN        none
-\**************************************************************************************************/
-void Time_stopTimer(HardTimer timer)
-{
-  switch (timer)
-  {
-    case TIME_HARD_TIMER_TIMER1:
-      TIM1->CR1 &= (~TIM_CR1_CEN);
-      break;
-    case TIME_HARD_TIMER_TIMER2:
-      TIM2->CR1 &= (~TIM_CR1_CEN);
-      break;
-    case TIME_HARD_TIMER_TIMER3:
-      NVIC_ClearPendingIRQ(TIM3_IRQn);
-      NVIC_DisableIRQ(TIM3_IRQn);
-      TIM3->CNT  = 0;
-      TIM3->CR1 &= (~TIM_CR1_CEN);
-      break;
-    default: break;
-  }
-}
-
-/**************************************************************************************************\
-* FUNCTION      Time_initTimer1
-* DESCRIPTION   Initializes timer1
-* PARAMETERS    none
-* RETURN        none
-\**************************************************************************************************/
-void Time_initTimer1(void)
-{
-  RCC->APB2ENR |= RCC_APB2ENR_TIM1EN; // Turn on Timer1 clocks (120 MHz)
-  TIM1->ARR     = 120; // Autoreload set to 1us overflow
-  TIM1->CR1    |= (TIM_CR1_CEN | TIM_CR1_URS | TIM_CR1_ARPE);
-  TIM1->CR2     = (0x00000000);
-  TIM1->DIER   |= TIM_DIER_UIE; // Turn on the timer (update) interrupt
-  NVIC_DisableIRQ(TIM1_UP_TIM10_IRQn);
-}
-
-/**************************************************************************************************\
-* FUNCTION    Time_timer1IRQ
-* DESCRIPTION Initializes timer1
-* PARAMETERS  none
-* RETURN        none
-\**************************************************************************************************/
-void TIM1_UP_TIM10_IRQHandler(void)
-{
-  CLEAR_BIT(TIM1->SR, TIM_SR_UIF); // Clear the update interrupt flag
-}
-
-/**************************************************************************************************\
-* FUNCTION      Time_initTimer2
-* DESCRIPTION    Initializes timer2
-* PARAMETERS    reloadValue: The automatic reload value, when reached an IRQ is triggered
-* RETURN        none
-\**************************************************************************************************/
-void Time_initTimer2(uint16 reloadValue)
-{
-  RCC->APB1ENR |= RCC_APB1ENR_TIM2EN; // Turn on Timer2 clocks (60 MHz)
-  TIM2->ARR     = reloadValue;
-  TIM2->CR1    |= (TIM_CR1_CEN | TIM_CR1_URS | TIM_CR1_ARPE);
-  TIM2->CR2     = (0x00000000);
-  TIM2->DIER   |= TIM_DIER_UIE; // Turn on the timer (update) interrupt
-  NVIC_EnableIRQ(TIM2_IRQn);
-}
-
-/**************************************************************************************************\
-* FUNCTION      TIM3_IRQHandler
-* DESCRIPTION   Handles interrupts originating from Timer3
-* PARAMETERS    none
-* RETURN        none
-\**************************************************************************************************/
-void TIM3_IRQHandler(void)
-{
-  CLEAR_BIT(TIM3->SR, TIM_SR_UIF); // Clear the update interrupt flag
-}
-
-/**************************************************************************************************\
-* FUNCTION      Time_initTimer3
-* DESCRIPTION   Initializes timer3
-* PARAMETERS    reloadValue: The automatic reload value, when reached an IRQ is triggered
-* RETURN        none
-\**************************************************************************************************/
-void Time_initTimer3(uint16 reloadValue)
-{
-  RCC->APB1ENR |= RCC_APB1ENR_TIM3EN; // Turn on Timer3 clocks
-  NVIC_ClearPendingIRQ(TIM3_IRQn);
-  TIM3->ARR     = reloadValue;
-  TIM3->CNT     = reloadValue;
-  TIM3->CR1    |= (TIM_CR1_CEN | TIM_CR1_URS | TIM_CR1_ARPE);
-  TIM3->CR2    &= (~TIM_CR2_MMS);
-  TIM3->CR2    |= (TIM_TRGOSource_Update);
-  TIM3->DIER   |= TIM_DIER_UIE; // Turn on the timer (update) interrupt
-  NVIC_EnableIRQ(TIM3_IRQn);
-}
-
-/**************************************************************************************************\
 * FUNCTION      Time_startTimer
 * DESCRIPTION   Creates a timer from the supplied configuration
 * PARAMETERS    timerConfig - the configuration for the timer to use
@@ -168,11 +69,10 @@ void Time_startTimer(SoftTimerConfig timerConfig)
 \**************************************************************************************************/
 void Time_delay(volatile uint32 microSeconds)
 {
-  //uint32_t timFreq = HAL_RCC_GetPCLK1Freq() * 2;
   if (0 == microSeconds)
     return;
   
-  const uint32_t timFreq = 90000000;
+  uint32_t timFreq = HAL_RCC_GetPCLK1Freq();   // TIM5 is connected to APB1
   RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;          // Turn on Timer5 clocks (90 MHz)
   TIM5->CR1     = (0x0000);                    // Turn off the counter entirely
   TIM5->PSC     = (timFreq / (1000 * 1000));   // Set prescalar to count up on microsecond bounds.
@@ -208,8 +108,8 @@ void Time_pendEnergyTime(Delay *pDelay)
   // if this is called waiting only on energy, then assume no time wait
   if (pDelay->tDelay > 0)
   {
-    const uint32_t timFreq = 90000000;
-    RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;          // Turn on Timer5 clocks (90 MHz)
+    uint32_t timFreq = HAL_RCC_GetPCLK1Freq();   // TIM5 is connected to APB1
+    RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;          // Turn on Timer5 clocks (45 MHz)
     TIM5->CR1     = (0x0000);                    // Turn off the counter entirely
     TIM5->PSC     = (timFreq / (1000 * 1000));   // Set prescalar to count up on microsecond bounds.
     TIM5->ARR     = (pDelay->tDelay);               // Set up the counter to count down
@@ -259,20 +159,6 @@ uint64 Time_getSystemTime(void)
   ENABLE_SYSTICK_INTERRUPT();
 
   return sysTime;
-}
-/**************************************************************************************************\
-* FUNCTION      Time_getTimeOfday
-* DESCRIPTION   Gets the milliseconds time within the day
-* PARAMETERS    none
-* RETURN        uint32 - time
-\**************************************************************************************************/
-uint32 Time_getTimeOfday(void)
-{
-  uint32 timeOfDay;
-  DISABLE_SYSTICK_INTERRUPT();
-  timeOfDay = sTime.systemTime % MILLISECONDS_PER_DAY;
-  ENABLE_SYSTICK_INTERRUPT();
-  return timeOfDay;
 }
 
 /**************************************************************************************************\

@@ -73,14 +73,14 @@ typedef struct
 typedef struct
 {
   uint32_t  sampRate;
-  uint32_t  testLen;
-  uint32_t  opDelay[4];
-  uint32_t  profile;
-  uint32_t  preTestDelay;
-  uint32_t  postTestDelay;
-  uint8_t  *pDst;
-  uint32_t  len;
-  uint8_t   buf[1024];
+  uint32_t  testLen;        // Estimated duration of the operation
+  uint32_t  opDelay[4];     // Time / Energy delays associated with the operation
+  uint32_t  profile;        // The power profile that the device will use to complete the operation
+  uint32_t  preTestDelay;   // Time to wait while sampling before performing the operation
+  uint32_t  postTestDelay;  // Time to wait while sampling after performing the operation
+  uint8_t  *pDst;           // Destination for data (buf) within the peripheral
+  uint32_t  len;            // Length of data buffer to write
+  uint8_t   buf[1024];      // Data buffer to be written to the peripheral
 } TestArgs;
 
 typedef struct
@@ -286,6 +286,7 @@ void Tests_runTest14(void)
   sTests.testArgs.opDelay[0] = 45000;
   sTests.testArgs.profile = HIH_PROFILE_STANDARD;
   sTests.testArgs.preTestDelay  = 1000;
+  sTests.testArgs.testLen       = 50000;
   sTests.testArgs.sampRate      = 1;
   sTests.testArgs.postTestDelay = 1000;
   sTests.testArgs.buf[0] = 1;
@@ -296,8 +297,8 @@ void Tests_runTest14(void)
   double humidity = HIH613X_getHumidity();
   double totalEnergy = 0;
   uint32_t i;
-  for (i = 0; i < sTests.periphState.numSamples; i++)
-    totalEnergy += sTests.periphState.pSampleBuffer[i];
+  for (i = 0; i < sTests.adc3.numSamples; i++)
+    totalEnergy += sTests.adc3.pSampleBuffer[i];
   
   Tests_sendData(sprintf((char *)sTests.comms.txBuffer, 
     "Temperature: %f, Humidity: %f, Energy: %f\r\n", temperature, humidity, totalEnergy));
@@ -333,7 +334,7 @@ void Tests_run(void)
     }
   }
   */
-  
+  /*
   while(1)
   {
     sTests.adc1.pSampleBuffer        = &GPSDRAM->samples[0][0];  // Reset sample buffers to
@@ -343,7 +344,7 @@ void Tests_run(void)
     Tests_runTest14();
     Time_delay(100000);
   }
-  
+  */
   switch (sTests.state)
   {
     case TEST_IDLE:  // Clear test data and setup listening for commands on the comm port
@@ -511,19 +512,20 @@ static void Tests_setupSPITests(Device device, TestArgs *pArgs)
   for (i = 0; i <= DMA2D_IRQn; i++)
     NVIC_DisableIRQ((IRQn_Type)i);
 
-  Analog_configureADC(ADC_DOM2_VOLTAGE,    sTests.adc1.pSampleBuffer,        numSamps);
-  Analog_configureADC(ADC_DOM2_INCURRENT,  sTests.adc2.pSampleBuffer,        numSamps);
-  Analog_configureADC(ADC_DOM2_OUTCURRENT, sTests.adc3.pSampleBuffer,        numSamps);
-  Analog_configureADC(ADC_PERIPH_STATE,    sTests.periphState.pSampleBuffer, numSamps);
-  
   switch (device)
   {
-    case DEVICE_TEMPSENSE: sTests.getPeriphState = HIH613X_getStateAsWord;     break;
+    case DEVICE_TEMPSENSE: Analog_setPeriphStatePointer(HIH613X_getStatePointer()); break;
     case DEVICE_EEPROM:    sTests.getPeriphState = EEPROM_getStateAsWord;      break;
     case DEVICE_NORFLASH:  sTests.getPeriphState = M25PX_getStateAsWord;       break;
     case DEVICE_SDCARD:    sTests.getPeriphState = SDCard_getStateAsWord;      break;
     default: break;
   }
+  
+  Analog_configureADC(ADC_DOM2_VOLTAGE,    sTests.adc1.pSampleBuffer,        numSamps);
+  Analog_configureADC(ADC_DOM2_INCURRENT,  sTests.adc2.pSampleBuffer,        numSamps);
+  Analog_configureADC(ADC_DOM2_OUTCURRENT, sTests.adc3.pSampleBuffer,        numSamps);
+  Analog_configureADC(ADC_PERIPH_STATE,    sTests.periphState.pSampleBuffer, numSamps);
+  
   sTests.periphState.channel    = device;   // For sorting out the state of the peripheral
   sTests.periphState.numSamples = numSamps; // decremented on each sample
   

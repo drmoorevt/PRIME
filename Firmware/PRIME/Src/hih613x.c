@@ -100,14 +100,14 @@ HIHState HIH613X_getState(void)
 }
 
 /**************************************************************************************************\
-* FUNCTION    HIH613X_getStateAsWord
+* FUNCTION    HIH613X_getStatePointer
 * DESCRIPTION Returns the current state of HIH613X
 * PARAMETERS  None
 * RETURNS     The current state of HIH613X
 \**************************************************************************************************/
-uint32 HIH613X_getStateAsWord(void)
+uint32_t *HIH613X_getStatePointer(void)
 {
-  return (uint32)sHIH613X.state;
+  return (uint32_t *)&sHIH613X.state;
 }
 
 /**************************************************************************************************\
@@ -242,7 +242,8 @@ HIHStatus HIH613X_readTempHumidI2C(bool measure, bool read, bool convert, Delay 
   if (measure && read)
   {
     // tMeasure ~= 36.65ms, but 45ms for reliability (comes in from fixture)
-    Time_pendEnergyTime(pDelay);
+    Time_delay(pDelay->tDelay);
+    //Time_pendEnergyTime(pDelay);
     HIH613X_setState(HIH_STATE_DATA_READY);
   }
 
