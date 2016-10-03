@@ -11,7 +11,7 @@ function [name, chans, data, time] = TestConsole(CommPort)
 %         fprintf('\nKBps: %10.4f, Kbps: %10.4f', KBps, KBps * 8);
 %     end
 
-    numSweeps = 10;
+    numSweeps = 1;
     eeFails = 0;
     sfFails = 0;
     sdFails = 0;
@@ -27,7 +27,7 @@ function [name, chans, data, time] = TestConsole(CommPort)
    %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 225000, [150000, 0, 0, 0]);    % SanDisk
    %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 100000, [65000, 0, 0, 0]);     % SwissBit
    %[sdFails, chans, data, time] = runTest13(CommPort, 921600, numSweeps, 15000,  [2000, 0, 0, 0]);      % Kingston
-   %[htFails, chans, data, time] = runTest14(CommPort, 921600, numSweeps,  50000,  [45000, 0, 0, 0]);    % HIH
+   [htFails, chans, data, time] = runTest14(CommPort, 921600, numSweeps,  50000,  [45000, 0, 0, 0]);    % HIH
 
    % Optimal Time Delay Tests
    %[eeFails, chans, data, time] = runTest21(CommPort, 921600, numSweeps, 7000,   [5000, 0, 0, 0]);   % EEPROM
@@ -36,7 +36,7 @@ function [name, chans, data, time] = TestConsole(CommPort)
    %[htFails, chans, data, time] = runTest24(CommPort, 921600, numSweeps,  50000,  [45000, 0, 0, 0]);   % HIH
    
    % Optimal Energy Delay Tests
-   [htFails, chans, data, time] = runTest24(CommPort, 921600, numSweeps,  50000,  [0, 0, 0, 700000]);   % HIH
+   %[htFails, chans, data, time] = runTest24(CommPort, 921600, numSweeps,  50000,  [0, 0, 0, 700000]);   % HIH
    
    %fprintf('Dev\tFails\nEE:\t%d\nSF:\t%d\nSD:\t%d\nHT:\t%d\n', eeFails, sfFails, sdFails, htFails);
    %[inEnergy, outEnergy, inEnergyDelta, outEnergyDelta] = analyzeTest(data, time)
