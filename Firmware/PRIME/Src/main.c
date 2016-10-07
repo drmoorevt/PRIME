@@ -21,38 +21,23 @@
 #include "tests.h"
 #include "time.h"
 
-CRC_HandleTypeDef hcrc;
-
 DAC_HandleTypeDef hdac;
-
 DMA2D_HandleTypeDef hdma2d;
-
 I2C_HandleTypeDef hi2c3;
-
 LTDC_HandleTypeDef hltdc;
-
 SPI_HandleTypeDef hspi5;
-
-TIM_HandleTypeDef htim6;
-TIM_HandleTypeDef htim7;
-
 UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart1;
-
 SRAM_HandleTypeDef hsram1;
 SDRAM_HandleTypeDef hsdram1;
 
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_CRC_Init(void);
 static void MX_DAC_Init(void);
 static void MX_DMA2D_Init(void);
 static void MX_FMC_Init(void);
 static void MX_I2C3_Init(void);
-static void MX_LTDC_Init(void);
 static void MX_SPI5_Init(void);
-static void MX_TIM6_Init(void);
-static void MX_TIM7_Init(void);
 static void MX_UART5_Init(void);
 static void MX_USART1_UART_Init(void);
 
@@ -156,38 +141,31 @@ void Main_printResult(uint32_t yPos, bool result)
 
 int main(void)
 {
-  bool runPOST = false;
+  bool runPOST = true;
   
   HAL_Init();  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   SystemClock_Config();  /* Configure the system clock */
   MX_GPIO_Init(); /* Initialize all configured peripherals */
-  MX_CRC_Init();
   MX_DAC_Init();
   MX_DMA2D_Init();
   MX_FMC_Init();
   MX_I2C3_Init();
-  //MX_LTDC_Init();
   MX_SPI5_Init();
-  MX_TIM6_Init();
-  MX_TIM7_Init();
   MX_UART5_Init();
   MX_USART1_UART_Init();
   BSP_LCD_Init();                                 // Initialize the LCD
-  SPI_init(&hspi5);  // Reinitialize SPI after the LCD messes with it...
-  I2C_init(&hi2c3);
   
-
   /* USER CODE BEGIN 2 */
   ExtMem_SDRAM_Initialization_sequence(REFRESH_COUNT, &hsdram1);
     
   Analog_init();             
   PowerCon_init(&hdac);      
   EEPROM_init();             
-//  ESP12_init(&huart1);     
+  ESP12_init(&huart1);     
   HIH613X_init();            
   M25PX_init();
   PLR5010D_init();  
-//  SBT263_init(&huart5);
+  SBT263_init(&huart5);
   SST26_init();
   SDCard_init();
   SI114X_init();
@@ -366,38 +344,22 @@ void SystemClock_Config(void)
   HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
-/* CRC init function */
-void MX_CRC_Init(void)
-{
-
-  hcrc.Instance = CRC;
-  HAL_CRC_Init(&hcrc);
-
-}
-
 /* DAC init function */
 void MX_DAC_Init(void)
 {
-
   DAC_ChannelConfTypeDef sConfig;
-
-    /**DAC Initialization 
-    */
+  /** DAC Initialization **/
   hdac.Instance = DAC;
   HAL_DAC_Init(&hdac);
-
-    /**DAC channel OUT2 config 
-    */
+  /** DAC channel OUT2 config **/
   sConfig.DAC_Trigger = DAC_TRIGGER_SOFTWARE;
   sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
   HAL_DAC_ConfigChannel(&hdac, &sConfig, DAC_CHANNEL_2);
-
 }
 
 /* DMA2D init function */
 void MX_DMA2D_Init(void)
 {
-
   hdma2d.Instance = DMA2D;
   hdma2d.Init.Mode = DMA2D_M2M;
   hdma2d.Init.ColorMode = DMA2D_ARGB8888;
@@ -407,15 +369,12 @@ void MX_DMA2D_Init(void)
   hdma2d.LayerCfg[1].AlphaMode = DMA2D_NO_MODIF_ALPHA;
   hdma2d.LayerCfg[1].InputAlpha = 0;
   HAL_DMA2D_Init(&hdma2d);
-
   HAL_DMA2D_ConfigLayer(&hdma2d, 1);
-
 }
 
 /* I2C3 init function */
 void MX_I2C3_Init(void)
 {
-
   hi2c3.Instance = I2C3;
   hi2c3.Init.ClockSpeed = 400000;
   hi2c3.Init.DutyCycle = I2C_DUTYCYCLE_2;
@@ -426,130 +385,18 @@ void MX_I2C3_Init(void)
   hi2c3.Init.GeneralCallMode = I2C_GENERALCALL_DISABLED;
   hi2c3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLED;
   HAL_I2C_Init(&hi2c3);
-
-}
-
-/* LTDC init function */
-void MX_LTDC_Init(void)
-{
-
-  LTDC_LayerCfgTypeDef pLayerCfg;
-  LTDC_LayerCfgTypeDef pLayerCfg1;
-
-  hltdc.Instance = LTDC;
-  hltdc.Init.HSPolarity = LTDC_HSPOLARITY_AL;
-  hltdc.Init.VSPolarity = LTDC_VSPOLARITY_AL;
-  hltdc.Init.DEPolarity = LTDC_DEPOLARITY_AL;
-  hltdc.Init.PCPolarity = LTDC_PCPOLARITY_IPC;
-  hltdc.Init.HorizontalSync = 7;
-  hltdc.Init.VerticalSync = 3;
-  hltdc.Init.AccumulatedHBP = 14;
-  hltdc.Init.AccumulatedVBP = 5;
-  hltdc.Init.AccumulatedActiveW = 654;
-  hltdc.Init.AccumulatedActiveH = 485;
-  hltdc.Init.TotalWidth = 660;
-  hltdc.Init.TotalHeigh = 487;
-  hltdc.Init.Backcolor.Blue = 0;
-  hltdc.Init.Backcolor.Green = 0;
-  hltdc.Init.Backcolor.Red = 0;
-  HAL_LTDC_Init(&hltdc);
-
-  pLayerCfg.WindowX0 = 0;
-  pLayerCfg.WindowX1 = 0;
-  pLayerCfg.WindowY0 = 0;
-  pLayerCfg.WindowY1 = 0;
-  pLayerCfg.PixelFormat = LTDC_PIXEL_FORMAT_ARGB8888;
-  pLayerCfg.Alpha = 0;
-  pLayerCfg.Alpha0 = 0;
-  pLayerCfg.BlendingFactor1 = LTDC_BLENDING_FACTOR1_CA;
-  pLayerCfg.BlendingFactor2 = LTDC_BLENDING_FACTOR2_CA;
-  pLayerCfg.FBStartAdress = 0;
-  pLayerCfg.ImageWidth = 0;
-  pLayerCfg.ImageHeight = 0;
-  pLayerCfg.Backcolor.Blue = 0;
-  pLayerCfg.Backcolor.Green = 0;
-  pLayerCfg.Backcolor.Red = 0;
-  HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg, 0);
-
-  pLayerCfg1.WindowX0 = 0;
-  pLayerCfg1.WindowX1 = 0;
-  pLayerCfg1.WindowY0 = 0;
-  pLayerCfg1.WindowY1 = 0;
-  pLayerCfg1.PixelFormat = LTDC_PIXEL_FORMAT_ARGB8888;
-  pLayerCfg1.Alpha = 0;
-  pLayerCfg1.Alpha0 = 0;
-  pLayerCfg1.BlendingFactor1 = LTDC_BLENDING_FACTOR1_CA;
-  pLayerCfg1.BlendingFactor2 = LTDC_BLENDING_FACTOR2_CA;
-  pLayerCfg1.FBStartAdress = 0;
-  pLayerCfg1.ImageWidth = 0;
-  pLayerCfg1.ImageHeight = 0;
-  pLayerCfg1.Backcolor.Blue = 0;
-  pLayerCfg1.Backcolor.Green = 0;
-  pLayerCfg1.Backcolor.Red = 0;
-  HAL_LTDC_ConfigLayer(&hltdc, &pLayerCfg1, 1);
-
+  I2C_init(&hi2c3);
 }
 
 /* SPI5 init function */
 void MX_SPI5_Init(void)
 {
-
-  hspi5.Instance = SPI5;
-  hspi5.Init.Mode = SPI_MODE_MASTER;
-  hspi5.Init.Direction = SPI_DIRECTION_2LINES;
-  hspi5.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi5.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi5.Init.CLKPhase = SPI_PHASE_1EDGE;
-  hspi5.Init.NSS = SPI_NSS_SOFT;
-  hspi5.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
-  hspi5.Init.FirstBit = SPI_FIRSTBIT_MSB;
-  hspi5.Init.TIMode = SPI_TIMODE_DISABLED;
-  hspi5.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLED;
-  hspi5.Init.CRCPolynomial = 10;
-  HAL_SPI_Init(&hspi5);
-
-}
-
-/* TIM6 init function */
-void MX_TIM6_Init(void)
-{
-
-  TIM_MasterConfigTypeDef sMasterConfig;
-
-  htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 0;
-  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 0;
-  HAL_TIM_Base_Init(&htim6);
-
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig);
-
-}
-
-/* TIM7 init function */
-void MX_TIM7_Init(void)
-{
-
-  TIM_MasterConfigTypeDef sMasterConfig;
-
-  htim7.Instance = TIM7;
-  htim7.Init.Prescaler = 0;
-  htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim7.Init.Period = 0;
-  HAL_TIM_Base_Init(&htim7);
-
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig);
-
+  SPI_init(&hspi5);  // Reinitialize SPI after the LCD messes with it...
 }
 
 /* UART5 init function */
 void MX_UART5_Init(void)
 {
-
   huart5.Instance = UART5;
   huart5.Init.BaudRate = 115200;
   huart5.Init.WordLength = UART_WORDLENGTH_8B;
@@ -559,13 +406,11 @@ void MX_UART5_Init(void)
   huart5.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart5.Init.OverSampling = UART_OVERSAMPLING_16;
   HAL_UART_Init(&huart5);
-
 }
 
 /* USART1 init function */
 void MX_USART1_UART_Init(void)
 {
-
   huart1.Instance = USART1;
 //  huart1.Init.BaudRate = 115200;
   huart1.Init.BaudRate = 9600;
@@ -576,20 +421,15 @@ void MX_USART1_UART_Init(void)
   huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
   huart1.Init.OverSampling = UART_OVERSAMPLING_16;
   HAL_UART_Init(&huart1);
-
 }
 
 /* FMC initialization function */
 void MX_FMC_Init(void)
 {
+  /** Perform the initialization sequence for USB module on bank 2**/
   FMC_NORSRAM_TimingTypeDef Timing;
-  FMC_SDRAM_TimingTypeDef SdramTiming;
-
-  /** Perform the SRAM1 memory initialization sequence
-  */
   hsram1.Instance = FMC_NORSRAM_DEVICE;
   hsram1.Extended = FMC_NORSRAM_EXTENDED_DEVICE;
-  /* hsram1.Init */
   hsram1.Init.NSBank = FMC_NORSRAM_BANK2;
   hsram1.Init.DataAddressMux = FMC_DATA_ADDRESS_MUX_DISABLE;
   hsram1.Init.MemoryType = FMC_MEMORY_TYPE_SRAM;
@@ -604,7 +444,6 @@ void MX_FMC_Init(void)
   hsram1.Init.AsynchronousWait = FMC_ASYNCHRONOUS_WAIT_DISABLE;
   hsram1.Init.WriteBurst = FMC_WRITE_BURST_DISABLE;
   hsram1.Init.ContinuousClock = FMC_CONTINUOUS_CLOCK_SYNC_ONLY;
-  /* Timing */
   Timing.AddressSetupTime = 2;       // 2 Minimum empirically
   Timing.AddressHoldTime = 0;        // 0 Minimum empirically
   Timing.DataSetupTime = 7;          // 7 Minimum empirically
@@ -612,14 +451,11 @@ void MX_FMC_Init(void)
   Timing.CLKDivision = 0;            // 0 Minimum empirically
   Timing.DataLatency = 0;            // 0 Minimum empirically
   Timing.AccessMode = FMC_ACCESS_MODE_A;
-  /* ExtTiming */
-
   HAL_SRAM_Init(&hsram1, &Timing, &Timing);
 
-  /** Perform the SDRAM1 memory initialization sequence
-  */
+  /** Perform the SDRAM1 memory initialization sequence **/
+  FMC_SDRAM_TimingTypeDef SdramTiming;
   hsdram1.Instance = FMC_SDRAM_DEVICE;
-  /* hsdram1.Init */
   hsdram1.Init.SDBank = FMC_SDRAM_BANK2;
   hsdram1.Init.ColumnBitsNumber = FMC_SDRAM_COLUMN_BITS_NUM_8;
   hsdram1.Init.RowBitsNumber = FMC_SDRAM_ROW_BITS_NUM_12;
@@ -630,7 +466,6 @@ void MX_FMC_Init(void)
   hsdram1.Init.SDClockPeriod = FMC_SDRAM_CLOCK_PERIOD_2;
   hsdram1.Init.ReadBurst = FMC_SDRAM_RBURST_DISABLE;
   hsdram1.Init.ReadPipeDelay = FMC_SDRAM_RPIPE_DELAY_1;
-  /* SdramTiming */
   SdramTiming.LoadToActiveDelay = 2;
   SdramTiming.ExitSelfRefreshDelay = 7;
   SdramTiming.SelfRefreshTime = 4;
@@ -638,30 +473,20 @@ void MX_FMC_Init(void)
   SdramTiming.WriteRecoveryTime = 2;
   SdramTiming.RPDelay = 2;
   SdramTiming.RCDDelay = 2;
-
   HAL_SDRAM_Init(&hsdram1, &SdramTiming);
 }
 
-/** Configure pins as 
-        * Analog 
-        * Input 
-        * Output
-        * EVENT_OUT
-        * EXTI
-*/
 void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct;
-
-  /* GPIO Ports Clock Enable */
-  __GPIOE_CLK_ENABLE();
-  __GPIOC_CLK_ENABLE();
-  __GPIOF_CLK_ENABLE();
-  __GPIOH_CLK_ENABLE();
   __GPIOA_CLK_ENABLE();
   __GPIOB_CLK_ENABLE();
-  __GPIOG_CLK_ENABLE();
+  __GPIOC_CLK_ENABLE();
   __GPIOD_CLK_ENABLE();
+  __GPIOE_CLK_ENABLE();
+  __GPIOF_CLK_ENABLE();
+  __GPIOG_CLK_ENABLE();
+  __GPIOH_CLK_ENABLE();
 
   /*Configure GPIO pins : PV_VSEL0_Pin PV_VSEL1_Pin _PV_CLR_Pin _PV_EN_Pin PV_VSEL2_Pin */
   GPIO_InitStruct.Pin = PV_VSEL0_Pin|PV_VSEL1_Pin|_PV_CLR_Pin|_PV_EN_Pin 

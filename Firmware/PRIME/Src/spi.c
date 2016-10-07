@@ -53,6 +53,7 @@ void SPI_init(SPI_HandleTypeDef *pSPI)
   HAL_GPIO_WritePin(CSX_GPIO_Port,     CSX_Pin,     GPIO_PIN_SET);
   
   spSPI = pSPI;
+  spSPI->Instance = SPI5;
   SPI_setup(FALSE, SPI_CLOCK_RATE_MAX, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
 }
 

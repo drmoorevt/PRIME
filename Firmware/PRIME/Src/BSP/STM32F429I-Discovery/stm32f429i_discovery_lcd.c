@@ -161,74 +161,71 @@ uint8_t BSP_LCD_Init(void)
   /* In this case, ReadID function is bypassed.*/  
   /*if(ili9341_drv.ReadID() == ILI9341_ID)*/
 
-    /* LTDC Configuration ----------------------------------------------------*/
-    LtdcHandler.Instance = LTDC;
-    
-    /* Timing configuration  (Typical configuration from ILI9341 datasheet)
-          HSYNC=10 (9+1)
-          HBP=20 (29-10+1)
-          ActiveW=240 (269-20-10+1)
-          HFP=10 (279-240-20-10+1)
-    
-          VSYNC=2 (1+1)
-          VBP=2 (3-2+1)
-          ActiveH=320 (323-2-2+1)
-          VFP=4 (327-320-2-2+1)
-      */
-    
-    /* Configure horizontal synchronization width */
-    LtdcHandler.Init.HorizontalSync = ILI9341_HSYNC;
-    /* Configure vertical synchronization height */
-    LtdcHandler.Init.VerticalSync = ILI9341_VSYNC;
-    /* Configure accumulated horizontal back porch */
-    LtdcHandler.Init.AccumulatedHBP = ILI9341_HBP;
-    /* Configure accumulated vertical back porch */
-    LtdcHandler.Init.AccumulatedVBP = ILI9341_VBP;
-    /* Configure accumulated active width */
-    LtdcHandler.Init.AccumulatedActiveW = 269;
-    /* Configure accumulated active height */
-    LtdcHandler.Init.AccumulatedActiveH = 323;
-    /* Configure total width */
-    LtdcHandler.Init.TotalWidth = 279;
-    /* Configure total height */
-    LtdcHandler.Init.TotalHeigh = 327;
-    
-    /* Configure R,G,B component values for LCD background color */
-    LtdcHandler.Init.Backcolor.Red= 0;
-    LtdcHandler.Init.Backcolor.Blue= 0;
-    LtdcHandler.Init.Backcolor.Green= 0;
-    
-    /* LCD clock configuration */
-    /* PLLSAI_VCO Input = HSE_VALUE/PLL_M = 1 Mhz */
-    /* PLLSAI_VCO Output = PLLSAI_VCO Input * PLLSAIN = 192 Mhz */
-    /* PLLLCDCLK = PLLSAI_VCO Output/PLLSAIR = 192/4 = 48 Mhz */
-    /* LTDC clock frequency = PLLLCDCLK / LTDC_PLLSAI_DIVR_8 = 48/4 = 6Mhz */
-    PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LTDC;
-    PeriphClkInitStruct.PLLSAI.PLLSAIN = 192;
-    PeriphClkInitStruct.PLLSAI.PLLSAIR = 4;
-    PeriphClkInitStruct.PLLSAIDivR = RCC_PLLSAIDIVR_8;
-    HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct); 
-    
-    /* Polarity */
-    LtdcHandler.Init.HSPolarity = LTDC_HSPOLARITY_AL;
-    LtdcHandler.Init.VSPolarity = LTDC_VSPOLARITY_AL;
-    LtdcHandler.Init.DEPolarity = LTDC_DEPOLARITY_AL;
-    LtdcHandler.Init.PCPolarity = LTDC_PCPOLARITY_IPC;
-    
-    MspInit();
-    HAL_LTDC_Init(&LtdcHandler); 
-    
-    /* Select the device */
-    LcdDrv = &ili9341_drv;
+  /* LTDC Configuration ----------------------------------------------------*/
+  LtdcHandler.Instance = LTDC;
+  
+  /* Timing configuration  (Typical configuration from ILI9341 datasheet)
+      HSYNC=10 (9+1)
+      HBP=20 (29-10+1)
+      ActiveW=240 (269-20-10+1)
+      HFP=10 (279-240-20-10+1)
+  
+      VSYNC=2 (1+1)
+      VBP=2 (3-2+1)
+      ActiveH=320 (323-2-2+1)
+      VFP=4 (327-320-2-2+1)
+  */
+  
+  /* Configure horizontal synchronization width */
+  LtdcHandler.Init.HorizontalSync = ILI9341_HSYNC;
+  /* Configure vertical synchronization height */
+  LtdcHandler.Init.VerticalSync = ILI9341_VSYNC;
+  /* Configure accumulated horizontal back porch */
+  LtdcHandler.Init.AccumulatedHBP = ILI9341_HBP;
+  /* Configure accumulated vertical back porch */
+  LtdcHandler.Init.AccumulatedVBP = ILI9341_VBP;
+  /* Configure accumulated active width */
+  LtdcHandler.Init.AccumulatedActiveW = 269;
+  /* Configure accumulated active height */
+  LtdcHandler.Init.AccumulatedActiveH = 323;
+  /* Configure total width */
+  LtdcHandler.Init.TotalWidth = 279;
+  /* Configure total height */
+  LtdcHandler.Init.TotalHeigh = 327;
+  
+  /* Configure R,G,B component values for LCD background color */
+  LtdcHandler.Init.Backcolor.Red= 0;
+  LtdcHandler.Init.Backcolor.Blue= 0;
+  LtdcHandler.Init.Backcolor.Green= 0;
+  
+  /* LCD clock configuration */
+  /* PLLSAI_VCO Input = HSE_VALUE/PLL_M = 1 Mhz */
+  /* PLLSAI_VCO Output = PLLSAI_VCO Input * PLLSAIN = 192 Mhz */
+  /* PLLLCDCLK = PLLSAI_VCO Output/PLLSAIR = 192/4 = 48 Mhz */
+  /* LTDC clock frequency = PLLLCDCLK / LTDC_PLLSAI_DIVR_8 = 48/4 = 6Mhz */
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_LTDC;
+  PeriphClkInitStruct.PLLSAI.PLLSAIN = 192;
+  PeriphClkInitStruct.PLLSAI.PLLSAIR = 4;
+  PeriphClkInitStruct.PLLSAIDivR = RCC_PLLSAIDIVR_8;
+  HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct); 
+  
+  /* Polarity */
+  LtdcHandler.Init.HSPolarity = LTDC_HSPOLARITY_AL;
+  LtdcHandler.Init.VSPolarity = LTDC_VSPOLARITY_AL;
+  LtdcHandler.Init.DEPolarity = LTDC_DEPOLARITY_AL;
+  LtdcHandler.Init.PCPolarity = LTDC_PCPOLARITY_IPC;
+  
+  MspInit();
+  HAL_LTDC_Init(&LtdcHandler); 
+  
+  /* Select the device */
+  LcdDrv = &ili9341_drv;
 
-    /* LCD Init */	 
-    LcdDrv->Init();
+  /* LCD Init */	 
+  LcdDrv->Init();
 
-    /* Initialize the SDRAM */
-    //BSP_SDRAM_Init();
-
-    /* Initialize the font */
-    BSP_LCD_SetFont(&LCD_DEFAULT_FONT);
+  /* Initialize the font */
+  BSP_LCD_SetFont(&LCD_DEFAULT_FONT);
 
   return LCD_OK;
 }  

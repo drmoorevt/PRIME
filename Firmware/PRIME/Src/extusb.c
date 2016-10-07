@@ -31,12 +31,19 @@ bool ExtUSB_init(void)
 \**************************************************************************************************/
 bool ExtUSB_tx(uint8_t *pSrc, uint32_t len)
 {
+  SoftTimerConfig usbTimeout = {TIME_SOFT_TIMER_USB_TX, 100, 0, NULL};
+  
   while(len--)
   {
-    while(!(*pStatPipe & FT232H_SPACE_AVAILABLE));  // Wait for available buffer space
+    Time_startTimer(usbTimeout);
+    while(!(*pStatPipe & FT232H_SPACE_AVAILABLE))  // Wait for available buffer space
+    {
+      if(0 == Time_getTimerValue(TIME_SOFT_TIMER_USB_TX))  // Timeout after 100ms
+        return false;
+    }
     *(pDataPipe) = *(uint8_t *)pSrc++;
   }
-  return true;
+  return true;  // Data was sent out within the timeout period
 }
 
 /**************************************************************************************************\
@@ -88,7 +95,11 @@ bool ExtUSB_testUSB(void)
   uint32_t len = sprintf((char *)helloString, "Hello world!");
   bool isConfigured   = (*pStatPipe & FT232H_CONFIGURED);
   bool spaceAvailable = (*pStatPipe & FT232H_SPACE_AVAILABLE);
+  bool helloSent      = false;
   if (isConfigured && spaceAvailable)
-    ExtUSB_tx((uint8_t *)helloString, len);
-  return isConfigured;
+  {
+    ExtUSB_flushRxBuffer();
+    helloSent = ExtUSB_tx((uint8_t *)helloString, len);
+  }
+  return helloSent;
 }

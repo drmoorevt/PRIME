@@ -19,8 +19,9 @@ typedef enum
   TIME_SOFT_TIMER_XBEE                = 11, // generic xbee timer
   TIME_SOFT_TIMER_XBEE_READ           = 12, // xbee read timeout
   TIME_SOFT_TIMER_ONE_SECOND          = 13, // One second timer
-  TIME_SOFT_TIMER_USB                 = 14, // USB receive timer
-  TIME_SOFT_TIMER_MAX                 = 15
+  TIME_SOFT_TIMER_USB_RX              = 14, // USB receive timer
+  TIME_SOFT_TIMER_USB_TX              = 15, // USB transmit timer
+  TIME_SOFT_TIMER_MAX                 = 16
 } SoftTimer;
 
 typedef enum
@@ -74,9 +75,6 @@ void Time_delay(uint32 microSeconds);
 
 void Time_startTimer(SoftTimerConfig timerConfig);
 uint32 Time_getTimerValue(SoftTimer timer);
-
-uint64 Time_getSystemTime(void);
-boolean Time_isSecondBoundary(void);
 
 void Time_pendEnergyTime(Delay *pDelay);
 bool Time_notifyEnergyExpended(uint32_t energyExpendedBitCounts);

@@ -5,19 +5,10 @@
 
 #define FILE_ID TIME_C
 
-#define MILLISECONDS_PER_SECOND (1000)
-#define MILLISECONDS_PER_MINUTE (MILLISECONDS_PER_SECOND * 60)
-#define MILLISECONDS_PER_HOUR   (MILLISECONDS_PER_MINUTE * 60)
-#define MILLISECONDS_PER_DAY    (MILLISECONDS_PER_HOUR   * 24)
-
-#define TIM_TRGOSource_Update              ((uint16_t)0x0020)
-
 struct
 {
   SoftTimerConfig softTimers[TIME_SOFT_TIMER_MAX];
-  uint64_t systemTime;  // milliseconds since the epoch
   volatile uint64_t pendEnergy;
-  boolean isSecondBoundary;
 } sTime;
 
 static void Time_decrementSoftTimers(void);
@@ -145,36 +136,6 @@ uint32 Time_getTimerValue(SoftTimer timer)
 }
 
 /**************************************************************************************************\
-* FUNCTION      Time_getSystemTime
-* DESCRIPTION   Gets system time as a 32 bit UTC since Jan. 1, 1970 value (secs)
-* PARAMETERS    none
-* RETURN        uint32 - systemTime
-\**************************************************************************************************/
-uint64 Time_getSystemTime(void)
-{
-  uint32 sysTime;
-  
-  DISABLE_SYSTICK_INTERRUPT();
-  sysTime = sTime.systemTime;
-  ENABLE_SYSTICK_INTERRUPT();
-
-  return sysTime;
-}
-
-/**************************************************************************************************\
-* FUNCTION      Time_isSecondBoundary
-* DESCRIPTION   Checks to see if we have crossed a second boundary.  This clears the boundary flag
-* PARAMETERS    none
-* RETURN        none
-\**************************************************************************************************/
-boolean Time_isSecondBoundary(void)
-{
-  boolean isSecondBoundary = sTime.isSecondBoundary;
-  sTime.isSecondBoundary   = FALSE;
-  return isSecondBoundary;
-}
-
-/**************************************************************************************************\
 * FUNCTION      Time_decrementSoftTimers
 * DESCRIPTION   Decrements all timers that aren't already 0
 * PARAMETERS    none
@@ -207,7 +168,5 @@ static void Time_decrementSoftTimers(void)
 \**************************************************************************************************/
 void HAL_SYSTICK_Callback(void)
 {
-  if (0 == ((sTime.systemTime++) % MILLISECONDS_PER_SECOND))
-    sTime.isSecondBoundary = TRUE;
   Time_decrementSoftTimers();
 }
