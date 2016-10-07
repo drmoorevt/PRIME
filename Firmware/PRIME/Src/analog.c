@@ -436,7 +436,10 @@ void Analog_openPort(ADCSelect adcSelect, AppADCConfig appConfig)
 \**************************************************************************************************/
 boolean Analog_setupTimer(uint32_t irqPeriod)
 {
-  uint32_t timFreq = HAL_RCC_GetPCLK2Freq();  // TIM8 is connected to APB2
+  const uint32_t apb2Prescalar = 2;
+  const uint32_t timerMult = 1; // TIM8 is connected to APB2
+  uint32_t timFreq = (HAL_RCC_GetPCLK2Freq() / timerMult) * apb2Prescalar;
+  
   sAnalog.adc[ADC_PORT_PERIPH_STATE].htim.Instance = TIM8;
   sAnalog.adc[ADC_PORT_PERIPH_STATE].htim.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
   sAnalog.adc[ADC_PORT_PERIPH_STATE].htim.Init.CounterMode       = TIM_COUNTERMODE_UP;

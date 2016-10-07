@@ -1,4 +1,5 @@
 #include "stm32f4xx_hal.h"
+#include "stm32f429i_discovery.h"  // For the BSP_LED toggling
 #include "analog.h"
 #include "crc.h"
 #include "eeprom.h"
@@ -343,6 +344,13 @@ void Tests_run(void)
     sTests.periphState.pSampleBuffer = &GPSDRAM->samples[3][0];  // chronologically
     Tests_runTest14();
     Time_delay(100000);
+  }
+  */
+  /*
+  while(1)
+  {
+    Time_delay(1000*1000);
+    BSP_LED_Toggle(LED3);
   }
   */
   switch (sTests.state)

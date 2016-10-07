@@ -62,8 +62,9 @@ void Time_delay(volatile uint32 microSeconds)
 {
   if (0 == microSeconds)
     return;
-  
-  uint32_t timFreq = HAL_RCC_GetPCLK1Freq();   // TIM5 is connected to APB1
+  const uint32_t apb1Prescalar = 4;
+  const uint32_t timerMult = 2;
+  uint32_t timFreq = (HAL_RCC_GetPCLK1Freq() / timerMult) * apb1Prescalar;
   RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;          // Turn on Timer5 clocks (90 MHz)
   TIM5->CR1     = (0x0000);                    // Turn off the counter entirely
   TIM5->PSC     = (timFreq / (1000 * 1000));   // Set prescalar to count up on microsecond bounds.
