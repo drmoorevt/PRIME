@@ -153,7 +153,7 @@ int main(void)
   MX_SPI5_Init();
   MX_UART5_Init();
   MX_USART1_UART_Init();
-  BSP_LCD_Init();                                 // Initialize the LCD
+  BSP_LCD_Init();  // Initialize the LCD
   
   /* USER CODE BEGIN 2 */
   ExtMem_SDRAM_Initialization_sequence(REFRESH_COUNT, &hsdram1);
@@ -252,7 +252,10 @@ int main(void)
     }
     else
       BSP_LCD_DisplayStringAt(0, 300,  "an error occurred", CENTER_MODE);
+    BSP_LED_Off(LED3);
+    BSP_LED_Off(LED4);
   }
+  BSP_LCD_DeInit();  // Turn off the LCD to reduce analog noise
   
   //__disable_irq();
   //HAL_SuspendTick();
