@@ -51,8 +51,7 @@ boolean SDCard_read(uint8 *pSrc, uint8 *pDest, uint16 length);
 SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length, uint32_t opDelay);
 boolean SDCard_setPowerState(SDCardState state, double vDomain);
 boolean SDCard_setPowerProfile(SDCardPowerProfile profile);
-uint32 SDCard_getStateAsWord(void);
-SDCardState SDCard_getState(void);
+uint32_t *SDCard_getStatePointer(void);
 double SDCard_getStateVoltage(void);
 bool    SDCard_test(void);
 

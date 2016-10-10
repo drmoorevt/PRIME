@@ -365,25 +365,14 @@ boolean SDCard_setup(boolean state)
 }
 
 /**************************************************************************************************\
-* FUNCTION    SDCard_getState
+* FUNCTION    SDCard_getStatePointer
 * DESCRIPTION Returns the current state of the SDCard
 * PARAMETERS  None
 * RETURNS     The current state of SDCard
 \**************************************************************************************************/
-SDCardState SDCard_getState(void)
+uint32_t *SDCard_getStatePointer(void)
 {
-  return sSDCard.state;
-}
-
-/**************************************************************************************************\
-* FUNCTION    SDCard_getStateAsWord
-* DESCRIPTION Returns the current state of the SDCard
-* PARAMETERS  None
-* RETURNS     The current state of SDCard
-\**************************************************************************************************/
-uint32 SDCard_getStateAsWord(void)
-{
-  return (uint32)sSDCard.state;
+  return (uint32_t *)sSDCard.state;
 }
 
 /**************************************************************************************************\

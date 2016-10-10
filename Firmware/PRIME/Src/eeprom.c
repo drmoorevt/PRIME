@@ -107,20 +107,9 @@ boolean EEPROM_setup(boolean state)
 * PARAMETERS  None
 * RETURNS     The current state of EEPROM
 \**************************************************************************************************/
-EEPROMState EEPROM_getState(void)
+uint32_t *EEPROM_getStatePointer(void)
 {
-  return sEEPROM.state;
-}
-
-/**************************************************************************************************\
-* FUNCTION    EEPROM_getStateAsWord
-* DESCRIPTION Returns the current state of EEPROM
-* PARAMETERS  None
-* RETURNS     The current state of EEPROM
-\**************************************************************************************************/
-uint32 EEPROM_getStateAsWord(void)
-{
-  return (uint32_t)sEEPROM.state;
+  return (uint32_t *)&sEEPROM.state;
 }
 
 /**************************************************************************************************\

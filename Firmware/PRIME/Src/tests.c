@@ -451,7 +451,8 @@ bool Tests_sendHeaderInfo(void)
 bool Tests_sendBinaryResults(Samples *adcBuffer)
 {
   uint8 *pData = (uint8 *)adcBuffer->pSampleBuffer;
-  uint16_t crc = CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, pData, sTests.testHeader.bytesPerChan);
+  uint16_t crc = 0;
+  //uint16_t crc = CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, pData, sTests.testHeader.bytesPerChan);
   
   while(1)
   {
@@ -488,11 +489,6 @@ static void Tests_setupSPITests(Device device, TestArgs *pArgs)
   
   // Match the continuously variable domain (CVD) to the MCU domain voltage:
   PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 10));
-  // Place every device other than the DUT into the MCU domain. Place the DUT in the CVD:
-  uint32_t i;
-//  for (i = 0; i < DEVICE_MAX; i++)
-//    PowerCon_setDeviceDomain((Device)i, VOLTAGE_DOMAIN_0);
-//  PowerCon_setDeviceDomain(device, VOLTAGE_DOMAIN_2);
   double refVolts = Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 100);
   
   // Prepare data structures for retrieval
@@ -517,15 +513,16 @@ static void Tests_setupSPITests(Device device, TestArgs *pArgs)
   
   // Disable all interrupts (except for the adc trigger which will be enabled last)
   DISABLE_SYSTICK_INTERRUPT();
+  uint32_t i;
   for (i = 0; i <= DMA2D_IRQn; i++)
     NVIC_DisableIRQ((IRQn_Type)i);
 
   switch (device)
   {
+    case DEVICE_EEPROM:    Analog_setPeriphStatePointer(EEPROM_getStatePointer()); break;
+    case DEVICE_NORFLASH:  Analog_setPeriphStatePointer(M25PX_getStatePointer()); break;
+    case DEVICE_SDCARD:    Analog_setPeriphStatePointer(SDCard_getStatePointer()); break;
     case DEVICE_TEMPSENSE: Analog_setPeriphStatePointer(HIH613X_getStatePointer()); break;
-    case DEVICE_EEPROM:    sTests.getPeriphState = EEPROM_getStateAsWord;      break;
-    case DEVICE_NORFLASH:  sTests.getPeriphState = M25PX_getStateAsWord;       break;
-    case DEVICE_SDCARD:    sTests.getPeriphState = SDCard_getStateAsWord;      break;
     default: break;
   }
   
@@ -565,14 +562,13 @@ static void Tests_teardownSPITests(TestArgs *pArgs, boolean testPassed)
         sTests.adc3.isSampling || 
         sTests.periphState.isSampling);
   Analog_stopSampleTimer();
-  
-  // Place every device back into the MCU domain:
-//  uint32_t i;
-//  for (i = 0; i < DEVICE_MAX; i++)
-//    PowerCon_setDeviceDomain((Device)i, VOLTAGE_DOMAIN_0);
-  
+    
   // Enable all previous interrupts
   ENABLE_SYSTICK_INTERRUPT();
+  
+  //uint32_t i = 0;
+  //for (i = 0; i < sTests.periphState.numSamples; i++)
+  //  sTests.periphState.pSampleBuffer[i] >>= 8;
 
   sprintf(sTests.chanHeader[0].title, "Domain Voltage (V)");
   sprintf(sTests.chanHeader[1].title, "Domain Input Current (mA)");
@@ -601,13 +597,7 @@ static void Tests_teardownSPITests(TestArgs *pArgs, boolean testPassed)
             sprintf(sTests.testHeader.title, "EEPROM PROFILE 18VIW Passed");
           else
             sprintf(sTests.testHeader.title, "EEPROM PROFILE 18VIW Failed");
-          break;/*
-        case 3:
-          if (testPassed)
-            sprintf(sTests.testHeader.title, "EEPROM PROFILE 14VIW Passed");
-          else
-            sprintf(sTests.testHeader.title, "EEPROM PROFILE 14VIW Failed");
-          break;*/
+          break;
         default: break;
       }
       break;
@@ -638,13 +628,7 @@ static void Tests_teardownSPITests(TestArgs *pArgs, boolean testPassed)
             sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 23VIW Passed");
           else
             sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 23VIW Failed");
-          break;/*
-        case 4:
-          if (testPassed)
-            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 21VIW Passed");
-          else
-            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 21VIW Failed");
-          break;*/
+          break;
         default: break;
       }
       break;
@@ -675,13 +659,7 @@ static void Tests_teardownSPITests(TestArgs *pArgs, boolean testPassed)
             sprintf(sTests.testHeader.title, "SDCARD PROFILE 24VISR Passed");
           else
             sprintf(sTests.testHeader.title, "SDCARD PROFILE 24VISR Failed");
-          break;/*
-        case 4:
-          if (testPassed)
-            sprintf(sTests.testHeader.title, "SDCARD PROFILE 21VISR Passed");
-          else
-            sprintf(sTests.testHeader.title, "SDCARD PROFILE 21VISR Failed");
-          break;*/
+          break;
         default: break;
       }
       break;
@@ -706,13 +684,7 @@ static void Tests_teardownSPITests(TestArgs *pArgs, boolean testPassed)
             sprintf(sTests.testHeader.title, "HIH PROFILE 25VIRyTW Passed");
           else
             sprintf(sTests.testHeader.title, "HIH PROFILE 25VIRyTW Failed");
-          break;/*
-        case 3:
-          if (testPassed)
-            sprintf(sTests.testHeader.title, "HIH PROFILE 23VIRyTW Passed");
-          else
-            sprintf(sTests.testHeader.title, "HIH PROFILE 23VIRyTW Failed");
-          break;*/
+          break;
         default: break;
       }
       break;

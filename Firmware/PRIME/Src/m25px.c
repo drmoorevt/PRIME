@@ -137,25 +137,14 @@ boolean M25PX_setup(boolean state)
 }
 
 /**************************************************************************************************\
-* FUNCTION    M25PX_getState
+* FUNCTION    M25PX_getStatePointer
 * DESCRIPTION Returns the internal state of M25PX
 * PARAMETERS  None
 * RETURNS     The M25PXState
 \**************************************************************************************************/
-M25PXState M25PX_getState(void)
+uint32_t *M25PX_getStatePointer(void)
 {
-  return sM25PX.state;
-}
-
-/**************************************************************************************************\
-* FUNCTION    M25PX_getStateAsWord
-* DESCRIPTION Returns the internal state of M25PX
-* PARAMETERS  None
-* RETURNS     The M25PXState
-\**************************************************************************************************/
-uint32 M25PX_getStateAsWord(void)
-{
-  return (uint32)sM25PX.state;
+  return (uint32_t *)sM25PX.state;
 }
 
 /**************************************************************************************************\
