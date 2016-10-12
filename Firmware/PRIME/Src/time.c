@@ -9,6 +9,8 @@ struct
 {
   SoftTimerConfig softTimers[TIME_SOFT_TIMER_MAX];
   volatile uint64_t pendEnergy;
+  volatile uint64_t accumEnergy;
+  volatile uint32_t energyIdx;
 } sTime;
 
 static void Time_decrementSoftTimers(void);
@@ -79,6 +81,18 @@ void Time_delay(volatile uint32 microSeconds)
   while (!(TIM5->SR & TIM_SR_UIF));            // Wait until timer hits the ARR value
 }
 
+bool Time_accumulateEnergy(uint32_t maxNum)
+{
+  while ((0xFFFF != GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][sTime.energyIdx]) && (maxNum--))
+  {
+    sTime.accumEnergy += GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][sTime.energyIdx];
+    if (sTime.accumEnergy > sTime.pendEnergy)
+      return true;
+    sTime.energyIdx++;
+  }
+  return false;
+}
+
 /**************************************************************************************************\
 * FUNCTION      Time_pendEnergyTime
 * DESCRIPTION   Blocking delay
@@ -96,6 +110,9 @@ void Time_pendEnergyTime(Delay *pDelay)
     sTime.pendEnergy = pDelay->eDelay;
   else
     sTime.pendEnergy = 0xFFFFFFFFFFFFFFFF;
+  
+  sTime.accumEnergy = 0;
+  sTime.energyIdx = 0;
   
   // if this is called waiting only on energy, then assume no time wait
   if (pDelay->tDelay > 0)
@@ -116,9 +133,9 @@ void Time_pendEnergyTime(Delay *pDelay)
   
   // Wait until timer hits the ARR value or the pending energy expenditure value reaches zero
   if (pDelay->tDelay > 0)
-    while ((!(TIM5->SR & TIM_SR_UIF)) && (sTime.pendEnergy > 0));
+    while ((!(TIM5->SR & TIM_SR_UIF)) && (false == Time_accumulateEnergy(50)));
   else
-    while (sTime.pendEnergy > 0);
+    while (false == Time_accumulateEnergy(50));
 }
 
 /**************************************************************************************************\

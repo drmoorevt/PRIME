@@ -1,6 +1,6 @@
-function [name, chans, data, time] = runTest22(CommPort, baudRate, numSweeps, testLen, opDelay)
+function [name, chans, data, time] = runTest22(CommPort, numSweeps, testLen, opDelay)
     delete(instrfindall);
-    s = openFixtureComms(CommPort, baudRate);
+    s = openFixtureComms(CommPort);
     i = 1;
     
     % begin by optimizing the erase delay

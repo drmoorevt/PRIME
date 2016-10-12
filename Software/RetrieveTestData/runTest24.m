@@ -1,6 +1,6 @@
-function [name, chans, data, time] = runTest24(CommPort, baudRate, numSweeps, testLen, opDelay)
+function [name, chans, data, time] = runTest24(CommPort, numSweeps, testLen, opDelay)
     delete(instrfindall);
-    s = openFixtureComms(CommPort, baudRate);
+    s = openFixtureComms(CommPort);
     
     if (opDelay(4) == 0)  % Are we looking for optimal tDelay? Then eDelay will be zero
         i = 1;

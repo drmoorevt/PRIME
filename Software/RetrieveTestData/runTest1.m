@@ -1,6 +1,6 @@
-function [ output_args ] = runTest1(CommPort, baudRate, numAvgs, testLen, opDelay)
+function [ output_args ] = runTest1(CommPort, numAvgs, testLen, opDelay)
     delete(instrfindall);
-    s = openFixtureComms(CommPort, baudRate);
+    s = openFixtureComms(CommPort);
     
     startVolts   = 1.8;
     endVolts     = 3.3;
@@ -73,7 +73,7 @@ function [ output_args ] = runTest1(CommPort, baudRate, numAvgs, testLen, opDela
                 fprintf('MISSED\n');
             end
             %pause(.05);
-            %s = resetFixtureComms(s, CommPort, baudRate);
+            %s = resetFixtureComms(s, CommPort);
             fwrite(s, uint8(hex2dec('54'))); % Attempt DUT reset
             %pause(.05);
         end

@@ -11,6 +11,7 @@
 #include "m25px.h"
 #include "plr5010d.h"
 #include "spi.h"
+#include "tests.h"
 #include "time.h"
 #include "util.h"
 #include <string.h>
@@ -18,10 +19,6 @@
 #include <stdio.h>
 
 #define FILE_ID TESTS_C
-
-#define SDRAM_NUM_CHANNELS        (4)
-#define SDRAM_NUM_TOTAL_SAMPLES   ((SDRAM_DEVICE_SIZE - BUFFER_OFFSET) / sizeof(uint16_t))
-#define TESTS_MAX_SAMPLES         (SDRAM_NUM_TOTAL_SAMPLES / SDRAM_NUM_CHANNELS)
 
 typedef enum
 {
@@ -83,11 +80,6 @@ typedef struct
   uint32_t  len;            // Length of data buffer to write
   uint8_t   buf[1024];      // Data buffer to be written to the peripheral
 } TestArgs;
-
-typedef struct
-{
-  uint16_t samples[4][TESTS_MAX_SAMPLES];
-} SDRAMMap;
 
 SDRAMMap *GPSDRAM = (SDRAMMap *)(SDRAM_DEVICE_ADDR + BUFFER_OFFSET);
 
@@ -178,7 +170,7 @@ void Tests_init(void)
   sTests.adc2.pSampleBuffer        = &GPSDRAM->samples[1][0];
   sTests.adc3.pSampleBuffer        = &GPSDRAM->samples[2][0];
   sTests.periphState.pSampleBuffer = &GPSDRAM->samples[3][0];
-    
+  
   // Reset all devices to default domain
   Device i;
   for (i = DEVICE_EEPROM; i < DEVICE_MAX; i++)
@@ -283,9 +275,10 @@ void Tests_notifyConversionComplete(ADCPort port, uint32_t chan, uint32 numSampl
 \**************************************************************************************************/
 void Tests_runTest14(void)
 {
-  sTests.testArgs.len = 50000;
-  sTests.testArgs.opDelay[0] = 45000;
-  sTests.testArgs.profile = HIH_PROFILE_STANDARD;
+  sTests.testArgs.len           = 50000;
+  sTests.testArgs.opDelay[0]    = 45000;
+  sTests.testArgs.opDelay[3]    = 600000;
+  sTests.testArgs.profile       = HIH_PROFILE_STANDARD;
   sTests.testArgs.preTestDelay  = 1000;
   sTests.testArgs.testLen       = 50000;
   sTests.testArgs.sampRate      = 1;
@@ -538,8 +531,13 @@ static void Tests_setupSPITests(Device device, TestArgs *pArgs)
   sTests.adc1.isSampling        = TRUE;
   sTests.adc2.isSampling        = TRUE;
   sTests.adc3.isSampling        = TRUE;
-  sTests.periphState.isSampling = TRUE;     
+  sTests.periphState.isSampling = TRUE;
   
+  // Fill output current sample buffer with 0xFF so we can energy accumulation despite DMA
+  memset(&GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][0], 0xFF, 
+         sizeof(GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT]));
+  
+  // Begin sampling here!
   Analog_startSampleTimer(pArgs->sampRate);
   
   Time_delay(pArgs->preTestDelay);  // This helps to identify state transitions
@@ -566,9 +564,9 @@ static void Tests_teardownSPITests(TestArgs *pArgs, boolean testPassed)
   // Enable all previous interrupts
   ENABLE_SYSTICK_INTERRUPT();
   
-  //uint32_t i = 0;
-  //for (i = 0; i < sTests.periphState.numSamples; i++)
-  //  sTests.periphState.pSampleBuffer[i] >>= 8;
+  //uint32_t i;
+  //for (i = 0; i < TESTS_MAX_SAMPLES; i++)
+  //  GPSDRAM->samples[SDRAM_CHANNEL_DEVSTATE][i] >>= 8;
 
   sprintf(sTests.chanHeader[0].title, "Domain Voltage (V)");
   sprintf(sTests.chanHeader[1].title, "Domain Input Current (mA)");

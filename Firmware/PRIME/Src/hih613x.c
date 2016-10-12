@@ -242,8 +242,7 @@ HIHStatus HIH613X_readTempHumidI2C(bool measure, bool read, bool convert, Delay 
   if (measure && read)
   {
     // tMeasure ~= 36.65ms, but 45ms for reliability (comes in from fixture)
-    Time_delay(pDelay->tDelay);
-    //Time_pendEnergyTime(pDelay);
+    Time_pendEnergyTime(pDelay);
     HIH613X_setState(HIH_STATE_DATA_READY);
   }
 
