@@ -1,4 +1,4 @@
-function [title,channels,results,time,dataBytes] = execTest(s, test, args)
+function [title,channels,results,time,timing,dataBytes] = execTest(s, test, args)
     title = {};
     channels = {};
     results = {};
@@ -19,7 +19,7 @@ function [title,channels,results,time,dataBytes] = execTest(s, test, args)
                 fread(s, s.BytesAvailable); % Clear out the serial port!
             end
             [title, channels, time, bitRes, numChannels, timeScaleMicroSec, ...
-            dataBytes] = rth(s);
+             timing, dataBytes] = rth(s);
             if (dataBytes)   % Header retrieval success, send ACK and proceed
                 fwrite(s, uint8(hex2dec('11')));
                 break;

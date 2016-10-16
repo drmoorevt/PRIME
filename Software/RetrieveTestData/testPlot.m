@@ -54,7 +54,6 @@ function testPlot(data, time, labels, testName, xMax)
     voltLine   = line(time, data(:,1),'Parent',voltAxis,'Color', 'b'); % plot voltage
     stateLine  = line(time, data(:,4),'Parent',voltAxis,'Color','black','LineWidth',3);
     
-    
     return
     
     figure; % create a new figure to plot on

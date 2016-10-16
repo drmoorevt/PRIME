@@ -22,8 +22,9 @@ function [numFailures, chans, data, time] = runTest13(CommPort, numSweeps, testL
             fprintf('Data: %s\n', dec2hex(writeBuffer));
             success = false;
             try
-                [name(:,profIter), chans, data(:,:,sweepIter,profIter), time, success] ...
+                [name(:,profIter), chans, data(:,:,sweepIter,profIter), time, timeArray(sweepIter,:), success] ...
                     = execTest(s, 13, args);
+                %timeArray(sweepIter,:) = timing(:);
                 testPassed = strfind(name(profIter),'Passed');
                 if (cellfun('isempty', testPassed))
                     numFailures = numFailures + 1;
@@ -42,7 +43,7 @@ function [numFailures, chans, data, time] = runTest13(CommPort, numSweeps, testL
         end
         filename = sprintf('./results/Test13-Profile%d-%dSweeps.mat', ...
                            profIter, sweepIter-1);
-        save(filename,'name','chans','avgData','time')
+        save(filename,'name','chans','avgData','time','timeArray')
         testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testLen/1000);
         
         movingAverage = avgData(:,:,profIter);
@@ -50,5 +51,15 @@ function [numFailures, chans, data, time] = runTest13(CommPort, numSweeps, testL
         movingAverage(50:end-50,2) = conv(movingAverage(50:end-50,2), ones(50,1)/50, 'same');
         movingAverage(50:end-50,3) = conv(movingAverage(50:end-50,3), ones(50,1)/50, 'same');
         testPlot(movingAverage(:,:), time, chans, name(:,profIter), testLen/1000);
+        
+        figure('Color', 'white')
+        modStr = strrep(name(profIter), 'Passed', '')
+        modStr = deblank(modStr)
+        hist(timeArray(:,2))
+        t1 = title(sprintf('%s Delay Required (n = %d)',modStr{:}, numSweeps));
+        set(t1,{'FontSize'},{10.0})
+        xlabel('SPI Read Attempts Before Success');
+        ylabel('Number of Occurrences');
+        
     end
 end

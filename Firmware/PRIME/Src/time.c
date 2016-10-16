@@ -86,9 +86,10 @@ bool Time_accumulateEnergy(uint32_t maxNum)
   while ((0xFFFF != GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][sTime.energyIdx]) && (maxNum--))
   {
     sTime.accumEnergy += GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][sTime.energyIdx];
-    if (sTime.accumEnergy > sTime.pendEnergy)
+    if ((sTime.accumEnergy > sTime.pendEnergy) || (sTime.energyIdx >= TESTS_MAX_SAMPLES))
       return true;
-    sTime.energyIdx++;
+    else
+      sTime.energyIdx++;
   }
   return false;
 }
