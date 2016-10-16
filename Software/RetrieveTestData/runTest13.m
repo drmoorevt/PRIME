@@ -24,7 +24,6 @@ function [numFailures, chans, data, time] = runTest13(CommPort, numSweeps, testL
             try
                 [name(:,profIter), chans, data(:,:,sweepIter,profIter), time, timeArray(sweepIter,:), success] ...
                     = execTest(s, 13, args);
-                %timeArray(sweepIter,:) = timing(:);
                 testPassed = strfind(name(profIter),'Passed');
                 if (cellfun('isempty', testPassed))
                     numFailures = numFailures + 1;
@@ -34,8 +33,6 @@ function [numFailures, chans, data, time] = runTest13(CommPort, numSweeps, testL
                 end
                 avgData = mean(data, 3);
                 sweepIter = sweepIter + 1;
-                %close all;
-                %testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), 80);
             catch
                 s = resetFixtureComms(s, CommPort);
                 disp('Test failure ... retrying');
@@ -46,18 +43,29 @@ function [numFailures, chans, data, time] = runTest13(CommPort, numSweeps, testL
         save(filename,'name','chans','avgData','time','timeArray')
         testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testLen/1000);
         
+        maTitle = strrep(name(:,profIter), 'Passed', 'Passed (50 Sample Moving Average)');
+        maTitle = strrep(maTitle, 'Failed', 'Failed (50 Sample Moving Average)');
         movingAverage = avgData(:,:,profIter);
         movingAverage(50:end-50,1) = conv(movingAverage(50:end-50,1), ones(50,1)/50, 'same');
         movingAverage(50:end-50,2) = conv(movingAverage(50:end-50,2), ones(50,1)/50, 'same');
         movingAverage(50:end-50,3) = conv(movingAverage(50:end-50,3), ones(50,1)/50, 'same');
-        testPlot(movingAverage(:,:), time, chans, name(:,profIter), testLen/1000);
+        testPlot(movingAverage(:,:), time, chans, maTitle(:,1), testLen/1000);
         
-        figure('Color', 'white')
-        modStr = strrep(name(profIter), 'Passed', '')
-        modStr = deblank(modStr)
-        hist(timeArray(:,2))
+%         figure('Color', 'white');
+%         modStr = strrep(name(profIter), 'Passed', '');
+%         modStr = deblank(modStr);
+%         hist(timeArray(:,2));
+%         t1 = title(sprintf('%s Delay Required (n = %d)',modStr{:}, numSweeps));
+%         set(t1,{'FontSize'},{10.0});
+%         xlabel('SPI Read Attempts Before Success');
+%         ylabel('Number of Occurrences');
+        
+        figure('Color', 'white');
+        modStr = strrep(name(profIter), 'Passed', '');
+        modStr = deblank(modStr);
+        hist(timeArray(:,2), 1000);
         t1 = title(sprintf('%s Delay Required (n = %d)',modStr{:}, numSweeps));
-        set(t1,{'FontSize'},{10.0})
+        set(t1,{'FontSize'},{10.0});
         xlabel('SPI Read Attempts Before Success');
         ylabel('Number of Occurrences');
         

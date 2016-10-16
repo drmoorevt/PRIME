@@ -10,16 +10,16 @@ function testPlot(data, time, labels, testName, xMax)
     newFig = figure; % create a new figure to plot on
     set(newFig, 'Color', 'white')
                 
-%     iCurAxis = axes('YAxisLocation',  'right',  ...
-%                     'Color',          'white',   ...
-%                     'XLim',           [0, xMax], ...
-%                     'XColor',         'black', ...
-%                     'XTickLabelMode', 'Manual', ... % remove xticks
-%                     'XTick',           [],      ...
-%                     'YColor',          [0 .5 0],       ...
-%                     'YLim',            [0, iInMax], ...
-%                     'YTick',           [0; iInMax/10; iInMax], ...
-%                     'YTickMode',       'auto');
+     iCurAxis = axes('YAxisLocation',  'right',  ...
+                     'Color',          'white',   ...
+                     'XLim',           [0, xMax], ...
+                     'XColor',         'black', ...
+                     'XTickLabelMode', 'Manual', ... % remove xticks
+                     'XTick',           [],      ...
+                     'YColor',          [0 .5 0],       ...
+                     'YLim',            [0, iInMax], ...
+                     'YTick',           [0; iInMax/10; iInMax], ...
+                     'YTickMode',       'auto');
     
     oCurAxis = axes('YAxisLocation',  'right',     ...
                     'Color',          'none',     ...
@@ -41,15 +41,32 @@ function testPlot(data, time, labels, testName, xMax)
                     'YTick',           [0; .5; 4], ...
                     'YTickMode',       'auto');
     
+    set(iCurAxis,'Position',get(iCurAxis,'Position') + [-.04, 0, +.04, 0])
+    set(oCurAxis,'Position',get(oCurAxis,'Position') + [-.04, 0, +.04, 0])
+    set(voltAxis,'Position',get(voltAxis,'Position') + [-.04, 0, +.04, 0])
+    linkaxes([iCurAxis, oCurAxis],'xy') % link the y axes of output currents
+    linkaxes([iCurAxis, oCurAxis, voltAxis],'x') % link the x axes for proper zooming
+    
     t1 = title(testName(1));
     set(t1,{'FontSize'},{10.0})
     
     timeLabel   = xlabel(voltAxis,  'Time (ms)');
     voltLabel   = ylabel(voltAxis,  labels(1));
-    %inCurLabel  = ylabel(iCurAxis,  labels(2));
+    inCurLabel  = ylabel(iCurAxis,  labels(2));
     outCurLabel = ylabel(oCurAxis,  labels(3));
     
-    inCurLine  = line(time, data(:,2),'Parent',oCurAxis,'Color',[0 .5 0]);
+    set(inCurLabel,  'Units', 'Normalized');
+    set(outCurLabel, 'Units', 'Normalized');
+    set(voltLabel,   'Units', 'Normalized');
+    
+    set(outCurLabel, 'VerticalAlignment', 'top');
+    set(inCurLabel,  'VerticalAlignment', 'top');
+    set(voltLabel,   'VerticalAlignment', 'bottom');
+    
+    set(inCurLabel,  'Position', get(inCurLabel, 'Position') + [0 -.25 0]);
+    set(outCurLabel, 'Position', get(outCurLabel,'Position') + [0 +.25 0]);
+    
+    inCurLine  = line(time, data(:,2),'Parent',iCurAxis,'Color',[0 .5 0]);
     outCurLine = line(time, data(:,3),'Parent',oCurAxis, 'Color','r');
     voltLine   = line(time, data(:,1),'Parent',voltAxis,'Color', 'b'); % plot voltage
     stateLine  = line(time, data(:,4),'Parent',voltAxis,'Color','black','LineWidth',3);
@@ -80,13 +97,13 @@ function testPlot(data, time, labels, testName, xMax)
     newFigure = figure();
     hold on
     
-    [gAxes1, g2, g3] = plotyy(time,data(:,2),time,data(:,3)); %(inCurrent / outCurrent)
+    [gAxes1, g2, g3] = plotyy(time,data(:,2),time,data(:,1)); %(inCurrent / outCurrent)
     set(g2, {'Color'}, {[0 .5 0]}) % set inCurrent for dark green
     set(g3, {'Color'}, {'r'}) % set outCurrent red
     %set(gAxes1,{'ycolor'},{'b';[0 .5 0]})
-    %xlim(gAxes1(1), [0, xMax]);
-    %xlim(gAxes1(2), [0, xMax]);
-    %ylim(gAxes1(1), [0, maxCurrent*1.1]);
+    xlim(gAxes1(1), [0, xMax]);
+    xlim(gAxes1(2), [0, xMax]);
+    ylim(gAxes1(1), [0, maxCurrent*1.1]);
     ylim(gAxes1(2), [0, maxCurrent*1.1]);
     inCurLabel = ylabel(gAxes1(1), labels(2));
     outCurLabel = ylabel(gAxes1(2), labels(3));
@@ -105,7 +122,7 @@ function testPlot(data, time, labels, testName, xMax)
     %set(get(gAxes1(2),'YLabel'),'Position',posLabel+[4 0 0])
     set(get(gAxes1(2),'YLabel'),'Units','Normalized','Position',[1.11 .5 1])
     
-    [gAxes2, g1, g4] = plotyy(time,data(:,1),time,data(:,4)); %(volts / state)
+    [gAxes2, g1, g4] = plotyy(time,data(:,3),time,data(:,4)); %(volts / state)
     set(g1, {'Color'}, {'b'})
     set(g4, {'Color'}, {'black'})
     set(g4, {'LineWidth'}, {2})
