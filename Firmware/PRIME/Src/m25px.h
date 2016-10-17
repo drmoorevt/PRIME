@@ -106,6 +106,6 @@ M25PXState M25PX_getState(void);
 boolean M25PX_setPowerProfile(M25PXPowerProfile profile);
 boolean M25PX_setPowerState(M25PXState state, double vDomain);
 M25PXResult M25PX_read(uint8 *pSrc, uint8 *pDest, uint16 length);
-M25PXResult M25PX_write(uint8 *pSrc, uint8 *pDst, uint32 len, uint32 eraseDelay, uint32 writeDelay);
+M25PXResult M25PX_write(uint8 *pSrc, uint8 *pDst, uint32 len, OpDelays *pDelays);
 
 #endif

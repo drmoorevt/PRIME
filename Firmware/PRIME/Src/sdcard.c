@@ -824,7 +824,7 @@ static SDCommandResult SDCard_writeBlock(uint32 block, Delay *pDelay)
 *             length - number of bytes to write
 * RETURNS     TRUE if the write succeeds, FALSE otherwise
 \**************************************************************************************************/
-SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length, Delay *pDelay)
+SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length, OpDelays *pDelays)
 {
   uint8 verify;
   uint32 block, offset;
@@ -848,7 +848,7 @@ SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length, Delay *pDel
 
   // Write the new contents of the block to the SDCard
   SDCard_setState(SDCARD_STATE_WRITING); // Set the state and voltage
-  writeResult = SDCard_writeBlock(block, pDelay);
+  writeResult = SDCard_writeBlock(block, &pDelays->op[0]);
 
   // Verify that the source data now resides in the block
   SDCard_setState(SDCARD_STATE_VERIFYING); // Set the state and voltage

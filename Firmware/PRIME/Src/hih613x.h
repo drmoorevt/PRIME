@@ -41,7 +41,7 @@ double    HIH613X_getStateVoltage(void);
 void HIH613X_notifyVoltageChange(double newVoltage);
 boolean HIH613X_setPowerProfile(HIHPowerProfile profile);
 boolean HIH613X_setPowerState(HIHState state, double vDomain);
-HIHStatus HIH613X_readTempHumidI2C(bool measure, bool read, bool convert, Delay *pDelay);
+HIHStatus HIH613X_readTempHumidI2C(bool measure, bool read, bool convert, OpDelays *pDelays);
 
 double HIH613X_getHumidity(void);
 double HIH613X_getTemperature(void);

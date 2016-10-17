@@ -52,18 +52,19 @@ typedef struct
   void      (*appNotifyTimerExpired)(SoftTimer timer); // Can be null
 } SoftTimerConfig;
 
-typedef enum
-{
-  DELAY_TYPE_TIME,
-  DELAY_TYPE_ENERGY,
-  DELAY_TYPE_DELTA,
-} DelayType;
-
 typedef struct
 {
   uint32_t tDelay;
   uint32_t eDelay;
+  uint32_t dDelay;
 } Delay;
+
+#define MAX_NUM_DELAYS 3
+
+typedef struct
+{
+  Delay op[MAX_NUM_DELAYS];
+} OpDelays;
 
 #define ENABLE_SYSTICK()  SysTick->CTRL = SysTick->CTRL | (SysTick_CTRL_ENABLE_Msk)
 #define DISABLE_SYSTICK() SysTick->CTRL = SysTick->CTRL & (~SysTick_CTRL_ENABLE_Msk)

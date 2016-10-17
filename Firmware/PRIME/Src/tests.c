@@ -73,7 +73,7 @@ typedef struct
 {
   uint32_t  sampRate;
   uint32_t  testLen;        // Estimated duration of the operation
-  uint32_t  opDelay[4];     // Time / Energy delays associated with the operation
+  OpDelays  opDelays;       // Time / Energy delays associated with the operation
   uint32_t  profile;        // The power profile that the device will use to complete the operation
   uint32_t  preTestDelay;   // Time to wait while sampling before performing the operation
   uint32_t  postTestDelay;  // Time to wait while sampling after performing the operation
@@ -876,9 +876,7 @@ uint16 Tests_test12(TestArgs *pArgs)
   M25PX_setPowerProfile((M25PXPowerProfile)pArgs->profile);
 
   Tests_setupSPITests(DEVICE_NORFLASH, pArgs);
-  M25PXResult result = M25PX_write(pArgs->buf, pArgs->pDst, pArgs->len, 
-                                                            pArgs->opDelay[0],  // erase delay
-                                                            pArgs->opDelay[1]); // page write delay
+  M25PXResult result = M25PX_write(pArgs->buf, pArgs->pDst, pArgs->len, pArgs->opDelays);
   Tests_teardownSPITests(pArgs, (M25PX_RESULT_OK == result));
 
   return (M25PX_RESULT_OK == result);
@@ -892,9 +890,7 @@ uint16 Tests_test12(TestArgs *pArgs)
 * NOTES       
 \**************************************************************************************************/
 uint16 Tests_test13(TestArgs *pArgs)
-{
-  Delay delay = {.tDelay = pArgs->opDelay[0], .eDelay = pArgs->opDelay[3]};
-  
+{ 
   SDCard_setPowerProfile((SDCardPowerProfile)pArgs->profile);
   uint8 i;
   for (i = 0; i < 5; i++)
@@ -905,7 +901,7 @@ uint16 Tests_test13(TestArgs *pArgs)
   }
   
   Tests_setupSPITests(DEVICE_SDCARD, pArgs);
-  SDWriteResult writeResult = SDCard_write(pArgs->buf, pArgs->pDst, pArgs->len, &delay);
+  SDWriteResult writeResult = SDCard_write(pArgs->buf, pArgs->pDst, pArgs->len, &pArgs->opDelays);
   Tests_teardownSPITests(pArgs, (SD_WRITE_RESULT_OK == writeResult));
 
   return (SD_WRITE_RESULT_OK == writeResult);
@@ -924,14 +920,10 @@ uint16 Tests_test14(TestArgs *pArgs)
   bool readVal = pArgs->buf[1];
   bool convert = pArgs->buf[2];
   
-  Delay delay;
-  delay.tDelay = pArgs->opDelay[0];
-  delay.eDelay = pArgs->opDelay[3];
-  
   HIH613X_setPowerProfile((HIHPowerProfile)pArgs->profile);
 
   Tests_setupSPITests(DEVICE_TEMPSENSE, pArgs);
-  HIHStatus hihResult = HIH613X_readTempHumidI2C(measure, readVal, convert, &delay);
+  HIHStatus hihResult = HIH613X_readTempHumidI2C(measure, readVal, convert, &pArgs->opDelays);
   Tests_teardownSPITests(pArgs, (HIH_STATUS_NORMAL == hihResult));
 
   return SUCCESS;
