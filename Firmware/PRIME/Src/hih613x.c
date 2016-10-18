@@ -275,9 +275,11 @@ HIHStatus HIH613X_readTempHumidI2C(bool measure, bool read, bool convert, OpDela
 \**************************************************************************************************/
 bool HIH613X_test(void)
 {
-  OpDelays delay;
-  delay.op{.tDelay = 50000, .eDelay = 0, .dDelay = 0};
-  HIH613X_readTempHumidI2C(true, true, true, &delay);
+  OpDelays delays;
+  delays.op[0].tDelay = 50000;
+  delays.op[0].eDelay = 0;
+  delays.op[0].dDelay = 0;
+  HIH613X_readTempHumidI2C(true, true, true, &delays);
   return ((sHIH613X.currHum > 0) && (sHIH613X.currHum < 100) &&
           (sHIH613X.currTmp > 0) && (sHIH613X.currTmp < 100));
 }

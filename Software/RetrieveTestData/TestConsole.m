@@ -11,6 +11,16 @@ function [name, chans, data, time] = TestConsole(CommPort)
 %         fprintf('\nKBps: %10.4f, Kbps: %10.4f', KBps, KBps * 8);
 %     end
 
+    %
+    eeTimingIODVS  = [[5000,0,0],   [0,0,0],    [0,0,0]];
+    sf1TimingIODVS = [[150000,0,0], [5000,0,0], [0,0,0]];
+    sf2TimingIODVS = [[45000,0,0],  [0,0,0],    [0,0,0]];
+    sd1TimingIODVS = [[150000,0,0], [0,0,0],    [0,0,0]];
+    sd2TimingIODVS = [[150000,0,0],  [0,0,0],    [0,0,0]];
+    sd3TimingIODVS = [[65000,0,0],  [0,0,0],    [0,0,0]];
+    sd4TimingIODVS = [[2000,0,0],  [0,0,0],    [0,0,0]];
+    htTimingIODVS  = [[45000,0,0],  [0,0,0],    [0,0,0]];
+
     numSweeps = 1;
     eeFails = 0;
     sfFails = 0;
@@ -21,14 +31,18 @@ function [name, chans, data, time] = TestConsole(CommPort)
    %return
     
    %IODVS Tests
-   %[eeFails, chans, data, time] = runTest11(CommPort, numSweeps, 7000,   [5000, 0, 0, 0],      [1, 3]); % EEPROM
-   %[sfFails, chans, data, time] = runTest12(CommPort, numSweeps, 275000, [150000, 5000, 0, 0], [1, 3]); % NOR
-   %[sdFails, chans, data, time] = runTest13(CommPort, numSweeps, 225000, [150000, 0, 0, 0],    [1, 3]); % Lexar
-   %[sdFails, chans, data, time] = runTest13(CommPort, numSweeps, 225000, [150000, 0, 0, 0],    [1, 3]); % SanDisk
-   %[sdFails, chans, data, time] = runTest13(CommPort, numSweeps, 100000, [65000, 0, 0, 0],     [1, 3]); % SwissBit
-   %[sdFails, chans, data, time] = runTest13(CommPort, numSweeps, 15000,  [2000, 0, 0, 0],      [1, 3]); % Kingston
-   [sdFails, chans, data, time] = runTest13(CommPort, numSweeps, 30000,  [0, 0, 0, 0],      [1]); % Kingston hack
-   %[htFails, chans, data, time] = runTest14(CommPort, numSweeps, 50000,  [45000, 0, 0, 0],     [1, 3]); % HIH
+   %[eeFails, chans, data, time] = runTest11(CommPort, numSweeps, 7000,   eeTimingIODVS,  [1, 3]); % EEPROM
+   
+   %[sfFails, chans, data, time] = runTest12(CommPort, numSweeps, 275000, sf1TimingIODVS, [1, 3]); % NOR
+   %[sfFails, chans, data, time] = runTest13(CommPort, numSweeps, 275000, sf2TimingIODVS, [1, 3]); % NAND
+   
+   %[sdFails, chans, data, time] = runTest13(CommPort, numSweeps, 225000, sd1TimingIODVS, [1, 3]); % Lexar
+   %[sdFails, chans, data, time] = runTest13(CommPort, numSweeps, 225000, sd2TimingIODVS, [1, 3]); % SanDisk
+   %[sdFails, chans, data, time] = runTest13(CommPort, numSweeps, 100000, sd3TimingIODVS, [1, 3]); % SwissBit
+   %[sdFails, chans, data, time] = runTest13(CommPort, numSweeps, 15000,  sd4TimingIODVS, [1, 3]); % Kingston
+   %[sdFails, chans, data, time] = runTest13(CommPort, numSweeps, 30000,  sd4TimingIODVS, [1]); % Kingston hack
+   
+   %[htFails, chans, data, time] = runTest14(CommPort, numSweeps, 50000,  htTimingIODVS,  [1, 3]); % HIH
 
    % Optimal Time Delay Tests
    %[eeFails, chans, data, time] = runTest21(CommPort, numSweeps, 7000,   [5000, 0, 0, 0], [1, 3]);      % EEPROM

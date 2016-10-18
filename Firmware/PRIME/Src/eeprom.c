@@ -217,7 +217,7 @@ void EEPROM_read(const uint8 *pSrc, uint8 *pDest, uint16 length)
 *             length - number of bytes to write
 * RETURNS     true if the write succeeds
 \**************************************************************************************************/
-EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint32_t length, uint32_t opDelay)
+EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint32_t length, OpDelays *pDelays)
 {
   uint16 numBytes;
   uint8 writeBuf[ADDRBYTES_EE + 1], readBuf[WRITEPAGESIZE_EE];
@@ -249,7 +249,7 @@ EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint32_t length, uint32_t o
 
     EEPROM_setup(FALSE);  // Disable the EEPROM control and SPI pins while waiting
     EEPROM_setState(EEPROM_STATE_WAITING); // For monitoring and voltage control purposes
-    Time_delay(opDelay); // EE_PAGE_WRITE_TIME
+    Time_pendEnergyTime(&pDelays->op[0]); // EE_PAGE_WRITE_TIME
 
     EEPROM_read(pDest, readBuf, numBytes); // Verify the write, re-enables then disables EEPROM
     if (Util_compareMemory(pSrc, readBuf, (uint8)numBytes) != 0)
@@ -272,6 +272,7 @@ EEPROMResult EEPROM_write(uint8 *pSrc, uint8 *pDest, uint32_t length, uint32_t o
 boolean EEPROM_fill(uint8 *pDest, uint16 length, uint8 fillVal)
 {
   uint8  fillBuf[WRITEPAGESIZE_EE];
+  OpDelays delays = {{{DEFAULT_PAGE_WRITE_DELAY,0,0}}};
   uint16 writeLength;
   uint8  i;
   
@@ -281,7 +282,7 @@ boolean EEPROM_fill(uint8 *pDest, uint16 length, uint8 fillVal)
   while (length)
   {
     writeLength = (length > sizeof(fillBuf)) ? sizeof(fillBuf) : length; // One page at a time
-    if (EEPROM_write((uint8*)fillBuf, pDest, writeLength, DEFAULT_PAGE_WRITE_DELAY) == FALSE)
+    if (EEPROM_write((uint8*)fillBuf, pDest, writeLength, &delays) == FALSE)
       return FALSE;  // Break early if any write fails
     else
     {

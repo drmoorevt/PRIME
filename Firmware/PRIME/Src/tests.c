@@ -277,8 +277,9 @@ void Tests_notifyConversionComplete(ADCPort port, uint32_t chan, uint32 numSampl
 void Tests_runTest14(void)
 {
   sTests.testArgs.len           = 50000;
-  sTests.testArgs.opDelay[0]    = 45000;
-  sTests.testArgs.opDelay[3]    = 600000;
+  sTests.testArgs.opDelays.op[0].tDelay = 45000;
+  sTests.testArgs.opDelays.op[0].eDelay = 600000;
+  sTests.testArgs.opDelays.op[0].dDelay = 0;
   sTests.testArgs.profile       = HIH_PROFILE_STANDARD;
   sTests.testArgs.preTestDelay  = 1000;
   sTests.testArgs.testLen       = 50000;
@@ -857,7 +858,7 @@ uint16 Tests_test11(TestArgs *pArgs)
   EEPROM_setPowerProfile((EEPROMPowerProfile)pArgs->profile);
 
   Tests_setupSPITests(DEVICE_EEPROM, pArgs);
-  EEPROMResult result = EEPROM_write(pArgs->buf, pArgs->pDst, pArgs->len, pArgs->opDelay[0]);
+  EEPROMResult result = EEPROM_write(pArgs->buf, pArgs->pDst, pArgs->len, &pArgs->opDelays);
   Tests_teardownSPITests(pArgs, (EEPROM_RESULT_OK == result));
 
   return (EEPROM_RESULT_OK == result);
@@ -876,7 +877,7 @@ uint16 Tests_test12(TestArgs *pArgs)
   M25PX_setPowerProfile((M25PXPowerProfile)pArgs->profile);
 
   Tests_setupSPITests(DEVICE_NORFLASH, pArgs);
-  M25PXResult result = M25PX_write(pArgs->buf, pArgs->pDst, pArgs->len, pArgs->opDelays);
+  M25PXResult result = M25PX_write(pArgs->buf, pArgs->pDst, pArgs->len, &pArgs->opDelays);
   Tests_teardownSPITests(pArgs, (M25PX_RESULT_OK == result));
 
   return (M25PX_RESULT_OK == result);
