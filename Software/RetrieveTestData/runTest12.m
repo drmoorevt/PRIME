@@ -41,8 +41,8 @@ function [numFailures, chans, data, time] = runTest12(CommPort, numSweeps, testL
                 disp('Test failure ... retrying');
             end
         end
-        filename = sprintf('./results/Test12-Profile%d-%dSweeps.mat', ...
-                           profIter, sweepIter-1);
+        filename = sprintf('./results/%s Test12-Profile%d-%dSweeps.mat', ...
+                           datestr(now,'HH.MM.SS dd-mm-yy'), profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time')
         testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testTime);
         

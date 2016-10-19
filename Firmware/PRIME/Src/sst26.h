@@ -101,13 +101,12 @@ typedef struct
 bool    SST26_test(void);
 void    SST26_init(void);
 SST26FlashId SST26_readSST26FlashId(void);
-uint32  SST26_getStateAsWord(void);
+uint32_t *SST26_getStatePointer(void);
 double  SST26_getStateVoltage(void);
 boolean SST26_setup(boolean state);
-SST26State SST26_getState(void);
 boolean SST26_setPowerProfile(SST26PowerProfile profile);
 boolean SST26_setPowerState(SST26State state, double vDomain);
-SST26Result SST26_read(uint8 *pSrc, uint8 *pDest, uint16 length);
-SST26Result SST26_write(uint8 *pSrc, uint8 *pDest, uint16 length);
+SST26Result SST26_read(uint8 *pSrc, uint8 *pDest, uint32 length, bool fast);
+SST26Result SST26_write(uint8 *pSrc, uint8 *pDest, uint32 len, OpDelays *pDelays);
 
 #endif

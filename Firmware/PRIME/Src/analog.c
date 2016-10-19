@@ -204,6 +204,7 @@ void Analog_dmaInit(ADCPort adcNum)
   HAL_DMA_Init(phDMA);
   
   HAL_NVIC_SetPriority(dmaIRQ, 0, 0);  // Configure the NVIC for DMA
+  HAL_NVIC_ClearPendingIRQ(dmaIRQ);
   HAL_NVIC_EnableIRQ(dmaIRQ);
 }
 

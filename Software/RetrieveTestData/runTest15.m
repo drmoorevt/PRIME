@@ -1,4 +1,4 @@
-function [numFailures, chans, data, time] = runTest14(CommPort, numSweeps, testLen, opDelay, profileList)
+function [numFailures, chans, data, time] = runTest15(CommPort, numSweeps, testLen, opDelay, profileList)
     numFailures = 0;
     delete(instrfindall);
     s = openFixtureComms(CommPort);
@@ -21,7 +21,7 @@ function [numFailures, chans, data, time] = runTest14(CommPort, numSweeps, testL
             success = false;
             try
                 [name(:,profIter), chans, data(:,:,sweepIter,profIter), time, success] ...
-                    = execTest(s, 14, args);
+                    = execTest(s, 15, args);
                 testPassed = strfind(name(profIter),'Passed');
                 if (cellfun('isempty', testPassed))
                     numFailures = numFailures + 1;
@@ -36,8 +36,8 @@ function [numFailures, chans, data, time] = runTest14(CommPort, numSweeps, testL
                 disp('Test failure ... retrying');
             end
         end
-        filename = sprintf('./results/Test14-Profile%d-%dSweeps.mat', ...
-                           profIter, sweepIter-1);
+        filename = sprintf('./results/%s Test15-Profile%d-%dSweeps.mat', ...
+                           datestr(now,'HH.MM.SS dd-mm-yy'), profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time')
         testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testLen/1000);
         

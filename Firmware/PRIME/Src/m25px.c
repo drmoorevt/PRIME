@@ -301,7 +301,7 @@ static boolean M25PX_waitForWriteComplete(boolean pollChip, Delay *pDelay)
   
   if (pollChip)
   { // Use only time to delay (not energy or current differential)
-    sfTimeout.value = pDelay->dDelay;
+    sfTimeout.value = pDelay->tDelay;
     Time_startTimer(sfTimeout);
     while (M25PX_readStatusRegister().writeInProgress && Time_getTimerValue(TIME_SOFT_TIMER_SERIAL_MEM));
     return (Time_getTimerValue(TIME_SOFT_TIMER_SERIAL_MEM) > 0);
@@ -341,6 +341,7 @@ M25PXResult M25PX_read(uint8 *pSrc, uint8 *pDest, uint16 length)
 \**************************************************************************************************/
 static boolean M25PX_directWrite(uint8 *pSrc, uint8 *pDest, uint32 length, Delay *pDelay)
 {
+  bool pollForDone = (0 == pDelay->tDelay) && (0 == pDelay->eDelay) && (0 == pDelay->dDelay);
   uint32 bytesToWrite, writeCommand;
   bool success = true;
 
@@ -360,7 +361,7 @@ static boolean M25PX_directWrite(uint8 *pSrc, uint8 *pDest, uint32 length, Delay
     DESELECT_CHIP_OF();
     M25PX_setup(FALSE);
 
-    success  = M25PX_waitForWriteComplete(FALSE, pDelay);
+    success  = M25PX_waitForWriteComplete(pollForDone, pDelay);
     length -= bytesToWrite;
     pDest  += bytesToWrite;
     pSrc   += bytesToWrite;
@@ -378,6 +379,7 @@ static boolean M25PX_directWrite(uint8 *pSrc, uint8 *pDest, uint32 length, Delay
 \**************************************************************************************************/
 static boolean M25PX_erase(uint8 *pDest, M25PXSize size, Delay *pDelay)
 {
+  bool pollForDone = (0 == pDelay->tDelay) && (0 == pDelay->eDelay) && (0 == pDelay->dDelay);
   uint32 eraseCmd = ((uint32)pDest & 0x00FFFFFF);
 
   // Put the erase command into the transmit buffer and set timeouts, both according to size
@@ -401,7 +403,7 @@ static boolean M25PX_erase(uint8 *pDest, M25PXSize size, Delay *pDelay)
   M25PX_sendWriteEnable();
   M25PX_transceive((uint8 *)&eraseCmd, sizeof(eraseCmd), NULL, 0);
 
-  return M25PX_waitForWriteComplete(FALSE, pDelay);  // return if the device registers op complete
+  return M25PX_waitForWriteComplete(pollForDone, pDelay);  // return device registers op complete
 }
 
 /**************************************************************************************************\
@@ -418,7 +420,6 @@ M25PXResult M25PX_write(uint8 *pSrc, uint8 *pDst, uint32 len, OpDelays *pDelays)
   uint8  *pCache   = (uint8 *)&sM25PX.subSector.byte[0];
   uint8  *pTestSub = (uint8 *)&sM25PX.testSubSector.byte[0];
   uint8  *pSubSector, *pCacheDest;
-  uint8   retries;
   uint16  numToWrite;
   
   // Ensure that the chip has enough voltage and time to power up
@@ -451,9 +452,8 @@ M25PXResult M25PX_write(uint8 *pSrc, uint8 *pDst, uint32 len, OpDelays *pDelays)
     M25PX_read(pSubSector, pTestSub, M25PX_SIZE_SUBSECTOR);
     
     if (0 != Util_compareMemory(pCache, pTestSub, M25PX_SIZE_SUBSECTOR))
-      retries = 0;  // Will fail out (with line reset) on next line of code
-      
-    result = (retries == 0) ? M25PX_RESULT_ERROR : result;
+      result = M25PX_RESULT_ERROR;
+    
     pSrc  += numToWrite; // update source pointer
     pDst  += numToWrite; // update destination pointer
     len   -= numToWrite;

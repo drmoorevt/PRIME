@@ -10,12 +10,12 @@
 #define FILE_ID SST26_C
 
 // Can remove the wait by configuring the pins as push-pull, but risk leakage into the domain
-#define SELECT_CHIP_OF()   do {                                                              \
+#define SELECT_CHIP_AF()   do {                                                              \
                                  HAL_GPIO_WritePin(AF_CS_GPIO_Port, AF_CS_Pin, GPIO_PIN_RESET); \
                                  Time_delay(1);                                               \
                                } while (0)
 
-#define DESELECT_CHIP_OF() do {                                                              \
+#define DESELECT_CHIP_AF() do {                                                              \
                                  HAL_GPIO_WritePin(AF_CS_GPIO_Port, AF_CS_Pin, GPIO_PIN_SET); \
                                  Time_delay(1);                                               \
                                } while (0)
@@ -41,26 +41,27 @@ typedef enum
 
 typedef enum
 {
-  OP_WRITE_ENABLE    = 0x06,  // WREN
-  OP_WRITE_DISABLE   = 0x04,  // WRDI
-  OP_READ_ID0        = 0x9F,  // RDID
-  OP_READ_ID1        = 0x9E,  // RDID
-  OP_READ_STATUS     = 0x05,  // RDSR
-  OP_WRITE_STATUS    = 0x01,  // WRSR
-  OP_WRITE_LOCK      = 0xE5,  // WRLR
-  OP_READ_LOCK       = 0xE8,  // RDLR
-  OP_READ_MEMORY     = 0x03,  // READ
-  OP_FAST_READ       = 0x0B,  // FAST_READ
-  OP_DUAL_READ       = 0x3B,  // DOFR
-  OP_READ_OTP        = 0x4B,  // ROTP
-  OP_WRITE_OTP       = 0x42,  // POTP
-  OP_WRITE_PAGE      = 0x02,  // PP
-  OP_DUAL_WRITE      = 0xA2,  // DIFP
-  OP_SUBSECTOR_ERASE = 0x20,  // SSE
-  OP_SECTOR_ERASE    = 0xD8,  // SE
-  OP_BULK_ERASE      = 0xC7,  // BE
-  OP_POWER_DOWN      = 0xB9,  // DP
-  OP_POWER_UP        = 0xAB   // RDP
+  OP_WRITE_ENABLE     = 0x06,  // WREN
+  OP_WRITE_DISABLE    = 0x04,  // WRDI
+  OP_READ_ID0         = 0x9F,  // RDID
+  OP_READ_ID1         = 0x9E,  // RDID
+  OP_READ_STATUS      = 0x05,  // RDSR
+  OP_WRITE_STATUS     = 0x01,  // WRSR
+  OP_WRITE_LOCK       = 0xE5,  // WRLR
+  OP_READ_LOCK        = 0xE8,  // RDLR
+  OP_READ_MEMORY      = 0x03,  // READ
+  OP_FAST_READ        = 0x0B,  // FAST_READ
+  OP_DUAL_READ        = 0x3B,  // DOFR
+  OP_READ_OTP         = 0x4B,  // ROTP
+  OP_WRITE_OTP        = 0x42,  // POTP
+  OP_WRITE_PAGE       = 0x02,  // PP
+  OP_DUAL_WRITE       = 0xA2,  // DIFP
+  OP_SUBSECTOR_ERASE  = 0x20,  // SSE
+  OP_SECTOR_ERASE     = 0xD8,  // SE
+  OP_BULK_ERASE       = 0xC7,  // BE
+  OP_POWER_DOWN       = 0xB9,  // DP
+  OP_POWER_UP         = 0xAB,  // RDP
+  OP_UNPROTECT_GLOBAL = 0x98
 } FlashCommand;
 
 typedef struct
@@ -79,7 +80,7 @@ static const double SST26_POWER_PROFILES[SST26_PROFILE_MAX][SST26_STATE_MAX] =
 { // Idle, Reading, Erasing, Writing, Waiting
   {3.3, 3.3, 3.3, 3.3, 3.3},  // Standard profile
   {3.0, 3.3, 3.3, 3.3, 3.0},  // 30VIW
-  {2.7, 3.3, 3.3, 3.3, 2.7},  // 27VIW
+  {2.6, 3.3, 3.3, 3.3, 2.6},  // 26VIW
   {2.3, 3.3, 3.3, 3.3, 2.3},  // 23VIW
   {2.1, 3.3, 3.3, 3.3, 2.1},  // 21VIW
 };
@@ -93,9 +94,6 @@ static struct
   SST26SubSector      testSubSector;
   boolean             isInitialized;
 } sSST26;
-
-static boolean SST26_erase(uint8 *pDest, SST26Size blockSize);
-static FlashStatusRegister SST26_readStatusRegister(void);
 
 /**************************************************************************************************\
 * FUNCTION    SST26_init
@@ -122,7 +120,7 @@ void SST26_init(void)
 \**************************************************************************************************/
 boolean SST26_setup(boolean state)
 {
-  DESELECT_CHIP_OF();
+  DESELECT_CHIP_AF();
 
   // Set up the SPI transaction with respect to domain voltage
   if (sSST26.vDomain[sSST26.state] >= SST26_HIGH_SPEED_VMIN)
@@ -139,25 +137,14 @@ boolean SST26_setup(boolean state)
 }
 
 /**************************************************************************************************\
-* FUNCTION    SST26_getState
+* FUNCTION    SST26_getStatePointer
 * DESCRIPTION Returns the internal state of SST26
 * PARAMETERS  None
-* RETURNS     The SST26State
+* RETURNS     The SST26 State
 \**************************************************************************************************/
-SST26State SST26_getState(void)
+uint32_t *SST26_getStatePointer(void)
 {
-  return sSST26.state;
-}
-
-/**************************************************************************************************\
-* FUNCTION    SST26_getStateAsWord
-* DESCRIPTION Returns the internal state of SST26
-* PARAMETERS  None
-* RETURNS     The SST26State
-\**************************************************************************************************/
-uint32 SST26_getStateAsWord(void)
-{
-  return (uint32)sSST26.state;
+  return (uint32_t *)&sSST26.state;
 }
 
 /**************************************************************************************************\
@@ -181,11 +168,21 @@ static void SST26_setState(SST26State state)
 {
   if (sSST26.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
+  
+  VoltageDomain curDomain;
+  switch (state)
+  {
+    case SST26_STATE_IDLE:    curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for idle
+    case SST26_STATE_READING: curDomain = VOLTAGE_DOMAIN_2; break;  // MCU domain for reading
+    case SST26_STATE_WRITING: curDomain = VOLTAGE_DOMAIN_2; break;  // MCU domain for writing
+    case SST26_STATE_WAITING: curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for waiting
+    default:                  curDomain = VOLTAGE_DOMAIN_2; break;  // Error...
+  }
+  PowerCon_setDeviceDomain(DEVICE_NANDFLASH, curDomain);  // Move the device to the new domain
+  PowerCon_setDomainVoltage(curDomain, sSST26.vDomain[state]);  // Set the domain voltage
   sSST26.state = state;
-  PowerCon_setDeviceDomain(DEVICE_NORFLASH, VOLTAGE_DOMAIN_0);
-  //Analog_setDomain(SPI_DOMAIN, TRUE, sSST26.vDomain[state]);
 }
-
+  
 /**************************************************************************************************\
 * FUNCTION    SST26_setPowerState
 * DESCRIPTION Sets the buck feedback voltage for a particular state of SST26
@@ -230,11 +227,11 @@ boolean SST26_setPowerProfile(SST26PowerProfile profile)
 void SST26_transceive(uint8 *txBuffer, uint16 txLength, uint8 *rxBuffer, uint16 rxLength)
 {
   SST26_setup(TRUE);
-  SELECT_CHIP_OF();
+  SELECT_CHIP_AF();
   SPI_write(txBuffer, txLength);
   if ((rxBuffer != NULL) && (rxLength > 0))
     SPI_read(rxBuffer, rxLength);
-  DESELECT_CHIP_OF();
+  DESELECT_CHIP_AF();
   SST26_setup(FALSE);
 }
 
@@ -286,8 +283,11 @@ static FlashStatusRegister SST26_readStatusRegister(void)
 \**************************************************************************************************/
 static void SST26_clearStatusRegister(void)
 {
-  uint8 writeCmd[2] = {OP_WRITE_STATUS, 0};
-  SST26_transceive(writeCmd, 2, NULL, 0);
+  uint8 clrStatusCmd[2] = {OP_WRITE_STATUS, 0};
+  SST26_transceive(clrStatusCmd, 2, NULL, 0);
+  
+  uint8 glblUnprotect[1] = {OP_UNPROTECT_GLOBAL};
+  SST26_transceive(glblUnprotect, 1, NULL, 0);
 }
 
 /**************************************************************************************************\
@@ -297,20 +297,20 @@ static void SST26_clearStatusRegister(void)
 *             timeout:  Timeout in milliseconds
 * RETURNS     TRUE if polling was not required, or if the timeout did not expire while polling
 \**************************************************************************************************/
-static boolean SST26_waitForWriteComplete(boolean pollChip, uint32 timeout)
+static boolean SST26_waitForWriteComplete(boolean pollChip, Delay *pDelay)
 {
   SoftTimerConfig sfTimeout = {TIME_SOFT_TIMER_SERIAL_MEM, 0, 0, NULL};
   SST26_setState(SST26_STATE_WAITING);
   if (pollChip)
   {
-    sfTimeout.value = timeout;
+    sfTimeout.value = pDelay->tDelay;
     Time_startTimer(sfTimeout);
     while (SST26_readStatusRegister().writeInProgress && Time_getTimerValue(TIME_SOFT_TIMER_SERIAL_MEM));
     return (Time_getTimerValue(TIME_SOFT_TIMER_SERIAL_MEM) > 0);
   }
   else
   {
-    Time_delay(timeout);
+    Time_pendEnergyTime(pDelay);
     return TRUE;
   }
 }
@@ -323,13 +323,23 @@ static boolean SST26_waitForWriteComplete(boolean pollChip, uint32 timeout)
 *             length - number of bytes to read
 * RETURNS     nothing
 \**************************************************************************************************/
-SST26Result SST26_read(uint8 *pSrc, uint8 *pDest, uint16 length)
+SST26Result SST26_read(uint8 *pSrc, uint8 *pDest, uint32 length, bool fast)
 {
-  uint32 readCommand = ((uint32)pSrc & 0x00FFFFFF) | (OP_READ_MEMORY << 24);
-  Util_swap32(&readCommand);
-
+  uint32_t rdCmd, rdCmdLen;
+  if (fast)
+  {
+    rdCmd    = ((uint32)pSrc & 0x00FFFFFF) | (OP_FAST_READ << 24);
+    rdCmdLen = sizeof(rdCmd) + 1;  // Need 1 byte of don't cares proceeding
+  }
+  else
+  {
+    rdCmd    = ((uint32)pSrc & 0x00FFFFFF) | (OP_READ_MEMORY << 24);
+    rdCmdLen = sizeof(rdCmd);  // Standard read command fits in 4 bytes
+  }
+  Util_swap32(&rdCmd);
+  
   SST26_setState(SST26_STATE_READING);
-  SST26_transceive((uint8 *)&readCommand, sizeof(readCommand), pDest, length);
+  SST26_transceive((uint8 *)&rdCmd, rdCmdLen, pDest, length);
   return SST26_RESULT_OK;
 }
 
@@ -341,11 +351,13 @@ SST26Result SST26_read(uint8 *pSrc, uint8 *pDest, uint16 length)
 *             length - number of bytes to read
 * RETURNS     nothing
 \**************************************************************************************************/
-static boolean SST26_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
+static boolean SST26_directWrite(uint8 *pSrc, uint8 *pDest, uint32 length, Delay *pDelay)
 {
   uint32 bytesToWrite, writeCommand;
+  bool pollForDone = (0 == pDelay->tDelay) && (0 == pDelay->eDelay) && (0 == pDelay->dDelay);
+  bool success = true;
 
-  while (length > 0)
+  while ((length > 0) && (true == success))
   {
     bytesToWrite = (length > SST26_SIZE_PAGE) ? SST26_SIZE_PAGE : length;
     writeCommand = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_WRITE_PAGE << 24);
@@ -355,82 +367,19 @@ static boolean SST26_directWrite(uint8 *pSrc, uint8 *pDest, uint16 length)
     SST26_sendWriteEnable();
 
     SST26_setup(TRUE);
-    SELECT_CHIP_OF();
+    SELECT_CHIP_AF();
     SPI_write((uint8 *)&writeCommand, sizeof(writeCommand));
     SPI_write(pSrc, bytesToWrite);
-    DESELECT_CHIP_OF();
+    DESELECT_CHIP_AF();
     SST26_setup(FALSE);
 
-    SST26_waitForWriteComplete(FALSE, PAGE_WRITE_TIME);
-
+    success = SST26_waitForWriteComplete(pollForDone, pDelay);
     length -= bytesToWrite;
     pDest  += bytesToWrite;
     pSrc   += bytesToWrite;
   }
 
-  return TRUE;
-}
-
-/*****************************************************************************\
-* FUNCTION    SST26_write
-* DESCRIPTION Writes a buffer to Serial Flash
-* PARAMETERS  pSrc - pointer to source RAM buffer
-*             pDest - pointer to destination in SST26
-*             length - number of bytes to write
-* RETURNS     TRUE if the write succeeds
-\*****************************************************************************/
-SST26Result SST26_write(uint8 *pSrc, uint8 *pDest, uint16 length)
-{
-  SST26Result result = SST26_RESULT_OK;
-  uint8  *pCache   = (uint8 *)&sSST26.subSector.byte[0];
-  uint8  *pTestSub = (uint8 *)&sSST26.testSubSector.byte[0];
-  uint8  *pSubSector, *pCacheDest;
-  uint8   retries;
-  uint16  numToWrite;
-  
-  // Ensure that the chip has enough voltage and time to power up
-  SST26_setState(SST26_STATE_IDLE);
-  
-  while ((result != SST26_RESULT_ERROR) && (length > 0))
-  {
-    // Write must not go past a page boundary, but must erase a whole sub sector at a time
-    numToWrite = SST26_SIZE_PAGE - ((uint32)pDest & (SST26_SIZE_PAGE - 1));
-    if (length < numToWrite)
-      numToWrite = length;
-
-    // Determine the which subsector we'll be manipulating and the data destination in local cache
-    pSubSector = (uint8 *)(((uint32)pDest  >> 0) & 0x001FF000);
-    pCacheDest = (uint8 *)((((uint32)pDest >> 0) & 0x00000FFF) + pCache);
-
-    for (retries = 3; retries > 0; retries--)
-    {
-      // Read the sub sector to be written into local cache
-      SST26_read(pSubSector, pCache, SST26_SIZE_SUBSECTOR);
-      
-      // Erase sub sector, it is now in local cache
-      SST26_erase(pSubSector, SST26_SIZE_SUBSECTOR);
-
-      // Overwrite local cache with the source data at the specified destination
-      Util_copyMemory(pSrc, pCacheDest, numToWrite);
-      
-      // Write the whole sub-sector back to flash
-      SST26_directWrite(pCache, pSubSector, SST26_SIZE_SUBSECTOR);
-
-      // Compare memory to determine if the write was successful
-      SST26_read(pSubSector, pTestSub, SST26_SIZE_SUBSECTOR);
-      
-      if (0 == Util_compareMemory(pCache, pTestSub, SST26_SIZE_SUBSECTOR))
-        break;
-      else
-        result = SST26_RESULT_NEEDED_RETRY;
-    }
-    result  = (retries == 0) ? SST26_RESULT_ERROR : result;
-    pSrc   += numToWrite; // update source pointer
-    pDest  += numToWrite; // update destination pointer
-    length -= numToWrite;
-  }
-  SST26_setState(SST26_STATE_IDLE);
-  return result;
+  return success;
 }
 
 /**************************************************************************************************\
@@ -440,26 +389,22 @@ SST26Result SST26_write(uint8 *pSrc, uint8 *pDest, uint16 length)
 *             length - number of bytes to erase
 * RETURNS     status byte for serial flash
 \**************************************************************************************************/
-static boolean SST26_erase(uint8 *pDest, SST26Size size)
+static boolean SST26_erase(uint8 *pDest, SST26Size size, Delay *pDelay)
 {
+  bool pollForDone = (0 == pDelay->tDelay) && (0 == pDelay->eDelay) && (0 == pDelay->dDelay);
   uint32 eraseCmd = ((uint32)pDest & 0x00FFFFFF);
-  boolean success;
-  uint32 timeout;
 
   // Put the erase command into the transmit buffer and set timeouts, both according to size
   switch (size)
   {
     case SST26_SIZE_SUBSECTOR:
       eraseCmd = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_SUBSECTOR_ERASE << 24);
-      timeout  = (SUBSECTOR_ERASE_TIME);
       break;
     case SST26_SIZE_SECTOR:
       eraseCmd = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_SECTOR_ERASE << 24);
-      timeout  = (SECTOR_ERASE_TIME);
       break;
     case SST26_SIZE_CHIP:
       eraseCmd = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_BULK_ERASE << 24);
-      timeout  = (BULK_ERASE_TIME);
       break;
     default:
       return FALSE;
@@ -469,9 +414,63 @@ static boolean SST26_erase(uint8 *pDest, SST26Size size)
   SST26_setState(SST26_STATE_ERASING);
   SST26_sendWriteEnable();
   SST26_transceive((uint8 *)&eraseCmd, sizeof(eraseCmd), NULL, 0);
-  success = SST26_waitForWriteComplete(FALSE, timeout);
+  return SST26_waitForWriteComplete(pollForDone, pDelay);  // return device registers op complete
+}
 
-  return success;
+/**************************************************************************************************\
+* FUNCTION    SST26_write
+* DESCRIPTION Writes a buffer to Serial Flash
+* PARAMETERS  pSrc - pointer to source RAM buffer
+*             pDest - pointer to destination in SST26
+*             length - number of bytes to write
+* RETURNS     TRUE if the write succeeds
+\**************************************************************************************************/
+SST26Result SST26_write(uint8 *pSrc, uint8 *pDest, uint32 len, OpDelays *pDelays)
+{
+  SST26Result result = SST26_RESULT_OK;
+  uint8  *pCache   = (uint8 *)&sSST26.subSector.byte[0];
+  uint8  *pTestSub = (uint8 *)&sSST26.testSubSector.byte[0];
+  uint8  *pSubSector, *pCacheDest;
+  uint16  numToWrite;
+  
+  // Ensure that the chip has enough voltage and time to power up
+  SST26_setState(SST26_STATE_IDLE);
+  
+  while ((result != SST26_RESULT_ERROR) && (len > 0))
+  {
+    // Write must not go past a page boundary, but must erase a whole sub sector at a time
+    numToWrite = SST26_SIZE_PAGE - ((uint32)pDest & (SST26_SIZE_PAGE - 1));
+    if (len < numToWrite)
+      numToWrite = len;
+
+    // Determine the which subsector we'll be manipulating and the data destination in local cache
+    pSubSector = (uint8 *)(((uint32)pDest  >> 0) & 0x001FF000);
+    pCacheDest = (uint8 *)((((uint32)pDest >> 0) & 0x00000FFF) + pCache);
+
+    // Read the sub sector to be written into local cache
+    SST26_read(pSubSector, pCache, SST26_SIZE_SUBSECTOR, true);
+    
+    // Erase sub sector, it is now in local cache
+    SST26_erase(pSubSector, SST26_SIZE_SUBSECTOR, &pDelays->op[0]);
+
+    // Overwrite local cache with the source data at the specified destination
+    Util_copyMemory(pSrc, pCacheDest, numToWrite);
+    
+    // Write the whole sub-sector back to flash
+    SST26_directWrite(pCache, pSubSector, SST26_SIZE_SUBSECTOR, &pDelays->op[1]);
+
+    // Compare memory to determine if the write was successful
+    SST26_read(pSubSector, pTestSub, SST26_SIZE_SUBSECTOR, true);
+    
+    if (0 != Util_compareMemory(pCache, pTestSub, SST26_SIZE_SUBSECTOR))
+      result = SST26_RESULT_ERROR;
+    
+    pSrc   += numToWrite; // update source pointer
+    pDest  += numToWrite; // update destination pointer
+    len    -= numToWrite;
+  }
+  SST26_setState(SST26_STATE_IDLE);
+  return result;
 }
 
 /*****************************************************************************\
@@ -482,7 +481,9 @@ static boolean SST26_erase(uint8 *pDest, SST26Size size)
 \*****************************************************************************/
 bool SST26_test(void)
 {
+  sSST26.status = SST26_readStatusRegister();
   SST26_clearStatusRegister();
+  sSST26.status = SST26_readStatusRegister();
   SST26FlashId flashId = SST26_readFlashId();
   return ((flashId.manufacturerId == SST26_MANUFACTURER_ID) &&
           (flashId.memoryType     == SST26_MEMORY_TYPE)     &&

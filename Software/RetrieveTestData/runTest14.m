@@ -1,4 +1,4 @@
-function [numFailures, chans, data, time] = runTest13(CommPort, numSweeps, testLen, opDelay, profileList)
+function [numFailures, chans, data, time] = runTest14(CommPort, numSweeps, testLen, opDelay, profileList)
     numFailures = 0;
     delete(instrfindall);
     s = openFixtureComms(CommPort);
@@ -23,12 +23,12 @@ function [numFailures, chans, data, time] = runTest13(CommPort, numSweeps, testL
             success = false;
             try
                 [name(:,profIter), chans, data(:,:,sweepIter,profIter), time, timeArray(sweepIter,:), success] ...
-                    = execTest(s, 13, args);
+                    = execTest(s, 14, args);
                 testPassed = strfind(name(profIter),'Passed');
                 if (cellfun('isempty', testPassed))
                     numFailures = numFailures + 1;
                     fprintf('\n******WRITE ERROR DETECTED*****\n');
-                    err = MException('Test13:WriteFailure', 'The write did not complete as expected');
+                    err = MException('Test14:WriteFailure', 'The write did not complete as expected');
                     throw(err);
                 end
                 avgData = mean(data, 3);
@@ -38,8 +38,8 @@ function [numFailures, chans, data, time] = runTest13(CommPort, numSweeps, testL
                 disp('Test failure ... retrying');
             end
         end
-        filename = sprintf('./results/Test13-Profile%d-%dSweeps.mat', ...
-                           profIter, sweepIter-1);
+        filename = sprintf('./results/%s Test14-Profile%d-%dSweeps.mat', ...
+                           datestr(now,'HH.MM.SS dd-mm-yy'), profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time','timeArray')
         testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testLen/1000);
         
