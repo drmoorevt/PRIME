@@ -2,6 +2,7 @@ function [name, chans, data, time] = runTest22(CommPort, numSweeps, testLen, opD
     for profListIdx = 1:numel(profileList)
         profIter = profileList(profListIdx);
         frameIdx = 1;
+        % Determine the optimal erase delay first:
         if (opDelay(1) ~= 0)  % Are we looking for optimal tDelay?
             lowerLim = opDelay(1); % begin by optimizing the erase delay
             upperLim = lowerLim * 2;

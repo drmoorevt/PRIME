@@ -13,32 +13,32 @@ function [name, chans, data, time] = TestConsole(CommPort)
 
     % [[Delay #1 (Erase...)], [Delay #2 (Write...)], [Delay #3 (None yet)]]
     %           ^--- [Time Delay, Energy Delay, Differential Delay]
-    eeTimingIODVS  = [[5000,0,0],   [0,0,0],    [0,0,0]];
-    sf1TimingIODVS = [[150000,0,0], [5000,0,0], [0,0,0]];
-    sf2TimingIODVS = [[25000,0,0],  [2000,0,0], [0,0,0]];
-    sd1TimingIODVS = [[150000,0,0], [0,0,0],    [0,0,0]];
-    sd2TimingIODVS = [[150000,0,0], [0,0,0],    [0,0,0]];
-    sd3TimingIODVS = [[65000,0,0],  [0,0,0],    [0,0,0]];
-    sd4TimingIODVS = [[2000,0,0],   [0,0,0],    [0,0,0]];
-    htTimingIODVS  = [[45000,0,0],  [0,0,0],    [0,0,0]];
+    eeTimingIODVS  = [[5000,   0, 0],   [0,0,0],    [0,0,0]];
+    sf1TimingIODVS = [[150000, 0, 0], [5000,0,0], [0,0,0]];
+    sf2TimingIODVS = [[25000,  0, 0],  [2000,0,0], [0,0,0]];
+    sd1TimingIODVS = [[150000, 0, 0], [0,0,0],    [0,0,0]];
+    sd2TimingIODVS = [[150000, 0, 0], [0,0,0],    [0,0,0]];
+    sd3TimingIODVS = [[65000,  0, 0],  [0,0,0],    [0,0,0]];
+    sd4TimingIODVS = [[2000,   0, 0],   [0,0,0],    [0,0,0]];
+    htTimingIODVS  = [[45000,  0, 0],  [0,0,0],    [0,0,0]];
 
-    eeTimingACRT  = [[5000,0,0],   [0,0,0],    [0,0,0]];
-    sf1TimingACRT = [[150000,0,0], [5000,0,0], [0,0,0]];
-    sf2TimingACRT = [[25000,0,0],  [2000,0,0],    [0,0,0]];
-    sd1TimingACRT = [[150000,0,0], [0,0,0],    [0,0,0]];
-    sd2TimingACRT = [[150000,0,0], [0,0,0],    [0,0,0]];
-    sd3TimingACRT = [[65000,0,0],  [0,0,0],    [0,0,0]];
-    sd4TimingACRT = [[2000,0,0],   [0,0,0],    [0,0,0]];
-    htTimingACRT  = [[45000,0,0],  [0,0,0],    [0,0,0]];
+    eeTimingACRT   = [[5000,   0, 0],   [0,0,0],    [0,0,0]];
+    sf1TimingACRT  = [[150000, 0, 0], [5000,0,0], [0,0,0]];
+    sf2TimingACRT  = [[25000,  0, 0],  [2000,0,0],    [0,0,0]];
+    sd1TimingACRT  = [[150000, 0, 0], [0,0,0],    [0,0,0]];
+    sd2TimingACRT  = [[150000, 0, 0], [0,0,0],    [0,0,0]];
+    sd3TimingACRT  = [[65000,  0, 0],  [0,0,0],    [0,0,0]];
+    sd4TimingACRT  = [[2000,   0, 0],   [0,0,0],    [0,0,0]];
+    htTimingACRT   = [[45000,  0, 0],  [0,0,0],    [0,0,0]];
 
-    eeTimingACRE  = [[5000,0,0],   [0,0,0],    [0,0,0]];
-    sf1TimingACRE = [[150000,0,0], [5000,0,0], [0,0,0]];
-    sf2TimingACRE = [[45000,0,0],  [0,0,0],    [0,0,0]];
-    sd1TimingACRE = [[150000,0,0], [0,0,0],    [0,0,0]];
-    sd2TimingACRE = [[150000,0,0], [0,0,0],    [0,0,0]];
-    sd3TimingACRE = [[65000,0,0],  [0,0,0],    [0,0,0]];
-    sd4TimingACRE = [[2000,0,0],   [0,0,0],    [0,0,0]];
-    htTimingACRE  = [[45000,0,70000],  [0,0,0],    [0,0,0]];
+    eeTimingACRE  =  [[5000,    0,      0],  [0,0,0],    [0,0,0]];
+    sf1TimingACRE =  [[150000,  0,      0],  [5000,0,0], [0,0,0]];
+    sf2TimingACRE =  [[45000,   0,      0],  [0,0,0],    [0,0,0]];
+    sd1TimingACRE =  [[150000,  0,      0],  [0,0,0],    [0,0,0]];
+    sd2TimingACRE =  [[150000,  0,      0],  [0,0,0],    [0,0,0]];
+    sd3TimingACRE =  [[65000,   0,      0],  [0,0,0],    [0,0,0]];
+    sd4TimingACRE =  [[2000,    0,      0],  [0,0,0],    [0,0,0]];
+    htTimingACRE  =  [[45000,       0, 0],  [0,0,0],    [0,0,0]];
 
     eeTimingACRD  = [[5000,0,0],   [0,0,0],    [0,0,0]];
     sf1TimingACRD = [[150000,0,0], [5000,0,0], [0,0,0]];
@@ -55,6 +55,9 @@ function [name, chans, data, time] = TestConsole(CommPort)
     sdFails = 0;
     htFails = 0;
    
+    [htFails,  chans, data, time] = runTest15(CommPort, numSweeps, 50000,  htTimingIODVS,  [1]); % HIH
+    return
+   
    %runTest1(CommPort, numSweeps, 7000,  [5000, 0, 0, 0]);
    %return
     
@@ -70,23 +73,27 @@ function [name, chans, data, time] = TestConsole(CommPort)
 
    % Optimal Time Delay Tests
    %[eeFails,  chans, data, time] = runTest21(CommPort, numSweeps, 7000,   eeTimingACRT,  [1, 3]); % EEPROM
-    [sf1Fails, chans, data, time] = runTest22(CommPort, numSweeps, 275000, sf1TimingACRT, [1]); % NOR
+   %[sf1Fails, chans, data, time] = runTest22(CommPort, numSweeps, 275000, sf1TimingACRT, [1, 3]); % NOR
    %[sf2Fails, chans, data, time] = runTest23(CommPort, numSweeps, 80000,  sf2TimingACRT, [1, 3]); % NAND
+     % All SDCard Optimal timing tests are invalid due to the presence of onboard caches + SPI polling
    %[sd1Fails, chans, data, time] = runTest24(CommPort, numSweeps, 225000, sd1TimingACRT, [1, 3]); % Lexar
    %[sd2Fails, chans, data, time] = runTest24(CommPort, numSweeps, 225000, sd2TimingACRT, [1, 3]); % SanDisk
    %[sd3Fails, chans, data, time] = runTest24(CommPort, numSweeps, 100000, sd3TimingACRT, [1, 3]); % SwissBit
    %[sd4Fails, chans, data, time] = runTest24(CommPort, numSweeps, 15000,  sd4TimingACRT, [1, 3]); % Kingston
+     % End SDCard optimal timing tests
    %[htFails,  chans, data, time] = runTest25(CommPort, numSweeps, 50000,  htTimingACRT,  [1, 3]); % HIH
    
    % Optimal Energy Delay Tests
    %[eeFails,  chans, data, time] = runTest21(CommPort, numSweeps, 7000,   eeTimingACRE,  [1, 3]); % EEPROM
    %[sf1Fails, chans, data, time] = runTest22(CommPort, numSweeps, 275000, sf1TimingACRE, [1, 3]); % NOR
    %[sf2Fails, chans, data, time] = runTest23(CommPort, numSweeps, 80000,  sf2TimingACRE, [1, 3]); % NAND
+     % All SDCard Optimal timing tests are invalid due to the presence of onboard caches + SPI polling
    %[sd1Fails, chans, data, time] = runTest24(CommPort, numSweeps, 225000, sd1TimingACRE, [1, 3]); % Lexar
    %[sd2Fails, chans, data, time] = runTest24(CommPort, numSweeps, 225000, sd2TimingACRE, [1, 3]); % SanDisk
    %[sd3Fails, chans, data, time] = runTest24(CommPort, numSweeps, 100000, sd3TimingACRE, [1, 3]); % SwissBit
    %[sd4Fails, chans, data, time] = runTest24(CommPort, numSweeps, 15000,  sd4TimingACRE, [1, 3]); % Kingston
-   %[htFails,  chans, data, time] = runTest25(CommPort, numSweeps, 50000,  htTimingACRE,  [1, 3]); % HIH
+     % End SDCard optimal energy tests
+   %[htFails,  chans, data, time] = runTest25(CommPort, numSweeps, 100000,  htTimingACRE,  [1, 3]); % HIH
    
    % Optimal Differential Tests
    %[eeFails,  chans, data, time] = runTest21(CommPort, numSweeps, 7000,   eeTimingACRD,  [1, 3]); % EEPROM
