@@ -163,8 +163,6 @@ void Analog_dmaInit(ADCPort adcNum)
   }
   
   __DMA2_CLK_ENABLE(); // Configure the DMA streams
-  if (NULL != phDMA->Instance)  // Only preform the DeInit if it was previously init
-    HAL_DMA_DeInit(phDMA);
   
   switch (adcNum)  // Configure the DMA streams 
   {
@@ -201,6 +199,7 @@ void Analog_dmaInit(ADCPort adcNum)
   phDMA->Init.FIFOThreshold       = DMA_FIFO_THRESHOLD_1QUARTERFULL;
   phDMA->Init.MemBurst            = DMA_MBURST_SINGLE;
   phDMA->Init.PeriphBurst         = DMA_PBURST_SINGLE;
+  HAL_DMA_DeInit(phDMA);  // De-init so we clear all DMA (error) flags that may be present
   HAL_DMA_Init(phDMA);
   
   HAL_NVIC_SetPriority(dmaIRQ, 0, 0);  // Configure the NVIC for DMA
@@ -534,7 +533,7 @@ boolean Analog_stopSampleTimer(void)
 * DESCRIPTION Catches interrupts from the DMA stream and dispatches them to their handler
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       DMA2, Stream0 is configured for DMA via ADC_1 (DMA Channel 0, ADC Channel 14, pin C4)
+* NOTES       DMA2, Stream4 is configured for DMA via ADC_1 (DMA Channel 0, ADC Channel 14, pin C4)
 \**************************************************************************************************/
 void DMA2_Stream4_IRQHandler(void)
 {
@@ -546,7 +545,7 @@ void DMA2_Stream4_IRQHandler(void)
 * DESCRIPTION Catches interrupts from the DMA stream and dispatches them to their handler
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       DMA2, Stream1 is configured for DMA via ADC_3 (DMA Channel 2, ADC Channel 11, pin C1)
+* NOTES       DMA2, Stream2 is configured for DMA via ADC_2 (DMA Channel 1, ADC Channel 15, pin C5)
 \**************************************************************************************************/
 void DMA2_Stream2_IRQHandler(void)
 {
@@ -558,7 +557,7 @@ void DMA2_Stream2_IRQHandler(void)
 * DESCRIPTION Catches interrupts from the DMA stream and dispatches them to their handler
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       DMA2, Stream2 is configured for DMA via ADC_2 (DMA Channel 1, ADC Channel 15, pin C5)
+* NOTES       DMA2, Stream2 is configured for DMA via ADC_3 (DMA Channel 2, ADC Channel 11, pin C1)
 \**************************************************************************************************/
 void DMA2_Stream0_IRQHandler(void)
 {
@@ -570,7 +569,7 @@ void DMA2_Stream0_IRQHandler(void)
 * DESCRIPTION Catches interrupts from the DMA stream and dispatches them to their handler
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       DMA2, Stream2 is configured for DMA via ADC_2 (DMA Channel 1, ADC Channel 15, pin C5)
+* NOTES       DMA2, Stream1 is configured for DMA via MEM2MEM DMA
 \**************************************************************************************************/
 void DMA2_Stream1_IRQHandler(void)
 {
