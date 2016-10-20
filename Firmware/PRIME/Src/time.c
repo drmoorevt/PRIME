@@ -81,6 +81,12 @@ void Time_delay(volatile uint32 microSeconds)
   while (!(TIM5->SR & TIM_SR_UIF));            // Wait until timer hits the ARR value
 }
 
+/**************************************************************************************************\
+* FUNCTION      Time_accumulateEnergy
+* DESCRIPTION   Blocking delay
+* PARAMETERS    maxNum
+* RETURN        none
+\**************************************************************************************************/
 bool Time_accumulateEnergy(uint32_t maxNum)
 {
   while ((0xFFFF != GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][sTime.energyIdx]) && (maxNum--))

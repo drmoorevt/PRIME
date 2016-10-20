@@ -163,6 +163,8 @@ void Analog_dmaInit(ADCPort adcNum)
   }
   
   __DMA2_CLK_ENABLE(); // Configure the DMA streams
+  if (NULL != phDMA->Instance)  // Only preform the DeInit if it was previously init
+    HAL_DMA_DeInit(phDMA);
   
   switch (adcNum)  // Configure the DMA streams 
   {
