@@ -124,9 +124,9 @@ boolean SST26_setup(boolean state)
 
   // Set up the SPI transaction with respect to domain voltage
   if (sSST26.vDomain[sSST26.state] >= SST26_HIGH_SPEED_VMIN)
-    SPI_setup(state, SPI_CLOCK_RATE_45000000, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
-  else if (sSST26.vDomain[sSST26.state] >= SST26_LOW_SPEED_VMIN)
     SPI_setup(state, SPI_CLOCK_RATE_22500000, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
+  else if (sSST26.vDomain[sSST26.state] >= SST26_LOW_SPEED_VMIN)
+    SPI_setup(state, SPI_CLOCK_RATE_11250000, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
   else
   {
     SPI_setup(state, SPI_CLOCK_RATE_05625000, SPI_PHASE_1EDGE, SPI_POLARITY_LOW, SPI_MODE_NORMAL);
@@ -448,7 +448,7 @@ SST26Result SST26_write(uint8 *pSrc, uint8 *pDest, uint32 len, OpDelays *pDelays
     pCacheDest = (uint8 *)((((uint32)pDest >> 0) & 0x00000FFF) + pCache);
 
     // Read the sub sector to be written into local cache
-    SST26_read(pSubSector, pCache, SST26_SIZE_SUBSECTOR, true);
+    SST26_read(pSubSector, pCache, SST26_SIZE_SUBSECTOR, false);
     
     // Erase sub sector, it is now in local cache
     SST26_erase(pSubSector, SST26_SIZE_SUBSECTOR, &pDelays->op[0]);
@@ -460,7 +460,7 @@ SST26Result SST26_write(uint8 *pSrc, uint8 *pDest, uint32 len, OpDelays *pDelays
     SST26_directWrite(pCache, pSubSector, SST26_SIZE_SUBSECTOR, &pDelays->op[1]);
 
     // Compare memory to determine if the write was successful
-    SST26_read(pSubSector, pTestSub, SST26_SIZE_SUBSECTOR, true);
+    SST26_read(pSubSector, pTestSub, SST26_SIZE_SUBSECTOR, false);
     
     if (0 != Util_compareMemory(pCache, pTestSub, SST26_SIZE_SUBSECTOR))
       result = SST26_RESULT_ERROR;

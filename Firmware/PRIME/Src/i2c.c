@@ -92,6 +92,7 @@ bool I2C_write(uint8_t devAddr, uint8 *pBytes, uint16 numBytes)
 bool I2C_read(uint8_t devAddr, uint8 *pBytes, uint16 numBytes)
 {
   bool retVal = (HAL_OK == HAL_I2C_Master_Receive(spI2C, devAddr << 1, pBytes, numBytes, 100));
+  return retVal;
   if (!retVal)
     return false;
   // Wait for the last byte and stop to be transmitted

@@ -54,13 +54,13 @@ void Time_startTimer(SoftTimerConfig timerConfig)
 }
 
 /**************************************************************************************************\
-* FUNCTION      Time_delay
-* DESCRIPTION   Blocking delay
+* FUNCTION      Time_setupTimer
+* DESCRIPTION   
 * PARAMETERS    microSeconds - number of microSeconds to delay
 * RETURN        none
 * NOTES         Timer5 is connected to APB1 which is operating at 60MHz
 \**************************************************************************************************/
-void Time_delay(volatile uint32 microSeconds)
+void Time_setupTimer(uint32 microSeconds)
 {
   if (0 == microSeconds)
     return;
@@ -70,15 +70,26 @@ void Time_delay(volatile uint32 microSeconds)
   RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;          // Turn on Timer5 clocks (90 MHz)
   TIM5->CR1     = (0x0000);                    // Turn off the counter entirely
   TIM5->PSC     = (timFreq / (1000 * 1000));   // Set prescalar to count up on microsecond bounds.
-  TIM5->ARR     = (microSeconds);               // Set up the counter to count down
+  TIM5->ARR     = (microSeconds);              // Set up the counter to count down
   TIM5->SR      = (0x0000);                    // Clear all status (and interrupt) bits
   TIM5->DIER    = (0x0000);                    // Turn off the timer (update) interrupt
   TIM5->CR2     = (0x0000);                    // Ensure CR2 is at default settings
   TIM5->CR1     = (0x0000) | (TIM_CR1_CEN   |  // Turn on the timer
-                              TIM_CR1_URS   |  // Only overflow/underflow generates an update IRQ
-                              TIM_CR1_OPM   |  // One pulse mode, disable after count hits zero
-                              TIM_CR1_ARPE);   // Buffer the ARPE
-  while (!(TIM5->SR & TIM_SR_UIF));            // Wait until timer hits the ARR value
+                              /*TIM_CR1_URS   |*/  // Only overflow/underflow generates an update IRQ
+                              TIM_CR1_OPM);    // One pulse mode, disable after count hits zero
+}
+
+/**************************************************************************************************\
+* FUNCTION      Time_delay
+* DESCRIPTION   Blocking delay
+* PARAMETERS    microSeconds - number of microSeconds to delay
+* RETURN        none
+* NOTES         Timer5 is connected to APB1 which is operating at 60MHz
+\**************************************************************************************************/
+void Time_delay(uint32 microSeconds)
+{
+  Time_setupTimer(microSeconds);
+  while (!(TIM5->SR & TIM_SR_UIF));  // Wait until timer hits the ARR value
 }
 
 /**************************************************************************************************\
@@ -112,37 +123,27 @@ void Time_pendEnergyTime(Delay *pDelay)
   if ((0 == pDelay->eDelay) && (0 == pDelay->tDelay))
     return;
   
+  sTime.accumEnergy = 0;  // Reset the accumulation parameters to zero
+  sTime.energyIdx = 0;
+  
   // if this is called waiting on zero microjoules then assume no actual energy wait
   if (pDelay->eDelay > 0)
     sTime.pendEnergy = pDelay->eDelay;
   else
     sTime.pendEnergy = 0xFFFFFFFFFFFFFFFF;
   
-  sTime.accumEnergy = 0;
-  sTime.energyIdx = 0;
-  
-  // if this is called waiting only on energy, then assume no time wait
   if (pDelay->tDelay > 0)
-  {
-    uint32_t timFreq = HAL_RCC_GetPCLK1Freq();   // TIM5 is connected to APB1
-    RCC->APB1ENR |= RCC_APB1ENR_TIM5EN;          // Turn on Timer5 clocks (45 MHz)
-    TIM5->CR1     = (0x0000);                    // Turn off the counter entirely
-    TIM5->PSC     = (timFreq / (1000 * 1000));   // Set prescalar to count up on microsecond bounds.
-    TIM5->ARR     = (pDelay->tDelay);               // Set up the counter to count down
-    TIM5->SR      = (0x0000);                    // Clear all status (and interrupt) bits
-    TIM5->DIER    = (0x0000);                    // Turn off the timer (update) interrupt
-    TIM5->CR2     = (0x0000);                    // Ensure CR2 is at default settings
-    TIM5->CR1     = (0x0000) | (TIM_CR1_CEN   |  // Turn on the timer
-                                TIM_CR1_URS   |  // Only overflow/underflow generates an update IRQ
-                                TIM_CR1_OPM   |  // One pulse mode, disable after count hits zero
-                                TIM_CR1_ARPE);   // Buffer the ARPE
-  }
+    Time_setupTimer(pDelay->tDelay);
   
   // Wait until timer hits the ARR value or the pending energy expenditure value reaches zero
   if (pDelay->tDelay > 0)
     while ((!(TIM5->SR & TIM_SR_UIF)) && (false == Time_accumulateEnergy(50)));
   else
     while (false == Time_accumulateEnergy(50));
+  TIM5->CR1     = (0x0000);                    // Turn off the counter entirely
+  RCC->APB1RSTR |= RCC_APB1RSTR_TIM5RST;
+  RCC->APB1RSTR &= (~RCC_APB1RSTR_TIM5RST);
+  RCC->APB1ENR  &= (~RCC_APB1ENR_TIM5EN);      // Turn off Timer5 clocks (90 MHz)
 }
 
 /**************************************************************************************************\
