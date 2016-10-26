@@ -247,6 +247,47 @@ static bool Si114x_SwitchGain(uint8_t alsGain, uint8_t psxGain);
 static bool Si114xReset(void);
 boolean Si114x_setup(boolean state);
 
+/**************************************************************************************************\
+* FUNCTION    Si114x_setState
+* DESCRIPTION 
+* PARAMETERS  None
+* RETURNS     None
+\**************************************************************************************************/
+void Si114x_setState(Si114xState state)
+{
+  if (sSi114x.isInitialized != TRUE)
+    return;  // Must run initialization before we risk changing the domain voltage
+  
+  VoltageDomain curDomain;
+  switch (state)
+  {
+    case SI114X_STATE_IDLE:        curDomain = VOLTAGE_DOMAIN_2; break;  // Modular domain for idle
+    case SI114X_STATE_READING:     curDomain = VOLTAGE_DOMAIN_2; break;  // MCU domain for reading
+    case SI114X_STATE_SENDING_CMD: curDomain = VOLTAGE_DOMAIN_2; break;  // MCU domain for writing
+    case SI114X_STATE_WAITING:     curDomain = VOLTAGE_DOMAIN_2; break;  // Mod domain for waiting
+    default:                       curDomain = VOLTAGE_DOMAIN_2; break;  // Error...
+  }
+  PowerCon_setDeviceDomain(DEVICE_NANDFLASH, curDomain);  // Move the device to the new domain
+  PowerCon_setDomainVoltage(curDomain, sSi114x.vDomain[state]);  // Set the domain voltage
+  sSi114x.state = state;
+}
+
+/**************************************************************************************************\
+* FUNCTION    Si114x_setPowerProfile
+* DESCRIPTION Sets all power states of serial flash to the specified profile
+* PARAMETERS  None
+* RETURNS     TRUE if the voltage can be set for the state, false otherwise
+\**************************************************************************************************/
+boolean Si114x_setPowerProfile(Si114xPowerProfile profile)
+{
+  uint32 state;
+  if (profile >= SI114X_PROFILE_MAX)
+    return FALSE;  // Invalid profile, inform the caller
+  for (state = 0; state < SI114X_STATE_MAX; state++)
+    sSi114x.vDomain[state] = SI114X_POWER_PROFILES[profile][state];
+  return TRUE;
+}
+
 /*************************************************************************************************\
 *  FUNCTION:    Si114x_i2cRead
 *  DESCRIPTION: Writes register data to the Si114x

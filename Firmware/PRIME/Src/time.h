@@ -56,7 +56,7 @@ typedef struct
 {
   uint32_t tDelay;
   uint32_t eDelay;
-  uint32_t dDelay;
+  uint32_t cDelay;
 } Delay;
 
 #define MAX_NUM_DELAYS 3
@@ -77,7 +77,7 @@ void Time_delay(uint32 microSeconds);
 void Time_startTimer(SoftTimerConfig timerConfig);
 uint32 Time_getTimerValue(SoftTimer timer);
 
-void Time_pendEnergyTime(Delay *pDelay);
+uint64_t Time_pendEnergyTime(Delay *pDelay);
 bool Time_notifyEnergyExpended(uint32_t energyExpendedBitCounts);
 
 #endif //TIME_H

@@ -100,6 +100,7 @@ typedef struct
 
 bool    SST26_test(void);
 void    SST26_init(void);
+void    SST26_setState(SST26State state);
 SST26FlashId SST26_readSST26FlashId(void);
 uint32_t *SST26_getStatePointer(void);
 double  SST26_getStateVoltage(void);

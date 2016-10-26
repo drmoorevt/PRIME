@@ -295,11 +295,13 @@ int main(void)
     Tests_run();
   }
   
+  /*
   while(1)
   {
     SI114X_ReadAndMeasure(NULL);
     Time_delay(100000);
   }
+  */
 }
 
 /** System Clock Configuration

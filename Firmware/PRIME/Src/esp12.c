@@ -128,7 +128,7 @@ double ESP12_getStateVoltage(void)
 * PARAMETERS  None
 * RETURNS     None
 \**************************************************************************************************/
-static void ESP12_setState(ESPState state)
+void ESP12_setState(ESPState state)
 {
   if (sESP12.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage

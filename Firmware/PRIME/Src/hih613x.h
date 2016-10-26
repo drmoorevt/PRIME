@@ -35,6 +35,7 @@ bool HIH613X_test(void);
 boolean HIH613X_setup(boolean state);
 
 HIHState  HIH613X_getState(void);
+void      HIH613X_setState(HIHState state);
 uint32_t *HIH613X_getStatePointer(void);
 double    HIH613X_getStateVoltage(void);
 

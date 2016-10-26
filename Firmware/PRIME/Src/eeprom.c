@@ -129,7 +129,7 @@ double EEPROM_getStateVoltage(void)
 * PARAMETERS  None
 * RETURNS     None
 \**************************************************************************************************/
-static void EEPROM_setState(EEPROMState state)
+void EEPROM_setState(EEPROMState state)
 {
   if (sEEPROM.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage

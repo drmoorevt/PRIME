@@ -98,6 +98,7 @@ typedef struct
 
 bool    M25PX_test(void);
 void    M25PX_init(void);
+void    M25PX_setState(M25PXState state);
 M25PXFlashId M25PX_readM25PXFlashId(void);
 uint32_t *M25PX_getStatePointer(void);
 double  M25PX_getStateVoltage(void);

@@ -3,6 +3,10 @@ function [numFailures, chans, data, time] = runTest14(CommPort, numSweeps, testL
     delete(instrfindall);
     s = openFixtureComms(CommPort);
     
+    preTestDelay = 1000;
+    postTestDelay = 1000;
+    testTime = (preTestDelay + testLen + postTestDelay) / 1000;
+    
     for profListIdx = 1:numel(profileList)
         profIter = profileList(profListIdx);
         sweepIter = 1;
@@ -13,8 +17,8 @@ function [numFailures, chans, data, time] = runTest14(CommPort, numSweeps, testL
                           testLen,              ... // testLen
                           opDelay,              ... // opDelay
                           uint32(profIter - 1), ... // profile
-                          1000,                 ... // preTestDelay
-                          1000,                 ... // postTestDelay
+                          preTestDelay,         ... // preTestDelay
+                          postTestDelay,        ... // postTestDelay
                           address,              ... // Destination address
                           writeBuffer           ... // Destination data
                           );
@@ -41,7 +45,7 @@ function [numFailures, chans, data, time] = runTest14(CommPort, numSweeps, testL
         filename = sprintf('./results/%s Test14-Profile%d-%dSweeps.mat', ...
                            datestr(now,'HH.MM.SS dd-mm-yy'), profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time','timeArray')
-        testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testLen/1000);
+        %testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testLen/1000);
         
         maTitle = strrep(name(:,profIter), 'Passed', 'Passed (50 Sample Moving Average)');
         maTitle = strrep(maTitle, 'Failed', 'Failed (50 Sample Moving Average)');
@@ -49,7 +53,7 @@ function [numFailures, chans, data, time] = runTest14(CommPort, numSweeps, testL
         movingAverage(50:end-50,1) = conv(movingAverage(50:end-50,1), ones(50,1)/50, 'same');
         movingAverage(50:end-50,2) = conv(movingAverage(50:end-50,2), ones(50,1)/50, 'same');
         movingAverage(50:end-50,3) = conv(movingAverage(50:end-50,3), ones(50,1)/50, 'same');
-        testPlot(movingAverage(:,:), time, chans, maTitle(:,1), testLen/1000);
+        testPlot(movingAverage(:,:), time, chans, maTitle(:,1), testTime);
         
 %         figure('Color', 'white');
 %         modStr = strrep(name(profIter), 'Passed', '');
@@ -60,14 +64,15 @@ function [numFailures, chans, data, time] = runTest14(CommPort, numSweeps, testL
 %         xlabel('SPI Read Attempts Before Success');
 %         ylabel('Number of Occurrences');
         
-        figure('Color', 'white');
-        modStr = strrep(name(profIter), 'Passed', '');
-        modStr = deblank(modStr);
-        hist(timeArray(:,2), 1000);
-        t1 = title(sprintf('%s Delay Required (n = %d)',modStr{:}, numSweeps));
-        set(t1,{'FontSize'},{10.0});
-        xlabel('SPI Read Attempts Before Success');
-        ylabel('Number of Occurrences');
-        
+%uncomment this one -- it works...
+%         figure('Color', 'white');
+%         modStr = strrep(name(profIter), 'Passed', '');
+%         modStr = deblank(modStr);
+%         hist(timeArray(:,2), 1000);
+%         t1 = title(sprintf('%s Delay Required (n = %d)',modStr{:}, numSweeps));
+%         set(t1,{'FontSize'},{10.0});
+%         xlabel('SPI Read Attempts Before Success');
+%         ylabel('Number of Occurrences');
+%         
     end
 end

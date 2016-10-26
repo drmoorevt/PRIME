@@ -23,14 +23,6 @@
 
 typedef enum
 {
-  HIH_CHANNEL_OVERLOAD = 21,
-  EE_CHANNEL_OVERLOAD  = 22,
-  SF_CHANNEL_OVERLOAD  = 23,
-  SD_CHANNEL_OVERLOAD  = 24
-} PeripheralChannels;
-
-typedef enum
-{
   TEST_IDLE     = 0,
   TEST_WAITING  = 1,
   TEST_RUNNING  = 3,
@@ -82,8 +74,6 @@ typedef struct
   uint32_t  len;            // Length of data buffer to write
   uint8_t   buf[1024];      // Data buffer to be written to the peripheral
 } TestArgs;
-
-SDRAMMap *GPSDRAM = (SDRAMMap *)(SDRAM_DEVICE_ADDR + BUFFER_OFFSET);
 
 static struct
 {
@@ -280,7 +270,7 @@ void Tests_runTest14(void)
   sTests.testArgs.len           = 50000;
   sTests.testArgs.opDelays.op[0].tDelay = 45000;
   sTests.testArgs.opDelays.op[0].eDelay = 600000;
-  sTests.testArgs.opDelays.op[0].dDelay = 0;
+  sTests.testArgs.opDelays.op[0].cDelay = 0;
   sTests.testArgs.profile       = HIH_PROFILE_STANDARD;
   sTests.testArgs.preTestDelay  = 1000;
   sTests.testArgs.testLen       = 50000;
@@ -483,10 +473,7 @@ static void Tests_setupSPITests(Device device, TestArgs *pArgs)
 {
   uint32_t numSamps = (pArgs->preTestDelay + pArgs->testLen + pArgs->postTestDelay)/pArgs->sampRate;
   
-  // Match the continuously variable domain (CVD) to the MCU domain voltage:
-  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 10));
   double refVolts = Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 100);
-  
   // Prepare data structures for retrieval
   sTests.testHeader.timeScale    = pArgs->sampRate; // in microseconds
   sTests.testHeader.numChannels  = 4;
@@ -545,7 +532,16 @@ static void Tests_setupSPITests(Device device, TestArgs *pArgs)
   // Begin sampling here!
   Analog_startSampleTimer(pArgs->sampRate);
   
-  Time_delay(pArgs->preTestDelay);  // This helps to identify state transitions
+  Delay delay = {.tDelay = pArgs->preTestDelay, .eDelay = 0, .cDelay = 0};
+  uint32_t preDelayEnergy = Time_pendEnergyTime(&delay);  // Helps to identify state transitions
+  
+  // If the test is calling for a current delay, then put the modified cDelay into the opDelay
+  if (pArgs->opDelays.op[0].cDelay != 0)
+  {
+    double postOpCurrent = (double)preDelayEnergy / (double)pArgs->preTestDelay;    // Get the I
+    postOpCurrent = postOpCurrent * ((double)pArgs->opDelays.op[0].cDelay / 100.0); // Modify
+    pArgs->opDelays.op[0].cDelay = (uint32_t)postOpCurrent;                         // Put in opDelay
+  }
 }
 
 /**************************************************************************************************\
@@ -889,6 +885,7 @@ uint16 Tests_test10(TestArgs *pArgs)
 uint16 Tests_test11(TestArgs *pArgs)
 {
   EEPROM_setPowerProfile((EEPROMPowerProfile)pArgs->profile);
+  EEPROM_setState(EEPROM_STATE_IDLE);
 
   Tests_setupSPITests(DEVICE_EEPROM, pArgs);
   EEPROMResult result = EEPROM_write(pArgs->buf, pArgs->pDst, pArgs->len, &pArgs->opDelays);
@@ -906,7 +903,8 @@ uint16 Tests_test11(TestArgs *pArgs)
 uint16 Tests_test12(TestArgs *pArgs)
 {
   M25PX_setPowerProfile((M25PXPowerProfile)pArgs->profile);
-
+  M25PX_setState(M25PX_STATE_IDLE);
+  
   Tests_setupSPITests(DEVICE_NORFLASH, pArgs);
   M25PXResult result = M25PX_write(pArgs->buf, pArgs->pDst, pArgs->len, &pArgs->opDelays);
   Tests_teardownSPITests(pArgs, (M25PX_RESULT_OK == result));
@@ -923,6 +921,7 @@ uint16 Tests_test12(TestArgs *pArgs)
 uint16 Tests_test13(TestArgs *pArgs)
 {
   SST26_setPowerProfile((SST26PowerProfile)pArgs->profile);
+  SST26_setState(SST26_STATE_IDLE);
 
   Tests_setupSPITests(DEVICE_NANDFLASH, pArgs);
   SST26Result result = SST26_write(pArgs->buf, pArgs->pDst, pArgs->len, &pArgs->opDelays);
@@ -940,13 +939,13 @@ uint16 Tests_test13(TestArgs *pArgs)
 uint16 Tests_test14(TestArgs *pArgs)
 { 
   SDCard_setPowerProfile((SDCardPowerProfile)pArgs->profile);
-  uint8 i;
+  uint32_t i;
   for (i = 0; i < 5; i++)
   {
     if (SDCard_initDisk())  // disk must be initialized before we can test writes to it
       break;
     Time_delay(300000);
-  }
+  }  // State + Voltage are properly set after initDisk, no need to reset them (like other tests)
   
   Tests_setupSPITests(DEVICE_SDCARD, pArgs);
   SDWriteResult writeResult = SDCard_write(pArgs->buf, pArgs->pDst, pArgs->len, &pArgs->opDelays);
@@ -968,7 +967,8 @@ uint16 Tests_test15(TestArgs *pArgs)
   bool convert = pArgs->buf[2];
   
   HIH613X_setPowerProfile((HIHPowerProfile)pArgs->profile);
-
+  HIH613X_setState(HIH_STATE_IDLE);
+  
   Tests_setupSPITests(DEVICE_TEMPSENSE, pArgs);
   HIHStatus hihResult = HIH613X_readTempHumidI2C(measure, readVal, convert, &pArgs->opDelays);
   Tests_teardownSPITests(pArgs, (HIH_STATUS_NORMAL == hihResult));

@@ -44,12 +44,14 @@ function [numFailures, chans, data, time] = runTest12(CommPort, numSweeps, testL
         filename = sprintf('./results/%s Test12-Profile%d-%dSweeps.mat', ...
                            datestr(now,'HH.MM.SS dd-mm-yy'), profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time')
-        testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testTime);
+        %testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testTime);
         
+        maTitle = strrep(name(:,profIter), 'Passed', 'Passed (50 Sample Moving Average)');
+        maTitle = strrep(maTitle, 'Failed', 'Failed (50 Sample Moving Average)');
         movingAverage = avgData(:,:,profIter);
         movingAverage(50:end-50,1) = conv(movingAverage(50:end-50,1), ones(50,1)/50, 'same');
         movingAverage(50:end-50,2) = conv(movingAverage(50:end-50,2), ones(50,1)/50, 'same');
         movingAverage(50:end-50,3) = conv(movingAverage(50:end-50,3), ones(50,1)/50, 'same');
-        testPlot(movingAverage(:,:), time, chans, name(:,profIter), testLen/1000);
+        testPlot(movingAverage(:,:), time, chans, maTitle(:,1), testTime);
     end
 end

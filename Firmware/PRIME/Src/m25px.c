@@ -164,7 +164,7 @@ double M25PX_getStateVoltage(void)
 * PARAMETERS  None
 * RETURNS     The M25PXState
 \**************************************************************************************************/
-static void M25PX_setState(M25PXState state)
+void M25PX_setState(M25PXState state)
 {
   if (sM25PX.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
@@ -341,7 +341,7 @@ M25PXResult M25PX_read(uint8 *pSrc, uint8 *pDest, uint16 length)
 \**************************************************************************************************/
 static boolean M25PX_directWrite(uint8 *pSrc, uint8 *pDest, uint32 length, Delay *pDelay)
 {
-  bool pollForDone = (0 == pDelay->tDelay) && (0 == pDelay->eDelay) && (0 == pDelay->dDelay);
+  bool pollForDone = (0 == pDelay->tDelay) && (0 == pDelay->eDelay) && (0 == pDelay->cDelay);
   uint32 bytesToWrite, writeCommand;
   bool success = true;
 
@@ -379,7 +379,7 @@ static boolean M25PX_directWrite(uint8 *pSrc, uint8 *pDest, uint32 length, Delay
 \**************************************************************************************************/
 static boolean M25PX_erase(uint8 *pDest, M25PXSize size, Delay *pDelay)
 {
-  bool pollForDone = (0 == pDelay->tDelay) && (0 == pDelay->eDelay) && (0 == pDelay->dDelay);
+  bool pollForDone = (0 == pDelay->tDelay) && (0 == pDelay->eDelay) && (0 == pDelay->cDelay);
   uint32 eraseCmd = ((uint32)pDest & 0x00FFFFFF);
 
   // Put the erase command into the transmit buffer and set timeouts, both according to size

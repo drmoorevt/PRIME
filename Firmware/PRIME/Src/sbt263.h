@@ -35,6 +35,7 @@ bool SBT263_test(void);
 boolean SBT263_setup(boolean state);
 SBTState SBT263_getState(void);
 uint32 SBT263_getStateAsWord(void);
+void SBT263_setState(SBTState state);
 double SBT263_getStateVoltage(void);
 void SBT263_notifyVoltageChange(double newVoltage);
 boolean SBT263_setPowerProfile(SBTPowerProfile profile);

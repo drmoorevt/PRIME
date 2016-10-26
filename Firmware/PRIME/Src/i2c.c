@@ -93,6 +93,7 @@ bool I2C_read(uint8_t devAddr, uint8 *pBytes, uint16 numBytes)
 {
   bool retVal = (HAL_OK == HAL_I2C_Master_Receive(spI2C, devAddr << 1, pBytes, numBytes, 100));
   return retVal;
+  /*
   if (!retVal)
     return false;
   // Wait for the last byte and stop to be transmitted
@@ -100,6 +101,7 @@ bool I2C_read(uint8_t devAddr, uint8 *pBytes, uint16 numBytes)
   while ((timeout-- > 0) && (spI2C->Instance->SR2 & I2C_SR2_BUSY))
     Time_delay(1);
   return (timeout > 0);
+  */
 }
 
 /*****************************************************************************\

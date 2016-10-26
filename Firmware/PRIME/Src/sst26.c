@@ -164,7 +164,7 @@ double SST26_getStateVoltage(void)
 * PARAMETERS  None
 * RETURNS     The SST26State
 \**************************************************************************************************/
-static void SST26_setState(SST26State state)
+void SST26_setState(SST26State state)
 {
   if (sSST26.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
@@ -354,7 +354,7 @@ SST26Result SST26_read(uint8 *pSrc, uint8 *pDest, uint32 length, bool fast)
 static boolean SST26_directWrite(uint8 *pSrc, uint8 *pDest, uint32 length, Delay *pDelay)
 {
   uint32 bytesToWrite, writeCommand;
-  bool pollForDone = (0 == pDelay->tDelay) && (0 == pDelay->eDelay) && (0 == pDelay->dDelay);
+  bool pollForDone = (0 == pDelay->tDelay) && (0 == pDelay->eDelay) && (0 == pDelay->cDelay);
   bool success = true;
 
   while ((length > 0) && (true == success))
@@ -391,7 +391,7 @@ static boolean SST26_directWrite(uint8 *pSrc, uint8 *pDest, uint32 length, Delay
 \**************************************************************************************************/
 static boolean SST26_erase(uint8 *pDest, SST26Size size, Delay *pDelay)
 {
-  bool pollForDone = (0 == pDelay->tDelay) && (0 == pDelay->eDelay) && (0 == pDelay->dDelay);
+  bool pollForDone = (0 == pDelay->tDelay) && (0 == pDelay->eDelay) && (0 == pDelay->cDelay);
   uint32 eraseCmd = ((uint32)pDest & 0x00FFFFFF);
 
   // Put the erase command into the transmit buffer and set timeouts, both according to size

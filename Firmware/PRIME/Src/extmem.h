@@ -1,6 +1,7 @@
 #ifndef EXTMEM_H
 #define EXTMEM_H
 
+#include "stm32f4xx_hal.h"
 #include "types.h"
 
 #define SDRAM_DEVICE_ADDR         ((uint32_t)0xD0000000)

@@ -23,6 +23,8 @@ static struct
   uint32_t *pPeriphState;
 } sAnalog;
 
+SDRAMMap *GPSDRAM = (SDRAMMap *)(SDRAM_DEVICE_ADDR + BUFFER_OFFSET);
+
 void Analog_initADC(ADCSelect adcNum);
 ADCPort Analog_getPortNumber(ADCSelect adcSelect);
 uint32_t Analog_getChannelNumber(ADCSelect adcSelect);
@@ -431,6 +433,31 @@ void Analog_openPort(ADCSelect adcSelect, AppADCConfig appConfig)
 }
 
 /**************************************************************************************************\
+* FUNCTION    Analog_getLatestSampleAverage
+* DESCRIPTION 
+* PARAMETERS  
+* RETURNS     The last N samples averaged together
+\**************************************************************************************************/
+uint32_t Analog_getLatestSampleAverage(SDRAMChannel chan, uint32_t numSamps)
+{
+  if ((0 == numSamps) || (numSamps > TESTS_MAX_SAMPLES))
+    return 0;
+  
+  uint32_t startIdx = 0, endIdx = 0, sampsAvg = 0;
+  // Find the last sample index (endIdx)
+  while ((0xFFFF != GPSDRAM->samples[chan][endIdx]) && (endIdx < TESTS_MAX_SAMPLES))
+    endIdx++;
+  
+  // Find the earliest sample index (0 if we are requesting more averages that samples available)
+  startIdx = (endIdx <= numSamps) ? 0 : (endIdx - numSamps);
+  
+  // Integrate the current samples and divide by the number of samples aggregated
+  while (startIdx < endIdx)
+    sampsAvg += GPSDRAM->samples[chan][startIdx++];
+  return sampsAvg / numSamps;
+}
+
+/**************************************************************************************************\
 * FUNCTION    Analog_setupTimer
 * DESCRIPTION Configures the ADCs to use DMA
 * PARAMETERS  irqPeriod: The IRQ period in microseconds
@@ -469,7 +496,7 @@ boolean Analog_setupTimer(uint32_t irqPeriod)
 }
 
 /**************************************************************************************************\
-* FUNCTION    ADC_getSamples
+* FUNCTION    Analog_configureADC
 * DESCRIPTION Configures an ADC port to provide a number of samples
 * PARAMETERS  port: The ADC port to get samples from
 *             numSamples: The number of samples after which the app will be notified

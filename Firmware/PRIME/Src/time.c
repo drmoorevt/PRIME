@@ -95,19 +95,41 @@ void Time_delay(uint32 microSeconds)
 /**************************************************************************************************\
 * FUNCTION      Time_accumulateEnergy
 * DESCRIPTION   Blocking delay
-* PARAMETERS    maxNum
+* PARAMETERS    numSamps -- The maximum number of samples to evaluate for energy AND current
 * RETURN        none
 \**************************************************************************************************/
-bool Time_accumulateEnergy(uint32_t maxNum)
+static bool Time_accumulateEnergy(const uint32_t numSamps, const uint32_t cDelay)
 {
-  while ((0xFFFF != GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][sTime.energyIdx]) && (maxNum--))
+  uint32_t sampCnt = numSamps;
+  while ((0xFFFF != GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][sTime.energyIdx]) && (sampCnt--))
   {
     sTime.accumEnergy += GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][sTime.energyIdx];
+    
     if ((sTime.accumEnergy > sTime.pendEnergy) || (sTime.energyIdx >= TESTS_MAX_SAMPLES))
-      return true;
+      return true;  // pending energy found or the test is now over
     else
       sTime.energyIdx++;
   }
+  
+  // Perform the current analysis if we've looked past preDelay (1ms) and we have a current target
+  if ((cDelay > 0) && (sTime.energyIdx > 4500))
+  {
+    // Find the earliest sample index (0 if we are requesting more averages than samples available)
+    uint32_t currAvg  = 0;
+    uint32_t endIdx   = sTime.energyIdx;
+    uint32_t startIdx = (endIdx <= numSamps) ? 0 : (endIdx - numSamps);
+    
+    // Integrate the current samples and divide by the number of samples aggregated
+    while (startIdx < endIdx)
+      currAvg += GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][startIdx++];
+    currAvg /= numSamps;
+    
+    if (currAvg <= cDelay)  // Return true if our avg current is now below the low current
+      return true;
+    else
+      return false;
+  }
+    
   return false;
 }
 
@@ -118,32 +140,36 @@ bool Time_accumulateEnergy(uint32_t maxNum)
 * RETURN        none
 * NOTES         Timer5 is connected to APB1 which is operating at 60MHz
 \**************************************************************************************************/
-void Time_pendEnergyTime(Delay *pDelay)
+uint64_t Time_pendEnergyTime(Delay *pDelay)
 {
-  if ((0 == pDelay->eDelay) && (0 == pDelay->tDelay))
-    return;
+  if ((0 == pDelay->tDelay) && (0 == pDelay->eDelay)&& (0 == pDelay->cDelay))
+    return 0;
   
-  sTime.accumEnergy = 0;  // Reset the accumulation parameters to zero
-  sTime.energyIdx = 0;
-  
-  // if this is called waiting on zero microjoules then assume no actual energy wait
+  // Setup the energy delay if requested, otherwise assume no actual energy wait
   if (pDelay->eDelay > 0)
     sTime.pendEnergy = pDelay->eDelay;
   else
     sTime.pendEnergy = 0xFFFFFFFFFFFFFFFF;
+  sTime.accumEnergy = 0;  // Reset the accumulation parameters to zero
+  sTime.energyIdx   = 0;
   
+  // Current delays are already setup via the pDelay
+  
+  // Setup the time delay if one is requested (do this close to the update flag polling)
   if (pDelay->tDelay > 0)
     Time_setupTimer(pDelay->tDelay);
   
   // Wait until timer hits the ARR value or the pending energy expenditure value reaches zero
   if (pDelay->tDelay > 0)
-    while ((!(TIM5->SR & TIM_SR_UIF)) && (false == Time_accumulateEnergy(50)));
+    while ((!(TIM5->SR & TIM_SR_UIF)) && (false == Time_accumulateEnergy(100, pDelay->cDelay)));
   else
-    while (false == Time_accumulateEnergy(50));
+    while (false == Time_accumulateEnergy(100, pDelay->cDelay));
+  
   TIM5->CR1     = (0x0000);                    // Turn off the counter entirely
   RCC->APB1RSTR |= RCC_APB1RSTR_TIM5RST;
   RCC->APB1RSTR &= (~RCC_APB1RSTR_TIM5RST);
   RCC->APB1ENR  &= (~RCC_APB1ENR_TIM5EN);      // Turn off Timer5 clocks (90 MHz)
+  return sTime.accumEnergy;
 }
 
 /**************************************************************************************************\
