@@ -5,29 +5,15 @@
 
 #define FILE_ID TIME_C
 
-struct
+static struct
 {
   SoftTimerConfig softTimers[TIME_SOFT_TIMER_MAX];
-  volatile uint64_t pendEnergy;
   volatile uint64_t accumEnergy;
   volatile uint32_t energyIdx;
+  volatile uint32_t sampIdx;
 } sTime;
 
 static void Time_decrementSoftTimers(void);
-
-/**************************************************************************************************\
-* FUNCTION      Time_notifyEnergyExpended
-* DESCRIPTION   
-* PARAMETERS    none
-* RETURN        none
-\**************************************************************************************************/
-bool Time_notifyEnergyExpended(uint32_t energyExpendedBitCounts)
-{
-  sTime.pendEnergy = (sTime.pendEnergy > energyExpendedBitCounts) 
-                   ? (sTime.pendEnergy - energyExpendedBitCounts)
-                   : (0);
-  return sTime.pendEnergy > 0;
-}
 
 /**************************************************************************************************\
 * FUNCTION      Time_init
@@ -98,25 +84,19 @@ void Time_delay(uint32 microSeconds)
 * PARAMETERS    numSamps -- The maximum number of samples to evaluate for energy AND current
 * RETURN        none
 \**************************************************************************************************/
-static bool Time_accumulateEnergy(const uint32_t numSamps, const uint32_t cDelay)
+static bool Time_accumulateEnergy(const uint32_t numSamps, Delay *pDelay)
 {
+  // Get (update) the latest sample index
   uint32_t sampCnt = numSamps;
-  while ((0xFFFF != GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][sTime.energyIdx]) && (sampCnt--))
-  {
-    sTime.accumEnergy += GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][sTime.energyIdx];
-    
-    if ((sTime.accumEnergy > sTime.pendEnergy) || (sTime.energyIdx >= TESTS_MAX_SAMPLES))
-      return true;  // pending energy found or the test is now over
-    else
-      sTime.energyIdx++;
-  }
+  while ((0xFFFF != GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][sTime.sampIdx]) && (sampCnt--))
+    sTime.sampIdx++;
   
   // Perform the current analysis if we've looked past preDelay (1ms) and we have a current target
-  if ((cDelay > 0) && (sTime.energyIdx > 4500))
+  if ((pDelay->cDelay > 0) && (sTime.sampIdx > 4500))
   {
     // Find the earliest sample index (0 if we are requesting more averages than samples available)
     uint32_t currAvg  = 0;
-    uint32_t endIdx   = sTime.energyIdx;
+    uint32_t endIdx   = sTime.sampIdx;
     uint32_t startIdx = (endIdx <= numSamps) ? 0 : (endIdx - numSamps);
     
     // Integrate the current samples and divide by the number of samples aggregated
@@ -124,13 +104,22 @@ static bool Time_accumulateEnergy(const uint32_t numSamps, const uint32_t cDelay
       currAvg += GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][startIdx++];
     currAvg /= numSamps;
     
-    if (currAvg <= cDelay)  // Return true if our avg current is now below the low current
+    if (currAvg <= pDelay->cDelay)  // Return true if our avg current is now below the low current
       return true;
-    else
-      return false;
+  }
+  
+  // Update the energy accumulation if necessary
+  if (pDelay->eDelay != 0)
+  {
+    while (sTime.energyIdx < sTime.sampIdx)
+    {
+      sTime.accumEnergy += GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][sTime.energyIdx];
+      if ((sTime.accumEnergy > pDelay->eDelay) || (sTime.energyIdx++ >= TESTS_MAX_SAMPLES))
+        return true;  // pending energy found or the test is now over
+    }
   }
     
-  return false;
+  return false;  // No conditions are sufficient to satisfy a complete energy or current delay
 }
 
 /**************************************************************************************************\
@@ -145,25 +134,20 @@ uint64_t Time_pendEnergyTime(Delay *pDelay)
   if ((0 == pDelay->tDelay) && (0 == pDelay->eDelay)&& (0 == pDelay->cDelay))
     return 0;
   
-  // Setup the energy delay if requested, otherwise assume no actual energy wait
-  if (pDelay->eDelay > 0)
-    sTime.pendEnergy = pDelay->eDelay;
-  else
-    sTime.pendEnergy = 0xFFFFFFFFFFFFFFFF;
-  sTime.accumEnergy = 0;  // Reset the accumulation parameters to zero
+  // Reset the energy analysis parameters to zero
+  sTime.accumEnergy = 0;
   sTime.energyIdx   = 0;
-  
-  // Current delays are already setup via the pDelay
-  
+  sTime.sampIdx     = 0;
+    
   // Setup the time delay if one is requested (do this close to the update flag polling)
   if (pDelay->tDelay > 0)
     Time_setupTimer(pDelay->tDelay);
   
   // Wait until timer hits the ARR value or the pending energy expenditure value reaches zero
-  if (pDelay->tDelay > 0)
-    while ((!(TIM5->SR & TIM_SR_UIF)) && (false == Time_accumulateEnergy(100, pDelay->cDelay)));
+  if ((0 == pDelay->eDelay) && (0 == pDelay->cDelay))
+    while (!(TIM5->SR & TIM_SR_UIF));  // Only check the timer if theres no energy analysis
   else
-    while (false == Time_accumulateEnergy(100, pDelay->cDelay));
+    while ((!(TIM5->SR & TIM_SR_UIF)) && (false == Time_accumulateEnergy(128, pDelay)));
   
   TIM5->CR1     = (0x0000);                    // Turn off the counter entirely
   RCC->APB1RSTR |= RCC_APB1RSTR_TIM5RST;

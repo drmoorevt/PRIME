@@ -1,5 +1,5 @@
 function [delayIdx] = getDelayIdx(opDelay)
-    if (opDelay(3) ~= 0)  % Are we looking for optimal dDelay?
+    if (opDelay(3) ~= 0)  % Are we looking for optimal cDelay?
         delayIdx = 3;
     elseif (opDelay(2) ~= 0)
         delayIdx = 2;

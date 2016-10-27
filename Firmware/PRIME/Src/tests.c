@@ -532,7 +532,7 @@ static void Tests_setupSPITests(Device device, TestArgs *pArgs)
   // Begin sampling here!
   Analog_startSampleTimer(pArgs->sampRate);
   
-  Delay delay = {.tDelay = pArgs->preTestDelay, .eDelay = 0, .cDelay = 0};
+  Delay delay = {.tDelay = pArgs->preTestDelay, .eDelay = 0xFFFFFFFF, .cDelay = 0};
   uint32_t preDelayEnergy = Time_pendEnergyTime(&delay);  // Helps to identify state transitions
   
   // If the test is calling for a current delay, then put the modified cDelay into the opDelay

@@ -78,6 +78,5 @@ void Time_startTimer(SoftTimerConfig timerConfig);
 uint32 Time_getTimerValue(SoftTimer timer);
 
 uint64_t Time_pendEnergyTime(Delay *pDelay);
-bool Time_notifyEnergyExpended(uint32_t energyExpendedBitCounts);
 
 #endif //TIME_H
