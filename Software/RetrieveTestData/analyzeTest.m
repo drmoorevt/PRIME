@@ -1,6 +1,6 @@
 % power data is (value:state:profile) over the length of time
 % energy data (value:state:profile) but scalar
-function [inEnergy, outEnergy, inEnergyDelta, outEnergyDelta] = analyzeTest(data, time)
+function [inEnergy, outEnergy, inEnergyDelta, outEnergyDelta, stateDurations] = analyzeTest(data, time)
     format long g
     % determine the input and output power for the test
     % data is (values, (v/i/state), [nothing] -- 1, profile,
@@ -9,7 +9,7 @@ function [inEnergy, outEnergy, inEnergyDelta, outEnergyDelta] = analyzeTest(data
     outPower(:,:) = data(:,1,:) .* data(:,3,:);
     
     STATE_MAX = 7;
-    stateRange = (3.3 * (4096.0 / STATE_MAX) / 4096.0) *.9;
+    stateRange = (3.3 * (4096.0 / STATE_MAX) / 4096.0) *.75;
     
     % calculate energy and power consumption for the preTestIdle phase
     i = 1;
@@ -22,13 +22,14 @@ function [inEnergy, outEnergy, inEnergyDelta, outEnergyDelta] = analyzeTest(data
         inEnergy(i,:)    = inAvePower(i,:)  .* stateDuration;
         outEnergy(i,:)   = outAvePower(i,:) .* stateDuration;
         stateStartIdx = stateEndIdx;
+        stateDurations(:,i) = stateDuration*1000;
         i = i + 1;
     end
     inEnergy  = inEnergy  .* 1000; % convert to microjoules
     outEnergy = outEnergy .* 1000; % convert to microjoules
     inEnergy(i,:)  = sum(inEnergy);
     outEnergy(i,:) = sum(outEnergy);
-
+    stateDurations = stateDurations';
     % Calculate normalized energy savings per state per profile
     for i = 1:length(inEnergy(1,:))
       inEnergyDelta(:,i)  = 100 * (1 - (inEnergy(:,i) ./ inEnergy(:,1)));

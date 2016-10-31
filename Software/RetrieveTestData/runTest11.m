@@ -42,7 +42,7 @@ function [numFailures, chans, data, time] = runTest11(CommPort, numSweeps, testL
             end
         end
         filename = sprintf('./results/%s Test11-Profile%d-%dSweeps.mat', ...
-                           datestr(now,'HH.MM.SS dd-mm-yy'), profIter, sweepIter-1);
+                           datestr(now,'dd-mm-yy HH.MM.SS'), profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time')
         %testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testTime, 6);
         
@@ -52,6 +52,6 @@ function [numFailures, chans, data, time] = runTest11(CommPort, numSweeps, testL
         movingAverage(1:end-1,1) = conv(movingAverage(1:end-1,1), ones(50,1)/50, 'same');
         movingAverage(1:end-1,2) = conv(movingAverage(1:end-1,2), ones(50,1)/50, 'same');
         movingAverage(1:end-1,3) = conv(movingAverage(1:end-1,3), ones(50,1)/50, 'same');
-        testPlot(movingAverage(:,:), time, chans, maTitle(:,1), testTime, 6);
+        testPlot(movingAverage(:,:), time, chans, maTitle(:,1), 0, 6);
     end
 end

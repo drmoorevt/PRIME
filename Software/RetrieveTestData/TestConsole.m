@@ -12,11 +12,11 @@ function [name, chans, data, time] = TestConsole(CommPort)
 %     end
 
     numSweeps = 1;
-    eeFails = 0;
+    eeFails  = 0;
     sf1Fails = 0;
     sf2Fails = 0;
     sd1Fails = 0;
-    htFails = 0;
+    htFails  = 0;
     
     % [[Delay #1 (Erase...)], [Delay #2 (Write...)], [Delay #3 (None yet)]]
     %           ^--- [Time Delay, Energy Delay, Differential Delay]
@@ -63,7 +63,7 @@ function [name, chans, data, time] = TestConsole(CommPort)
    %return
     
    %IODVS Tests
-   [eeFails,  chans, data, time] = runTest11(CommPort, numSweeps,   6000,  eeTimingIODVS, [1, 3]); % EEPROM
+   %[eeFails,  chans, data, time] = runTest11(CommPort, numSweeps,   6000,  eeTimingIODVS, [1, 3]); % EEPROM
    %[sf1Fails, chans, data, time] = runTest12(CommPort, numSweeps, 250000, sf1TimingIODVS, [1, 3]); % NOR
    %[sf2Fails, chans, data, time] = runTest13(CommPort, numSweeps,  80000, sf2TimingIODVS, [1, 3]); % NAND
    %[sd1Fails, chans, data, time] = runTest14(CommPort, numSweeps, 225000, sd1TimingIODVS, [1, 3]); % Lexar
@@ -87,7 +87,7 @@ function [name, chans, data, time] = TestConsole(CommPort)
    % Optimal Energy Delay Tests
    %[eeFails,  chans, data, time] = runTest21(CommPort, numSweeps, 6000,   eeTimingACRE,  [1, 3]); % EEPROM
    %[sf1Fails, chans, data, time] = runTest22(CommPort, numSweeps, 250000, sf1TimingACRE, [1, 3]); % NOR
-   %[sf2Fails, chans, data, time] = runTest23(CommPort, numSweeps, 80000,  sf2TimingACRE, [1, 3]); % NAND
+    [sf2Fails, chans, data, time] = runTest23(CommPort, numSweeps, 80000,  sf2TimingACRE, [1, 3]); % NAND
      % All SDCard Optimal timing tests are invalid due to the presence of onboard caches + SPI polling
    %[sd1Fails, chans, data, time] = runTest24(CommPort, numSweeps, 225000, sd1TimingACRE, [1, 3]); % Lexar
    %[sd2Fails, chans, data, time] = runTest24(CommPort, numSweeps, 225000, sd2TimingACRE, [1, 3]); % SanDisk
@@ -107,7 +107,7 @@ function [name, chans, data, time] = TestConsole(CommPort)
    %[htFails,  chans, data, time] = runTest15(CommPort, numSweeps, 50000,  htTimingACRD,  [1, 3]); % HIH
    
    %fprintf('Dev\tFails\nEE:\t%d\nSF:\t%d\nSD:\t%d\nHT:\t%d\n', eeFails, sfFails, sdFails, htFails);
-   %[inEnergy, outEnergy, inEnergyDelta, outEnergyDelta] = analyzeTest(data, time)
+   [inEnergy, outEnergy, inEnergyDelta, outEnergyDelta, stateDurations] = analyzeTest(data, time)
    return
    
    % End selection bypass
