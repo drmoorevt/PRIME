@@ -9,7 +9,7 @@ function [inEnergy, outEnergy, inEnergyDelta, outEnergyDelta, stateDurations] = 
     outPower(:,:) = data(:,1,:) .* data(:,3,:);
     
     STATE_MAX = 7;
-    stateRange = (3.3 * (4096.0 / STATE_MAX) / 4096.0) *.75;
+    stateRange = (3.3 * (4096.0 / STATE_MAX) / 4096.0) *.90;
     
     % calculate energy and power consumption for the preTestIdle phase
     i = 1;

@@ -26,8 +26,10 @@ function [numFailures, chans, data, time] = runTest14(CommPort, numSweeps, testL
             fprintf('Data: %s\n', dec2hex(writeBuffer));
             success = false;
             try
-                [name(:,profIter), chans, data(:,:,sweepIter,profIter), time, timeArray(sweepIter,:), success] ...
-                    = execTest(s, 14, args);
+                 [name(:,profIter), chans, data(:,:,sweepIter,profIter), time, timeArray(sweepIter,:), success] ...
+                     = execTest(s, 14, args);
+%                [name(:,profIter), chans, data1, time, timeArray(sweepIter,:), success] ...
+%                    = execTest(s, 14, args);
                 testPassed = strfind(name(profIter),'Passed');
                 if (cellfun('isempty', testPassed))
                     numFailures = numFailures + 1;
@@ -47,32 +49,32 @@ function [numFailures, chans, data, time] = runTest14(CommPort, numSweeps, testL
         save(filename,'name','chans','avgData','time','timeArray')
         %testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testTime, mean(avgData(:,3))*2);
         
-        maTitle = strrep(name(:,profIter), 'Passed', 'Passed (50 Sample Moving Average)');
-        maTitle = strrep(maTitle, 'Failed', 'Failed (50 Sample Moving Average)');
-        movingAverage = avgData(:,:,profIter);
-        movingAverage(50:end-50,1) = conv(movingAverage(50:end-50,1), ones(50,1)/50, 'same');
-        movingAverage(50:end-50,2) = conv(movingAverage(50:end-50,2), ones(50,1)/50, 'same');
-        movingAverage(50:end-50,3) = conv(movingAverage(50:end-50,3), ones(50,1)/50, 'same');
-        testPlot(movingAverage(:,:), time, chans, maTitle(:,1), 0, max(movingAverage(:,3)));
+         maTitle = strrep(name(:,profIter), 'Passed', 'Passed (50 Sample Moving Average)');
+         maTitle = strrep(maTitle, 'Failed', 'Failed (50 Sample Moving Average)');
+         movingAverage = avgData(:,:,profIter);
+         movingAverage(50:end-50,1) = conv(movingAverage(50:end-50,1), ones(50,1)/50, 'same');
+         movingAverage(50:end-50,2) = conv(movingAverage(50:end-50,2), ones(50,1)/50, 'same');
+         movingAverage(50:end-50,3) = conv(movingAverage(50:end-50,3), ones(50,1)/50, 'same');
+         testPlot(movingAverage(:,:), time, chans, maTitle(:,1), 0, 56);
         
 %         figure('Color', 'white');
 %         modStr = strrep(name(profIter), 'Passed', '');
 %         modStr = deblank(modStr);
-%         hist(timeArray(:,2));
+%         histfit(timeArray(:,2),max(24,round(numSweeps/10)),'kernel');
 %         t1 = title(sprintf('%s Delay Required (n = %d)',modStr{:}, numSweeps));
 %         set(t1,{'FontSize'},{10.0});
-%         xlabel('SPI Read Attempts Before Success');
-%         ylabel('Number of Occurrences');
-        
-%uncomment this one -- it works...
-%         figure('Color', 'white');
-%         modStr = strrep(name(profIter), 'Passed', '');
-%         modStr = deblank(modStr);
-%         hist(timeArray(:,2), 1000);
-%         t1 = title(sprintf('%s Delay Required (n = %d)',modStr{:}, numSweeps));
-%         set(t1,{'FontSize'},{10.0});
+%         set(gca, 'XLim', [0,max(timeArray(:,2))])
 %         xlabel('SPI Read Attempts Before Success');
 %         ylabel('Number of Occurrences');
 %         
+%         %%% Create the labels
+%         mnlabel =  sprintf('Mean -- %3.2f', mean(timeArray(:,2)));
+%         melabel =  sprintf('Median -- %3.2f', median(timeArray(:,2)));
+%         molabel =  sprintf('Mode -- %3.2f', mode(timeArray(:,2)));
+%         stdlabel = sprintf('Std Deviation -- %3.2f', std(timeArray(:,2)));
+%         
+%         %%% Create the textbox
+%         h = annotation('textbox',[0.40 0.80 0.10 0.10]);
+%         set(h,'String',{mnlabel,melabel,molabel,stdlabel});
     end
 end

@@ -6,7 +6,7 @@ function [fail, chans, retData, time] = runTest25(CommPort, numSweeps, testLen, 
         close all
         filename = sprintf('./results/%s Test25-Profile%d-OpDelays[%s].gif', ...
                            datestr(now,'dd-mm-yy HH.MM.SS'), profIter, sprintf('%d ', opDelay));
-        movie2gif(F, filename)
+        movie2gif(F1, filename)
         retData(:,:,1,profIter) = data(:,:,1,profIter);
     end
 end
