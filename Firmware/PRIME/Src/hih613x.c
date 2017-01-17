@@ -127,7 +127,7 @@ double HIH613X_getStateVoltage(void)
 * PARAMETERS  None
 * RETURNS     None
 \**************************************************************************************************/
-static void HIH613X_setState(HIHState state)
+void HIH613X_setState(HIHState state)
 {
   if (sHIH613X.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
@@ -226,7 +226,7 @@ void HIH613X_notifyVoltageChange(double newVoltage)
 *                delay occurring between the measurement and read
 *             2) The results are stored in the HIH613X structure
 \**************************************************************************************************/
-HIHStatus HIH613X_readTempHumidI2C(bool measure, bool read, bool convert, Delay *pDelay)
+HIHStatus HIH613X_readTempHumidI2C(bool measure, bool read, bool convert, OpDelays *pDelays)
 {
   uint8_t dummyWrite[1] = {0xFF};
   
@@ -242,8 +242,7 @@ HIHStatus HIH613X_readTempHumidI2C(bool measure, bool read, bool convert, Delay 
   if (measure && read)
   {
     // tMeasure ~= 36.65ms, but 45ms for reliability (comes in from fixture)
-    Time_delay(pDelay->tDelay);
-    //Time_pendEnergyTime(pDelay);
+    Time_pendEnergyTime(&pDelays->op[0]);
     HIH613X_setState(HIH_STATE_DATA_READY);
   }
 
@@ -276,8 +275,11 @@ HIHStatus HIH613X_readTempHumidI2C(bool measure, bool read, bool convert, Delay 
 \**************************************************************************************************/
 bool HIH613X_test(void)
 {
-  Delay delay = {0, 50000};
-  HIH613X_readTempHumidI2C(true, true, true, &delay);
+  OpDelays delays;
+  delays.op[0].tDelay = 50000;
+  delays.op[0].eDelay = 0;
+  delays.op[0].cDelay = 0;
+  HIH613X_readTempHumidI2C(true, true, true, &delays);
   return ((sHIH613X.currHum > 0) && (sHIH613X.currHum < 100) &&
           (sHIH613X.currTmp > 0) && (sHIH613X.currTmp < 100));
 }

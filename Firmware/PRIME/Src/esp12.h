@@ -35,6 +35,7 @@ bool ESP12_test(void);
 boolean ESP12_setup(boolean state);
 ESPState ESP12_getState(void);
 uint32 ESP12_getStateAsWord(void);
+void ESP12_setState(ESPState state);
 double ESP12_getStateVoltage(void);
 void ESP12_notifyVoltageChange(double newVoltage);
 boolean ESP12_setPowerProfile(ESPPowerProfile profile);

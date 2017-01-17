@@ -23,6 +23,8 @@ static struct
   uint32_t *pPeriphState;
 } sAnalog;
 
+SDRAMMap *GPSDRAM = (SDRAMMap *)(SDRAM_DEVICE_ADDR + BUFFER_OFFSET);
+
 void Analog_initADC(ADCSelect adcNum);
 ADCPort Analog_getPortNumber(ADCSelect adcSelect);
 uint32_t Analog_getChannelNumber(ADCSelect adcSelect);
@@ -201,9 +203,11 @@ void Analog_dmaInit(ADCPort adcNum)
   phDMA->Init.FIFOThreshold       = DMA_FIFO_THRESHOLD_1QUARTERFULL;
   phDMA->Init.MemBurst            = DMA_MBURST_SINGLE;
   phDMA->Init.PeriphBurst         = DMA_PBURST_SINGLE;
+  HAL_DMA_DeInit(phDMA);  // De-init so we clear all DMA (error) flags that may be present
   HAL_DMA_Init(phDMA);
   
   HAL_NVIC_SetPriority(dmaIRQ, 0, 0);  // Configure the NVIC for DMA
+  HAL_NVIC_ClearPendingIRQ(dmaIRQ);
   HAL_NVIC_EnableIRQ(dmaIRQ);
 }
 
@@ -429,6 +433,31 @@ void Analog_openPort(ADCSelect adcSelect, AppADCConfig appConfig)
 }
 
 /**************************************************************************************************\
+* FUNCTION    Analog_getLatestSampleAverage
+* DESCRIPTION 
+* PARAMETERS  
+* RETURNS     The last N samples averaged together
+\**************************************************************************************************/
+uint32_t Analog_getLatestSampleAverage(SDRAMChannel chan, uint32_t numSamps)
+{
+  if ((0 == numSamps) || (numSamps > TESTS_MAX_SAMPLES))
+    return 0;
+  
+  uint32_t startIdx = 0, endIdx = 0, sampsAvg = 0;
+  // Find the last sample index (endIdx)
+  while ((0xFFFF != GPSDRAM->samples[chan][endIdx]) && (endIdx < TESTS_MAX_SAMPLES))
+    endIdx++;
+  
+  // Find the earliest sample index (0 if we are requesting more averages that samples available)
+  startIdx = (endIdx <= numSamps) ? 0 : (endIdx - numSamps);
+  
+  // Integrate the current samples and divide by the number of samples aggregated
+  while (startIdx < endIdx)
+    sampsAvg += GPSDRAM->samples[chan][startIdx++];
+  return sampsAvg / numSamps;
+}
+
+/**************************************************************************************************\
 * FUNCTION    Analog_setupTimer
 * DESCRIPTION Configures the ADCs to use DMA
 * PARAMETERS  irqPeriod: The IRQ period in microseconds
@@ -467,7 +496,7 @@ boolean Analog_setupTimer(uint32_t irqPeriod)
 }
 
 /**************************************************************************************************\
-* FUNCTION    ADC_getSamples
+* FUNCTION    Analog_configureADC
 * DESCRIPTION Configures an ADC port to provide a number of samples
 * PARAMETERS  port: The ADC port to get samples from
 *             numSamples: The number of samples after which the app will be notified
@@ -533,7 +562,7 @@ boolean Analog_stopSampleTimer(void)
 * DESCRIPTION Catches interrupts from the DMA stream and dispatches them to their handler
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       DMA2, Stream0 is configured for DMA via ADC_1 (DMA Channel 0, ADC Channel 14, pin C4)
+* NOTES       DMA2, Stream4 is configured for DMA via ADC_1 (DMA Channel 0, ADC Channel 14, pin C4)
 \**************************************************************************************************/
 void DMA2_Stream4_IRQHandler(void)
 {
@@ -545,7 +574,7 @@ void DMA2_Stream4_IRQHandler(void)
 * DESCRIPTION Catches interrupts from the DMA stream and dispatches them to their handler
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       DMA2, Stream1 is configured for DMA via ADC_3 (DMA Channel 2, ADC Channel 11, pin C1)
+* NOTES       DMA2, Stream2 is configured for DMA via ADC_2 (DMA Channel 1, ADC Channel 15, pin C5)
 \**************************************************************************************************/
 void DMA2_Stream2_IRQHandler(void)
 {
@@ -557,7 +586,7 @@ void DMA2_Stream2_IRQHandler(void)
 * DESCRIPTION Catches interrupts from the DMA stream and dispatches them to their handler
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       DMA2, Stream2 is configured for DMA via ADC_2 (DMA Channel 1, ADC Channel 15, pin C5)
+* NOTES       DMA2, Stream2 is configured for DMA via ADC_3 (DMA Channel 2, ADC Channel 11, pin C1)
 \**************************************************************************************************/
 void DMA2_Stream0_IRQHandler(void)
 {
@@ -569,7 +598,7 @@ void DMA2_Stream0_IRQHandler(void)
 * DESCRIPTION Catches interrupts from the DMA stream and dispatches them to their handler
 * PARAMETERS  None
 * RETURNS     Nothing
-* NOTES       DMA2, Stream2 is configured for DMA via ADC_2 (DMA Channel 1, ADC Channel 15, pin C5)
+* NOTES       DMA2, Stream1 is configured for DMA via MEM2MEM DMA
 \**************************************************************************************************/
 void DMA2_Stream1_IRQHandler(void)
 {

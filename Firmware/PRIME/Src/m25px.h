@@ -98,14 +98,15 @@ typedef struct
 
 bool    M25PX_test(void);
 void    M25PX_init(void);
+void    M25PX_setState(M25PXState state);
 M25PXFlashId M25PX_readM25PXFlashId(void);
-uint32  M25PX_getStateAsWord(void);
+uint32_t *M25PX_getStatePointer(void);
 double  M25PX_getStateVoltage(void);
 boolean M25PX_setup(boolean state);
 M25PXState M25PX_getState(void);
 boolean M25PX_setPowerProfile(M25PXPowerProfile profile);
 boolean M25PX_setPowerState(M25PXState state, double vDomain);
 M25PXResult M25PX_read(uint8 *pSrc, uint8 *pDest, uint16 length);
-M25PXResult M25PX_write(uint8 *pSrc, uint8 *pDst, uint32 len, uint32 eraseDelay, uint32 writeDelay);
+M25PXResult M25PX_write(uint8 *pSrc, uint8 *pDst, uint32 len, OpDelays *pDelays);
 
 #endif

@@ -1,6 +1,6 @@
-function [s] = openFixtureComms(CommPort, BaudRate)
+function [s] = openFixtureComms(CommPort)
     try % Attempt to open the PEGMA comm port
-        s = serial(CommPort,'BaudRate',BaudRate,'InputBufferSize',4194304, ...
+        s = serial(CommPort,'BaudRate',115200,'InputBufferSize',4194304, ...
                             'Timeout',1, 'RequestToSend','off');
         fopen(s);
         if (s.BytesAvailable > 0)

@@ -1,37 +1,12 @@
-function [name, chans, data, time] = runTest24(CommPort, baudRate, numSweeps, testLen, opDelay)
-    delete(instrfindall);
-    s = openFixtureComms(CommPort, baudRate);
-    
-    if (opDelay(4) == 0)  % Are we looking for optimal tDelay? Then eDelay will be zero
-        i = 1;
-        lowerLim = opDelay(4);
-        upperLim = lowerLim * 2;
-        while (lowerLim ~= upperLim)
-            fprintf('\n\nTesting tDelay: %d\n\n', lowerLim);
-            [fail, chans, data, time] = runTest14(CommPort, 921600, numSweeps,  testLen,  [lowerLim, opDelay(2), opDelay(3), opDelay(4)]);
-            [upperLim, lowerLim] = binSearch(fail, upperLim, lowerLim);
-            %set(gcf,'units','normalized','outerposition',[0 0 1 1])
-            F(i) = getframe(gcf);
-            i = i + 1;
-            close all
-        end
-        fprintf('\n\nOptimal tDelay: %d\n\n', lowerLim);
-    else
-        i = 1;
-        lowerLim = opDelay(4);
-        upperLim = lowerLim * 2;
-        while (lowerLim ~= upperLim)
-            fprintf('\n\nTesting eDelay: %d\n\n', lowerLim);
-            [fail, chans, data, time] = runTest14(CommPort, 921600, numSweeps,  testLen,  [opDelay(1), opDelay(2), opDelay(3), lowerLim]);
-            [upperLim, lowerLim] = binSearch(fail, upperLim, lowerLim);
-            %set(gcf,'units','normalized','outerposition',[0 0 1 1])
-            F(i) = getframe(gcf);
-            i = i + 1;
-            close all
-        end
-        fprintf('\n\nOptimal eDelay: %d\n\n', lowerLim);
+function [fail, chans, retData, time] = runTest24(CommPort, numSweeps, testLen, opDelay, profileList)
+    for profListIdx = 1:numel(profileList)
+        profIter = profileList(profListIdx);
+        [fail, chans, data, time, F1, opDelay] = optimizeDelay(14, CommPort, numSweeps, testLen, opDelay, 1, profIter);
+        fprintf('Optimal delays: [ %s]\n', sprintf('%d ', opDelay));
+        close all
+        filename = sprintf('./results/%s Test24-Profile%d-OpDelays[%s].gif', ...
+                           datestr(now,'dd-mm-yy HH.MM.SS'), profIter, sprintf('%d ', opDelay));
+        movie2gif(F, filename)
+        retData(:,:,1,profIter) = data(:,:,1,profIter);
     end
-    close all
-    figure
-    movie(gcf,F,1000000,3)
 end

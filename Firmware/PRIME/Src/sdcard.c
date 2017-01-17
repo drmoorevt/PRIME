@@ -324,6 +324,20 @@ static struct
 
 static SDCommandResult SDCard_readBlock(SDCommand cmd, uint32 arg);
 
+SDCardTiming SDCard_getLastTiming(void)
+{
+  SDCardTiming timing =
+  {
+    .cmdWaitClocks       = sSDCard.cmdWaitClocks,
+    .writeWaitClocks     = sSDCard.writeWaitClocks,
+    .preReadWaitClocks   = sSDCard.preReadWaitClocks,
+    .postReadWaitClocks  = sSDCard.postReadWaitClocks,
+    .preWriteWaitClocks  = sSDCard.preWriteWaitClocks,
+    .postWriteWaitClocks = sSDCard.postWriteWaitClocks
+  };
+  return timing;
+}
+
 /**************************************************************************************************\
 * FUNCTION    SDCard_init
 * DESCRIPTION Initializes the SDCard module
@@ -365,25 +379,14 @@ boolean SDCard_setup(boolean state)
 }
 
 /**************************************************************************************************\
-* FUNCTION    SDCard_getState
+* FUNCTION    SDCard_getStatePointer
 * DESCRIPTION Returns the current state of the SDCard
 * PARAMETERS  None
 * RETURNS     The current state of SDCard
 \**************************************************************************************************/
-SDCardState SDCard_getState(void)
+uint32_t *SDCard_getStatePointer(void)
 {
-  return sSDCard.state;
-}
-
-/**************************************************************************************************\
-* FUNCTION    SDCard_getStateAsWord
-* DESCRIPTION Returns the current state of the SDCard
-* PARAMETERS  None
-* RETURNS     The current state of SDCard
-\**************************************************************************************************/
-uint32 SDCard_getStateAsWord(void)
-{
-  return (uint32)sSDCard.state;
+  return (uint32_t *)&sSDCard.state;
 }
 
 /**************************************************************************************************\
@@ -777,7 +780,7 @@ static SDCommandResult SDCard_sendDataBlock(uint8 token)
 * PARAMETERS  block - The block number to write
 * RETURNS     SDCARD_RESPONSE_OK if the write succeeds, various SDCommandResults otherwise
 \**************************************************************************************************/
-static SDCommandResult SDCard_writeBlock(uint32 block, uint32 writeDelay)
+static SDCommandResult SDCard_writeBlock(uint32 block, Delay *pDelay)
 {
   SDCommandResponseR1 cardStatusRespR1, writeBlockRespR1;
   SDCommandResponseR2 cardStatusRespR2;
@@ -792,16 +795,12 @@ static SDCommandResult SDCard_writeBlock(uint32 block, uint32 writeDelay)
   dataResp = SDCard_sendDataBlock(START_SINGLE_BLOCK_TOKEN);
   sSDCard.preWriteWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_PRE_WRITE_BYTES);
   
-  if (writeDelay > 0)
-  {
-    SDCard_setState(SDCARD_STATE_WAITING); // Set the state and voltage
-    SDCard_setup(FALSE); // Turn on the SPI and control pins
-    Time_delay(writeDelay); // Wait for the SDCard to complete the write
-    SDCard_setup(TRUE); // Turn on the SPI and control pins
-    SDCard_setState(SDCARD_STATE_WRITING); // Set the state and voltage
-    //Time_delay(1000); // is this necessary?
-    SELECT_CHIP_SD();
-  }
+  SDCard_setState(SDCARD_STATE_WAITING); // Set the state and voltage
+  SDCard_setup(FALSE); // Turn on the SPI and control pins
+  Time_pendEnergyTime(pDelay); // Wait for the SDCard to complete the write
+  SDCard_setup(TRUE); // Turn on the SPI and control pins
+  SDCard_setState(SDCARD_STATE_WRITING); // Set the state and voltage
+  SELECT_CHIP_SD();
   
   sSDCard.writeWaitClocks = SDCard_waitReady(0xFF, SD_MAX_WAIT_WRITE_BYTES); // Wait for bus release
   cardStatusRespR1 = SDCard_sendCommand(CARD_STATUS, 0x00000000, SD_MAX_WAIT_RESP_BYTES);
@@ -825,7 +824,7 @@ static SDCommandResult SDCard_writeBlock(uint32 block, uint32 writeDelay)
 *             length - number of bytes to write
 * RETURNS     TRUE if the write succeeds, FALSE otherwise
 \**************************************************************************************************/
-SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length, uint32 opDelay)
+SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length, OpDelays *pDelays)
 {
   uint8 verify;
   uint32 block, offset;
@@ -849,7 +848,7 @@ SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length, uint32 opDe
 
   // Write the new contents of the block to the SDCard
   SDCard_setState(SDCARD_STATE_WRITING); // Set the state and voltage
-  writeResult = SDCard_writeBlock(block, opDelay);
+  writeResult = SDCard_writeBlock(block, &pDelays->op[0]);
 
   // Verify that the source data now resides in the block
   SDCard_setState(SDCARD_STATE_VERIFYING); // Set the state and voltage

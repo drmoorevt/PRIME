@@ -43,16 +43,27 @@ typedef enum
   SDCARD_RESULT_MAX
 } SDWriteResult;
 
+typedef struct
+{
+  uint32 cmdWaitClocks;
+  uint32 writeWaitClocks;
+  uint32 preReadWaitClocks;
+  uint32 postReadWaitClocks;
+  uint32 preWriteWaitClocks;
+  uint32 postWriteWaitClocks;
+} SDCardTiming;
+
+SDCardTiming SDCard_getLastTiming(void);
+
 void    SDCard_init(void);
 boolean SDCard_setup(boolean state);
 boolean SDCard_initDisk(void);
 void SDCard_notifyVoltageChange(double newVoltage);
 boolean SDCard_read(uint8 *pSrc, uint8 *pDest, uint16 length);
-SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length, uint32_t opDelay);
+SDWriteResult SDCard_write(uint8 *pSrc, uint8 *pDest, uint16 length, OpDelays *pDelays);
 boolean SDCard_setPowerState(SDCardState state, double vDomain);
 boolean SDCard_setPowerProfile(SDCardPowerProfile profile);
-uint32 SDCard_getStateAsWord(void);
-SDCardState SDCard_getState(void);
+uint32_t *SDCard_getStatePointer(void);
 double SDCard_getStateVoltage(void);
 bool    SDCard_test(void);
 

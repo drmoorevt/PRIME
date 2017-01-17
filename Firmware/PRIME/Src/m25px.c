@@ -137,25 +137,14 @@ boolean M25PX_setup(boolean state)
 }
 
 /**************************************************************************************************\
-* FUNCTION    M25PX_getState
+* FUNCTION    M25PX_getStatePointer
 * DESCRIPTION Returns the internal state of M25PX
 * PARAMETERS  None
 * RETURNS     The M25PXState
 \**************************************************************************************************/
-M25PXState M25PX_getState(void)
+uint32_t *M25PX_getStatePointer(void)
 {
-  return sM25PX.state;
-}
-
-/**************************************************************************************************\
-* FUNCTION    M25PX_getStateAsWord
-* DESCRIPTION Returns the internal state of M25PX
-* PARAMETERS  None
-* RETURNS     The M25PXState
-\**************************************************************************************************/
-uint32 M25PX_getStateAsWord(void)
-{
-  return (uint32)sM25PX.state;
+  return (uint32_t *)&sM25PX.state;
 }
 
 /**************************************************************************************************\
@@ -175,7 +164,7 @@ double M25PX_getStateVoltage(void)
 * PARAMETERS  None
 * RETURNS     The M25PXState
 \**************************************************************************************************/
-static void M25PX_setState(M25PXState state)
+void M25PX_setState(M25PXState state)
 {
   if (sM25PX.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
@@ -305,20 +294,21 @@ static void M25PX_clearStatusRegister(void)
 *             timeout:  Timeout in milliseconds
 * RETURNS     TRUE if polling was not required, or if the timeout did not expire while polling
 \**************************************************************************************************/
-static boolean M25PX_waitForWriteComplete(boolean pollChip, uint32 timeout)
+static boolean M25PX_waitForWriteComplete(boolean pollChip, Delay *pDelay)
 {
   SoftTimerConfig sfTimeout = {TIME_SOFT_TIMER_SERIAL_MEM, 0, 0, NULL};
   M25PX_setState(M25PX_STATE_WAITING);
+  
   if (pollChip)
-  {
-    sfTimeout.value = timeout;
+  { // Use only time to delay (not energy or current differential)
+    sfTimeout.value = pDelay->tDelay;
     Time_startTimer(sfTimeout);
     while (M25PX_readStatusRegister().writeInProgress && Time_getTimerValue(TIME_SOFT_TIMER_SERIAL_MEM));
     return (Time_getTimerValue(TIME_SOFT_TIMER_SERIAL_MEM) > 0);
   }
   else
   {
-    Time_delay(timeout);
+    Time_pendEnergyTime(pDelay);
     return TRUE;
   }
 }
@@ -349,12 +339,13 @@ M25PXResult M25PX_read(uint8 *pSrc, uint8 *pDest, uint16 length)
 *             length - number of bytes to read
 * RETURNS     nothing
 \**************************************************************************************************/
-static boolean M25PX_directWrite(uint8 *pSrc, uint8 *pDest, uint32 length, uint32 writeDelay)
+static boolean M25PX_directWrite(uint8 *pSrc, uint8 *pDest, uint32 length, Delay *pDelay)
 {
+  bool pollForDone = (0 == pDelay->tDelay) && (0 == pDelay->eDelay) && (0 == pDelay->cDelay);
   uint32 bytesToWrite, writeCommand;
-  bool success;
+  bool success = true;
 
-  while (length > 0)
+  while ((length > 0) && (true == success))
   {
     bytesToWrite = (length > M25PX_SIZE_PAGE) ? M25PX_SIZE_PAGE : length;
     writeCommand = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_WRITE_PAGE << 24);
@@ -370,9 +361,7 @@ static boolean M25PX_directWrite(uint8 *pSrc, uint8 *pDest, uint32 length, uint3
     DESELECT_CHIP_OF();
     M25PX_setup(FALSE);
 
-    // Has the page write time been overriden?
-    success  = (writeDelay > 0) ? M25PX_waitForWriteComplete(FALSE, writeDelay) 
-                                : M25PX_waitForWriteComplete(FALSE, PAGE_WRITE_TIME);
+    success  = M25PX_waitForWriteComplete(pollForDone, pDelay);
     length -= bytesToWrite;
     pDest  += bytesToWrite;
     pSrc   += bytesToWrite;
@@ -388,26 +377,22 @@ static boolean M25PX_directWrite(uint8 *pSrc, uint8 *pDest, uint32 length, uint3
 *             length - number of bytes to erase
 * RETURNS     status byte for serial flash
 \**************************************************************************************************/
-static boolean M25PX_erase(uint8 *pDest, M25PXSize size, uint32_t eraseDelay)
+static boolean M25PX_erase(uint8 *pDest, M25PXSize size, Delay *pDelay)
 {
+  bool pollForDone = (0 == pDelay->tDelay) && (0 == pDelay->eDelay) && (0 == pDelay->cDelay);
   uint32 eraseCmd = ((uint32)pDest & 0x00FFFFFF);
-  uint32 timeout;
-  bool success;
 
   // Put the erase command into the transmit buffer and set timeouts, both according to size
   switch (size)
   {
     case M25PX_SIZE_SUBSECTOR:
       eraseCmd = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_SUBSECTOR_ERASE << 24);
-      timeout  = (SUBSECTOR_ERASE_TIME);
       break;
     case M25PX_SIZE_SECTOR:
       eraseCmd = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_SECTOR_ERASE << 24);
-      timeout  = (SECTOR_ERASE_TIME);
       break;
     case M25PX_SIZE_CHIP:
       eraseCmd = ((uint32)pDest & 0x00FFFFFF) | ((uint32)OP_BULK_ERASE << 24);
-      timeout  = (BULK_ERASE_TIME);
       break;
     default:
       return FALSE;
@@ -418,27 +403,23 @@ static boolean M25PX_erase(uint8 *pDest, M25PXSize size, uint32_t eraseDelay)
   M25PX_sendWriteEnable();
   M25PX_transceive((uint8 *)&eraseCmd, sizeof(eraseCmd), NULL, 0);
 
-  // Has the erase time been overriden?
-  success  = (eraseDelay > 0) ? M25PX_waitForWriteComplete(FALSE, eraseDelay) 
-                              : M25PX_waitForWriteComplete(FALSE, timeout);
-  return success;
+  return M25PX_waitForWriteComplete(pollForDone, pDelay);  // return device registers op complete
 }
 
-/*****************************************************************************\
+/**************************************************************************************************\
 * FUNCTION    M25PX_write
 * DESCRIPTION Writes a buffer to Serial Flash
 * PARAMETERS  pSrc - pointer to source RAM buffer
 *             pDest - pointer to destination in M25PX
 *             length - number of bytes to write
 * RETURNS     TRUE if the write succeeds
-\*****************************************************************************/
-M25PXResult M25PX_write(uint8 *pSrc, uint8 *pDst, uint32 len, uint32 eraseDelay, uint32 writeDelay)
+\**************************************************************************************************/
+M25PXResult M25PX_write(uint8 *pSrc, uint8 *pDst, uint32 len, OpDelays *pDelays)
 {
   M25PXResult result = M25PX_RESULT_OK;
   uint8  *pCache   = (uint8 *)&sM25PX.subSector.byte[0];
   uint8  *pTestSub = (uint8 *)&sM25PX.testSubSector.byte[0];
   uint8  *pSubSector, *pCacheDest;
-  uint8   retries;
   uint16  numToWrite;
   
   // Ensure that the chip has enough voltage and time to power up
@@ -459,21 +440,20 @@ M25PXResult M25PX_write(uint8 *pSrc, uint8 *pDst, uint32 len, uint32 eraseDelay,
     M25PX_read(pSubSector, pCache, M25PX_SIZE_SUBSECTOR);
     
     // Erase sub sector, it is now in local cache
-    M25PX_erase(pSubSector, M25PX_SIZE_SUBSECTOR, eraseDelay);
+    M25PX_erase(pSubSector, M25PX_SIZE_SUBSECTOR, &pDelays->op[0]);
 
     // Overwrite local cache with the source data at the specified destination
     Util_copyMemory(pSrc, pCacheDest, numToWrite);
     
     // Write the whole sub-sector back to flash
-    M25PX_directWrite(pCache, pSubSector, M25PX_SIZE_SUBSECTOR, writeDelay);
+    M25PX_directWrite(pCache, pSubSector, M25PX_SIZE_SUBSECTOR, &pDelays->op[1]);
 
     // Compare memory to determine if the write was successful
     M25PX_read(pSubSector, pTestSub, M25PX_SIZE_SUBSECTOR);
     
     if (0 != Util_compareMemory(pCache, pTestSub, M25PX_SIZE_SUBSECTOR))
-      retries = 0;  // Will fail out (with line reset) on next line of code
-      
-    result = (retries == 0) ? M25PX_RESULT_ERROR : result;
+      result = M25PX_RESULT_ERROR;
+    
     pSrc  += numToWrite; // update source pointer
     pDst  += numToWrite; // update destination pointer
     len   -= numToWrite;

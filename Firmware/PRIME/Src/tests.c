@@ -11,6 +11,8 @@
 #include "m25px.h"
 #include "plr5010d.h"
 #include "spi.h"
+#include "sst26.h"
+#include "tests.h"
 #include "time.h"
 #include "util.h"
 #include <string.h>
@@ -18,18 +20,6 @@
 #include <stdio.h>
 
 #define FILE_ID TESTS_C
-
-#define SDRAM_NUM_CHANNELS        (4)
-#define SDRAM_NUM_TOTAL_SAMPLES   ((SDRAM_DEVICE_SIZE - BUFFER_OFFSET) / sizeof(uint16_t))
-#define TESTS_MAX_SAMPLES         (SDRAM_NUM_TOTAL_SAMPLES / SDRAM_NUM_CHANNELS)
-
-typedef enum
-{
-  HIH_CHANNEL_OVERLOAD = 21,
-  EE_CHANNEL_OVERLOAD  = 22,
-  SF_CHANNEL_OVERLOAD  = 23,
-  SD_CHANNEL_OVERLOAD  = 24
-} PeripheralChannels;
 
 typedef enum
 {
@@ -57,11 +47,12 @@ typedef struct
 
 typedef struct
 {
-  uint32 headerBytes;  // The size of this struct
-  char   title[64];    // Title of this test
-  uint32 timeScale;    // Time between samples in micro seconds
-  uint32 bytesPerChan; // Number of bytes to expect per channel
-  uint32 numChannels;  // Total number of channels
+  uint32       headerBytes;  // The size of this struct
+  char         title[64];    // Title of this test
+  uint32       timeScale;    // Time between samples in micro seconds
+  uint32       bytesPerChan; // Number of bytes to expect per channel
+  uint32       numChannels;  // Total number of channels
+  SDCardTiming timing;       // This will ultimately be a union for devices with variable timing
 } TestHeader;
 
 typedef struct
@@ -75,7 +66,7 @@ typedef struct
 {
   uint32_t  sampRate;
   uint32_t  testLen;        // Estimated duration of the operation
-  uint32_t  opDelay[4];     // Time / Energy delays associated with the operation
+  OpDelays  opDelays;       // Time / Energy delays associated with the operation
   uint32_t  profile;        // The power profile that the device will use to complete the operation
   uint32_t  preTestDelay;   // Time to wait while sampling before performing the operation
   uint32_t  postTestDelay;  // Time to wait while sampling after performing the operation
@@ -83,13 +74,6 @@ typedef struct
   uint32_t  len;            // Length of data buffer to write
   uint8_t   buf[1024];      // Data buffer to be written to the peripheral
 } TestArgs;
-
-typedef struct
-{
-  uint16_t samples[4][TESTS_MAX_SAMPLES];
-} SDRAMMap;
-
-SDRAMMap *GPSDRAM = (SDRAMMap *)(SDRAM_DEVICE_ADDR + BUFFER_OFFSET);
 
 static struct
 {
@@ -178,7 +162,7 @@ void Tests_init(void)
   sTests.adc2.pSampleBuffer        = &GPSDRAM->samples[1][0];
   sTests.adc3.pSampleBuffer        = &GPSDRAM->samples[2][0];
   sTests.periphState.pSampleBuffer = &GPSDRAM->samples[3][0];
-    
+  
   // Reset all devices to default domain
   Device i;
   for (i = DEVICE_EEPROM; i < DEVICE_MAX; i++)
@@ -283,9 +267,11 @@ void Tests_notifyConversionComplete(ADCPort port, uint32_t chan, uint32 numSampl
 \**************************************************************************************************/
 void Tests_runTest14(void)
 {
-  sTests.testArgs.len = 50000;
-  sTests.testArgs.opDelay[0] = 45000;
-  sTests.testArgs.profile = HIH_PROFILE_STANDARD;
+  sTests.testArgs.len           = 50000;
+  sTests.testArgs.opDelays.op[0].tDelay = 45000;
+  sTests.testArgs.opDelays.op[0].eDelay = 600000;
+  sTests.testArgs.opDelays.op[0].cDelay = 0;
+  sTests.testArgs.profile       = HIH_PROFILE_STANDARD;
   sTests.testArgs.preTestDelay  = 1000;
   sTests.testArgs.testLen       = 50000;
   sTests.testArgs.sampRate      = 1;
@@ -402,7 +388,7 @@ void Tests_run(void)
 \**************************************************************************************************/
 bool Tests_sendHeaderInfo(void)
 {
-  uint8 i, txBufOffset = 0;
+  uint32_t i, txBufOffset = 0;
   boolean tfAck = FALSE;
   uint16 crc;
 
@@ -425,13 +411,13 @@ bool Tests_sendHeaderInfo(void)
                     sizeof(ChanHeader));
     txBufOffset += sizeof(ChanHeader);
   }
+  
   crc = CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, (uint8 *)&sTests.comms.txBuffer, txBufOffset);
   Util_copyMemory((uint8 *)&crc, (uint8 *)&sTests.comms.txBuffer[txBufOffset], sizeof(crc));
   txBufOffset += 2;
 
   while (FALSE == tfAck)
-  {
-    // Send the header + CRC out the VCP
+  { // Send the header + CRC out the VCP
     Tests_sendData(txBufOffset);
     Tests_receiveData(1, 1000); // Wait for the ack
     if (sTests.comms.rxBuffer[0] == 0x54) // reset attempt
@@ -451,7 +437,8 @@ bool Tests_sendHeaderInfo(void)
 bool Tests_sendBinaryResults(Samples *adcBuffer)
 {
   uint8 *pData = (uint8 *)adcBuffer->pSampleBuffer;
-  uint16_t crc = CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, pData, sTests.testHeader.bytesPerChan);
+  uint16_t crc = 0;
+  //uint16_t crc = CRC_crc16(0x0000, CRC16_POLY_CCITT_STD, pData, sTests.testHeader.bytesPerChan);
   
   while(1)
   {
@@ -486,15 +473,7 @@ static void Tests_setupSPITests(Device device, TestArgs *pArgs)
 {
   uint32_t numSamps = (pArgs->preTestDelay + pArgs->testLen + pArgs->postTestDelay)/pArgs->sampRate;
   
-  // Match the continuously variable domain (CVD) to the MCU domain voltage:
-  PowerCon_setDomainVoltage(VOLTAGE_DOMAIN_2, Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 10));
-  // Place every device other than the DUT into the MCU domain. Place the DUT in the CVD:
-  uint32_t i;
-//  for (i = 0; i < DEVICE_MAX; i++)
-//    PowerCon_setDeviceDomain((Device)i, VOLTAGE_DOMAIN_0);
-//  PowerCon_setDeviceDomain(device, VOLTAGE_DOMAIN_2);
   double refVolts = Analog_getADCVoltage(ADC_DOM0_VOLTAGE, 100);
-  
   // Prepare data structures for retrieval
   sTests.testHeader.timeScale    = pArgs->sampRate; // in microseconds
   sTests.testHeader.numChannels  = 4;
@@ -510,22 +489,25 @@ static void Tests_setupSPITests(Device device, TestArgs *pArgs)
   {
     case 11: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / EEPROM_STATE_MAX) / 4096.0); break;
     case 12: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / M25PX_STATE_MAX)  / 4096.0); break;
-    case 13: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / SDCARD_STATE_MAX) / 4096.0); break;
-    case 14: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / HIH_STATE_MAX)    / 4096.0); break;
+    case 13: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / SST26_STATE_MAX)  / 4096.0); break;
+    case 14: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / SDCARD_STATE_MAX) / 4096.0); break;
+    case 15: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / HIH_STATE_MAX)    / 4096.0); break;
     default: sTests.chanHeader[3].bitRes   = (3.3 * (4096.0 / 5)                / 4096.0); break;
   }
   
   // Disable all interrupts (except for the adc trigger which will be enabled last)
   DISABLE_SYSTICK_INTERRUPT();
+  uint32_t i;
   for (i = 0; i <= DMA2D_IRQn; i++)
     NVIC_DisableIRQ((IRQn_Type)i);
 
   switch (device)
   {
+    case DEVICE_EEPROM:    Analog_setPeriphStatePointer(EEPROM_getStatePointer());  break;
+    case DEVICE_NORFLASH:  Analog_setPeriphStatePointer(M25PX_getStatePointer());   break;
+    case DEVICE_NANDFLASH: Analog_setPeriphStatePointer(SST26_getStatePointer());   break;
+    case DEVICE_SDCARD:    Analog_setPeriphStatePointer(SDCard_getStatePointer());  break;
     case DEVICE_TEMPSENSE: Analog_setPeriphStatePointer(HIH613X_getStatePointer()); break;
-    case DEVICE_EEPROM:    sTests.getPeriphState = EEPROM_getStateAsWord;      break;
-    case DEVICE_NORFLASH:  sTests.getPeriphState = M25PX_getStateAsWord;       break;
-    case DEVICE_SDCARD:    sTests.getPeriphState = SDCard_getStateAsWord;      break;
     default: break;
   }
   
@@ -541,11 +523,25 @@ static void Tests_setupSPITests(Device device, TestArgs *pArgs)
   sTests.adc1.isSampling        = TRUE;
   sTests.adc2.isSampling        = TRUE;
   sTests.adc3.isSampling        = TRUE;
-  sTests.periphState.isSampling = TRUE;     
+  sTests.periphState.isSampling = TRUE;
   
+  // Fill output current sample buffer with 0xFF so we can energy accumulation despite DMA
+  memset(&GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT][0], 0xFF, 
+         sizeof(GPSDRAM->samples[SDRAM_CHANNEL_OUTCURRENT]));
+  
+  // Begin sampling here!
   Analog_startSampleTimer(pArgs->sampRate);
   
-  Time_delay(pArgs->preTestDelay);  // This helps to identify state transitions
+  Delay delay = {.tDelay = pArgs->preTestDelay, .eDelay = 0xFFFFFFFF, .cDelay = 0};
+  uint32_t preDelayEnergy = Time_pendEnergyTime(&delay);  // Helps to identify state transitions
+  
+  // If the test is calling for a current delay, then put the modified cDelay into the opDelay
+  if (pArgs->opDelays.op[0].cDelay != 0)
+  {
+    double postOpCurrent = (double)preDelayEnergy / (double)pArgs->preTestDelay;    // Get the I
+    postOpCurrent = postOpCurrent * ((double)pArgs->opDelays.op[0].cDelay / 100.0); // Modify
+    pArgs->opDelays.op[0].cDelay = (uint32_t)postOpCurrent;                         // Put in opDelay
+  }
 }
 
 /**************************************************************************************************\
@@ -565,14 +561,13 @@ static void Tests_teardownSPITests(TestArgs *pArgs, boolean testPassed)
         sTests.adc3.isSampling || 
         sTests.periphState.isSampling);
   Analog_stopSampleTimer();
-  
-  // Place every device back into the MCU domain:
-//  uint32_t i;
-//  for (i = 0; i < DEVICE_MAX; i++)
-//    PowerCon_setDeviceDomain((Device)i, VOLTAGE_DOMAIN_0);
-  
+    
   // Enable all previous interrupts
   ENABLE_SYSTICK_INTERRUPT();
+  
+  //uint32_t i;
+  //for (i = 0; i < TESTS_MAX_SAMPLES; i++)
+  //  GPSDRAM->samples[SDRAM_CHANNEL_DEVSTATE][i] >>= 8;
 
   sprintf(sTests.chanHeader[0].title, "Domain Voltage (V)");
   sprintf(sTests.chanHeader[1].title, "Domain Input Current (mA)");
@@ -601,54 +596,74 @@ static void Tests_teardownSPITests(TestArgs *pArgs, boolean testPassed)
             sprintf(sTests.testHeader.title, "EEPROM PROFILE 18VIW Passed");
           else
             sprintf(sTests.testHeader.title, "EEPROM PROFILE 18VIW Failed");
-          break;/*
-        case 3:
-          if (testPassed)
-            sprintf(sTests.testHeader.title, "EEPROM PROFILE 14VIW Passed");
-          else
-            sprintf(sTests.testHeader.title, "EEPROM PROFILE 14VIW Failed");
-          break;*/
+          break;
         default: break;
       }
       break;
     case 12:
-      sprintf(sTests.chanHeader[3].title, "SerialFlash State");
+      sprintf(sTests.chanHeader[3].title, "NOR SerialFlash State");
       switch (pArgs->profile)
       {
         case 0:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE STANDARD Passed");
+            sprintf(sTests.testHeader.title, "NOR SERIAL FLASH PROFILE STANDARD Passed");
           else
-            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE STANDARD Failed");
+            sprintf(sTests.testHeader.title, "NOR SERIAL FLASH PROFILE STANDARD Failed");
           break;
         case 1:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 30VIW Passed");
+            sprintf(sTests.testHeader.title, "NOR SERIAL FLASH PROFILE 30VIW Passed");
           else
-            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 30VIW Failed");
+            sprintf(sTests.testHeader.title, "NOR SERIAL FLASH PROFILE 30VIW Failed");
           break;
         case 2:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 27VIW Passed");
+            sprintf(sTests.testHeader.title, "NOR SERIAL FLASH PROFILE 27VIW Passed");
           else
-            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 27VIW Failed");
+            sprintf(sTests.testHeader.title, "NOR SERIAL FLASH PROFILE 27VIW Failed");
           break;
         case 3:
           if (testPassed)
-            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 23VIW Passed");
+            sprintf(sTests.testHeader.title, "NOR SERIAL FLASH PROFILE 23VIW Passed");
           else
-            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 23VIW Failed");
-          break;/*
-        case 4:
-          if (testPassed)
-            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 21VIW Passed");
-          else
-            sprintf(sTests.testHeader.title, "SERIAL FLASH PROFILE 21VIW Failed");
-          break;*/
+            sprintf(sTests.testHeader.title, "NOR SERIAL FLASH PROFILE 23VIW Failed");
+          break;
         default: break;
       }
       break;
     case 13:
+      sprintf(sTests.chanHeader[3].title, "NAND SerialFlash State");
+      switch (pArgs->profile)
+      {
+        case 0:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "NAND SERIAL FLASH PROFILE STANDARD Passed");
+          else
+            sprintf(sTests.testHeader.title, "NAND SERIAL FLASH PROFILE STANDARD Failed");
+          break;
+        case 1:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "NAND SERIAL FLASH PROFILE 30VIW Passed");
+          else
+            sprintf(sTests.testHeader.title, "NAND SERIAL FLASH PROFILE 30VIW Failed");
+          break;
+        case 2:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "NAND SERIAL FLASH PROFILE 26VIW Passed");
+          else
+            sprintf(sTests.testHeader.title, "NAND SERIAL FLASH PROFILE 26VIW Failed");
+          break;
+        case 3:
+          if (testPassed)
+            sprintf(sTests.testHeader.title, "NAND SERIAL FLASH PROFILE 23VIW Passed");
+          else
+            sprintf(sTests.testHeader.title, "NAND SERIAL FLASH PROFILE 23VIW Failed");
+          break;
+        default: break;
+      }
+      break;
+    case 14:
+      sTests.testHeader.timing = SDCard_getLastTiming();
       sprintf(sTests.chanHeader[3].title, "SDCard State");
       switch (pArgs->profile)
       {
@@ -675,17 +690,11 @@ static void Tests_teardownSPITests(TestArgs *pArgs, boolean testPassed)
             sprintf(sTests.testHeader.title, "SDCARD PROFILE 24VISR Passed");
           else
             sprintf(sTests.testHeader.title, "SDCARD PROFILE 24VISR Failed");
-          break;/*
-        case 4:
-          if (testPassed)
-            sprintf(sTests.testHeader.title, "SDCARD PROFILE 21VISR Passed");
-          else
-            sprintf(sTests.testHeader.title, "SDCARD PROFILE 21VISR Failed");
-          break;*/
+          break;
         default: break;
       }
       break;
-    case 14:
+    case 15:
       sprintf(sTests.chanHeader[3].title, "HIH6130 State");
       switch (pArgs->profile)
       {
@@ -706,13 +715,7 @@ static void Tests_teardownSPITests(TestArgs *pArgs, boolean testPassed)
             sprintf(sTests.testHeader.title, "HIH PROFILE 25VIRyTW Passed");
           else
             sprintf(sTests.testHeader.title, "HIH PROFILE 25VIRyTW Failed");
-          break;/*
-        case 3:
-          if (testPassed)
-            sprintf(sTests.testHeader.title, "HIH PROFILE 23VIRyTW Passed");
-          else
-            sprintf(sTests.testHeader.title, "HIH PROFILE 23VIRyTW Failed");
-          break;*/
+          break;
         default: break;
       }
       break;
@@ -875,17 +878,17 @@ uint16 Tests_test10(TestArgs *pArgs)
 
 /**************************************************************************************************\
 * FUNCTION    Tests_test11
-* DESCRIPTION
+* DESCRIPTION Performs a EEPROM write on the MCP25AA512 via the input test parameters
 * PARAMETERS  None
-* RETURNS     Number of bytes generated by the test
-* NOTES       None
+* RETURNS     true if successful, false otherwise
 \**************************************************************************************************/
 uint16 Tests_test11(TestArgs *pArgs)
 {
   EEPROM_setPowerProfile((EEPROMPowerProfile)pArgs->profile);
+  EEPROM_setState(EEPROM_STATE_IDLE);
 
   Tests_setupSPITests(DEVICE_EEPROM, pArgs);
-  EEPROMResult result = EEPROM_write(pArgs->buf, pArgs->pDst, pArgs->len, pArgs->opDelay[0]);
+  EEPROMResult result = EEPROM_write(pArgs->buf, pArgs->pDst, pArgs->len, &pArgs->opDelays);
   Tests_teardownSPITests(pArgs, (EEPROM_RESULT_OK == result));
 
   return (EEPROM_RESULT_OK == result);
@@ -893,20 +896,17 @@ uint16 Tests_test11(TestArgs *pArgs)
 
 /**************************************************************************************************\
 * FUNCTION    Tests_test12
-* DESCRIPTION
+* DESCRIPTION Performs a write to the NOR serial flash
 * PARAMETERS  None
-* RETURNS     Number of bytes generated by the test
-* NOTES       This test uses the same technique as test11, but performs the test iteratively and
-*             aggregates the results.
+* RETURNS     true if successful, false otherwise
 \**************************************************************************************************/
 uint16 Tests_test12(TestArgs *pArgs)
 {
   M25PX_setPowerProfile((M25PXPowerProfile)pArgs->profile);
-
+  M25PX_setState(M25PX_STATE_IDLE);
+  
   Tests_setupSPITests(DEVICE_NORFLASH, pArgs);
-  M25PXResult result = M25PX_write(pArgs->buf, pArgs->pDst, pArgs->len, 
-                                                            pArgs->opDelay[0],  // erase delay
-                                                            pArgs->opDelay[1]); // page write delay
+  M25PXResult result = M25PX_write(pArgs->buf, pArgs->pDst, pArgs->len, &pArgs->opDelays);
   Tests_teardownSPITests(pArgs, (M25PX_RESULT_OK == result));
 
   return (M25PX_RESULT_OK == result);
@@ -914,65 +914,65 @@ uint16 Tests_test12(TestArgs *pArgs)
 
 /**************************************************************************************************\
 * FUNCTION    Tests_test13
-* DESCRIPTION
+* DESCRIPTION Performs a write to the NAND serial flash
 * PARAMETERS  None
-* RETURNS     Number of bytes generated by the test
-* NOTES       This test uses the same technique as test12, but uses the XtremeLowPower function
+* RETURNS     true if successful, false otherwise
 \**************************************************************************************************/
 uint16 Tests_test13(TestArgs *pArgs)
 {
+  SST26_setPowerProfile((SST26PowerProfile)pArgs->profile);
+  SST26_setState(SST26_STATE_IDLE);
+
+  Tests_setupSPITests(DEVICE_NANDFLASH, pArgs);
+  SST26Result result = SST26_write(pArgs->buf, pArgs->pDst, pArgs->len, &pArgs->opDelays);
+  Tests_teardownSPITests(pArgs, (SST26_RESULT_OK == result));
+
+  return (SST26_RESULT_OK == result);
+}
+
+/**************************************************************************************************\
+* FUNCTION    Tests_test14
+* DESCRIPTION Performs a write to the SD Card
+* PARAMETERS  None
+* RETURNS     true if successful, false otherwise
+\**************************************************************************************************/
+uint16 Tests_test14(TestArgs *pArgs)
+{ 
   SDCard_setPowerProfile((SDCardPowerProfile)pArgs->profile);
-  
-  uint8 i;
+  uint32_t i;
   for (i = 0; i < 5; i++)
   {
     if (SDCard_initDisk())  // disk must be initialized before we can test writes to it
       break;
     Time_delay(300000);
-  }
+  }  // State + Voltage are properly set after initDisk, no need to reset them (like other tests)
   
   Tests_setupSPITests(DEVICE_SDCARD, pArgs);
-  SDWriteResult writeResult = SDCard_write(pArgs->buf, pArgs->pDst, pArgs->len, pArgs->opDelay[0]);
+  SDWriteResult writeResult = SDCard_write(pArgs->buf, pArgs->pDst, pArgs->len, &pArgs->opDelays);
   Tests_teardownSPITests(pArgs, (SD_WRITE_RESULT_OK == writeResult));
 
   return (SD_WRITE_RESULT_OK == writeResult);
 }
 
 /**************************************************************************************************\
-* FUNCTION    Tests_test14
-* DESCRIPTION
+* FUNCTION    Tests_test15
+* DESCRIPTION Performs a temperature and humidity measurement
 * PARAMETERS  None
-* RETURNS     Number of bytes generated by the test
-* NOTES       This test attempts basic operation of the SerialFlash
+* RETURNS     true if successful, false otherwise
 \**************************************************************************************************/
-uint16 Tests_test14(TestArgs *pArgs)
+uint16 Tests_test15(TestArgs *pArgs)
 {
   bool measure = pArgs->buf[0];
   bool readVal = pArgs->buf[1];
   bool convert = pArgs->buf[2];
   
-  Delay delay;
-  delay.tDelay = pArgs->opDelay[0];
-  delay.eDelay = pArgs->opDelay[3];
-  
   HIH613X_setPowerProfile((HIHPowerProfile)pArgs->profile);
-
+  HIH613X_setState(HIH_STATE_IDLE);
+  
   Tests_setupSPITests(DEVICE_TEMPSENSE, pArgs);
-  HIHStatus hihResult = HIH613X_readTempHumidI2C(measure, readVal, convert, &delay);
+  HIHStatus hihResult = HIH613X_readTempHumidI2C(measure, readVal, convert, &pArgs->opDelays);
   Tests_teardownSPITests(pArgs, (HIH_STATUS_NORMAL == hihResult));
 
-  return SUCCESS;
-}
-
-/**************************************************************************************************\
-* FUNCTION    Tests_test15
-* DESCRIPTION
-* PARAMETERS  None
-* RETURNS     Number of bytes generated by the test
-* NOTES       This test attempts power profile operation of the HIH Temp/Humid module
-\**************************************************************************************************/
-uint16 Tests_test15(TestArgs *pArgs)
-{
   return SUCCESS;
 }
 

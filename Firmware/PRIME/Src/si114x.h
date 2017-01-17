@@ -24,6 +24,7 @@ typedef enum
 
 void SI114X_init(void);
 bool SI114X_test(void);
+void Si114x_setState(Si114xState state);
 bool SI114X_setup(boolean state);
 void SI114X_ReadAndMeasure(void *pData);
 Si114xState SI114X_getState(void);

@@ -42,3 +42,6 @@
 *.cproject
 /Software/RetrieveTestData/results/*.mat
 /Software/RetrieveTestData/*.fig
+/Firmware/PRIME/Src/*.bak
+/Firmware/PRIME/MDK-ARM/PRIME Build/*._2i
+/Software/RetrieveTestData/results

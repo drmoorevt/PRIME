@@ -1,9 +1,10 @@
 function [title, channels, time, bitRes, numChannels, ...
-          timeScaleMicroSec, dataBytes] = rth(s)
+          timeScaleMicroSec, timing, dataBytes] = rth(s)
     title = {};
     channels = {};
     time = {};
     dataBytes = 0;
+    numTiming = 6;
     % wait for the size of the header, timeout after 2 seconds
     if (false == wfb(s, 4, 1000))
         fprintf('No header bytes received\n');
@@ -20,6 +21,9 @@ function [title, channels, time, bitRes, numChannels, ...
     timeScaleMicroSec = fread(s,  1, 'uint32');
     bytesPerChannel   = fread(s,  1, 'uint32');
     numChannels       = fread(s,  1, 'uint32');
+    for i = 1:numTiming
+        timing(i) = fread(s, 1, 'uint32');
+    end
     for i = 1:numChannels
         chanNum(:,i) = fread(s,  1, 'uint8');
         legend(:,i)  = fread(s, 31, 'uint8');
@@ -33,6 +37,9 @@ function [title, channels, time, bitRes, numChannels, ...
     testHeader = [testHeader, typecast(uint32(timeScaleMicroSec), 'uint8')];
     testHeader = [testHeader, typecast(uint32(bytesPerChannel), 'uint8')];
     testHeader = [testHeader, typecast(uint32(numChannels), 'uint8')];
+    for i = 1:numTiming
+        testHeader = [testHeader, typecast(uint32(timing(i)'), 'uint8')];
+    end
     for i = 1:numChannels
         testHeader = [testHeader, uint8(chanNum(:,i)')];
         testHeader = [testHeader, uint8(legend(:,i)')];

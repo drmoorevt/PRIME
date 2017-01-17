@@ -1,14 +1,14 @@
-function [numFailures, chans, data, time] = runTest12(CommPort, baudRate, numSweeps, testLen, opDelay)
+function [numFailures, chans, data, time] = runTest12(CommPort, numSweeps, testLen, opDelay, profileList)
     numFailures = 0;
     delete(instrfindall);
-    s = openFixtureComms(CommPort, baudRate);
+    s = openFixtureComms(CommPort);
     
     preTestDelay = 1000;
     postTestDelay = 1000;
     testTime = (preTestDelay + testLen + postTestDelay) / 1000;
     
-    profIter = 1;
-    while (profIter < 6) % 5 profiles: (profIter = 1,2,3,4,5) = 0,1,2,3,4
+    for profListIdx = 1:numel(profileList)
+        profIter = profileList(profListIdx);
         sweepIter = 1;
         while sweepIter <= numSweeps
             address = uint32((2^21)*rand/4096)*4096;
@@ -37,15 +37,21 @@ function [numFailures, chans, data, time] = runTest12(CommPort, baudRate, numSwe
                 avgData = mean(data, 3);
                 sweepIter = sweepIter + 1;
             catch
-                s = resetFixtureComms(s, CommPort, baudRate);
+                s = resetFixtureComms(s, CommPort);
                 disp('Test failure ... retrying');
             end
         end
-        filename = sprintf('./results/Test12-Profile%d-%dSweeps.mat', ...
-                           profIter, sweepIter-1);
+        filename = sprintf('./results/%s Test12-Profile%d-%dSweeps.mat', ...
+                           datestr(now,'dd-mm-yy HH.MM.SS'), profIter, sweepIter-1);
         save(filename,'name','chans','avgData','time')
-        testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testTime);
-        %profIter = profIter + 3;
-        profIter = profIter + 6;
+        %testPlot(avgData(:,:,profIter), time, chans, name(:,profIter), testTime, 15);
+        
+        maTitle = strrep(name(:,profIter), 'Passed', 'Passed (50 Sample Moving Average)');
+        maTitle = strrep(maTitle, 'Failed', 'Failed (50 Sample Moving Average)');
+        movingAverage = avgData(:,:,profIter);
+        movingAverage(50:end-50,1) = conv(movingAverage(50:end-50,1), ones(50,1)/50, 'same');
+        movingAverage(50:end-50,2) = conv(movingAverage(50:end-50,2), ones(50,1)/50, 'same');
+        movingAverage(50:end-50,3) = conv(movingAverage(50:end-50,3), ones(50,1)/50, 'same');
+        testPlot(movingAverage(:,:), time, chans, maTitle(:,1), 0, 16);
     end
 end

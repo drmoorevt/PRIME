@@ -106,7 +106,7 @@ double SBT263_getStateVoltage(void)
 * PARAMETERS  None
 * RETURNS     None
 \**************************************************************************************************/
-static void SBT263_setState(SBTState state)
+void SBT263_setState(SBTState state)
 {
   if (sSBT263.isInitialized != TRUE)
     return;  // Must run initialization before we risk changing the domain voltage
